@@ -533,9 +533,9 @@ class Field extends StatelessWidget {
     required this.suffixIcon,
     required this.prefixIcon,
     required this.borderRadius,
-    IconData? icon,
-    VoidCallback? onPressed,
-    double? iconSize,
+    this.icon,
+    this.onPressed,
+    this.iconSize,
     required this.useOtpDesign,
     required this.fillColor,
     required this.suffixIconConstraints,
@@ -545,7 +545,7 @@ class Field extends StatelessWidget {
     required this.label,
     required this.spacing,
     required this.inputConfigBuilder,
-    Color? iconColor,
+    this.iconColor,
     required this.cursorColor,
     required this.cursorErrorColor,
     required this.cursorHeight,
@@ -596,17 +596,10 @@ class Field extends StatelessWidget {
     required this.autoCorrect,
     required this.maxLengthEnforcement,
     bool isPassword = false,
-    Color? iconButtonColor,
-    Color? iconSplashColor,
-    double? iconSplashRadius
-  }) : _isPassword = isPassword,
-    icon = icon,
-    iconSize = iconSize,
-    iconColor = iconColor,
-    onPressed = onPressed,
-    iconSplashRadius = iconSplashRadius,
-    iconSplashColor = iconSplashColor,
-    iconButtonColor = iconButtonColor;
+    this.iconButtonColor,
+    this.iconSplashColor,
+    this.iconSplashRadius
+  }) : _isPassword = isPassword;
 
   Field copyWith({
     TextEditingController? controller,

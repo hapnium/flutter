@@ -5,9 +5,9 @@ import 'package:smart/src/styles/colors/common_colors.dart';
 
 import '../../export.dart';
 
-const SmartShareConfig _defaultConfig = const SmartShareConfig();
+const SmartShareConfig _defaultConfig = SmartShareConfig();
 
-const SmartShareItemConfig _defaultItemConfig = const SmartShareItemConfig();
+const SmartShareItemConfig _defaultItemConfig = SmartShareItemConfig();
 
 /// {@template smart_share}
 /// A widget that provides a customizable share sheet with various sharing options.
@@ -131,7 +131,7 @@ class SmartShare extends StatelessWidget {
   Widget build(BuildContext context) {
     double spacer = spacing ?? 10;
 
-    List<SmartShareItem> _defaultItems = [
+    List<SmartShareItem> defaultItems = [
       if(config.enableCopyLink) ...[
         SmartShareItem(
           index: 0,
@@ -195,10 +195,10 @@ class SmartShare extends StatelessWidget {
       ]
     ];
 
-    SmartShareItemBuilder builder = (BuildContext context, ItemMetadata<SmartShareItem> meta) {
-      SmartShareItemConfigurer configurer = (SmartShareItemConfig config, int index) {
+    Widget builder(BuildContext context, ItemMetadata<SmartShareItem> meta) {
+      SmartShareItemConfig configurer(SmartShareItemConfig config, int index) {
         return globalConfiguration.isNotNull ? globalConfiguration!(config, index) : config;
-      };
+      }
 
       SmartShareItem item = meta.item;
       SmartShareItemConfig itemConfig = configurer(meta.item.config ?? _defaultItemConfig, meta.index);
@@ -278,10 +278,10 @@ class SmartShare extends StatelessWidget {
           ),
         ),
       );
-    };
+    }
 
-    List<SmartShareItem> _items = items.isNotNull ? items! : listBuilder.isNotNull ? listBuilder!(_defaultItems) : _defaultItems;
-    int listCount = isLoading ? 10 : _items.length;
+    List<SmartShareItem> items = this.items.isNotNull ? this.items! : listBuilder.isNotNull ? listBuilder!(defaultItems) : defaultItems;
+    int listCount = isLoading ? 10 : items.length;
 
     if(_useGrid) {
       return SizedBox(
@@ -305,10 +305,10 @@ class SmartShare extends StatelessWidget {
             } else {
               ItemMetadata<SmartShareItem> metadata = ItemMetadata(
                 isFirst: index.equals(0),
-                isLast: index.equals(_items.length - 1),
+                isLast: index.equals(items.length - 1),
                 index: index,
-                totalItems: _items.length,
-                item: _items[index],
+                totalItems: items.length,
+                item: items[index],
               );
 
               return builder(context, metadata);
@@ -328,10 +328,10 @@ class SmartShare extends StatelessWidget {
             } else {
               ItemMetadata<SmartShareItem> metadata = ItemMetadata(
                 isFirst: index.equals(0),
-                isLast: index.equals(_items.length - 1),
+                isLast: index.equals(items.length - 1),
                 index: index,
-                totalItems: _items.length,
-                item: _items[index],
+                totalItems: items.length,
+                item: items[index],
               );
 
               return builder(context, metadata);

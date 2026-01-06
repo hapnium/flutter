@@ -25,7 +25,7 @@ class LinkUtils {
   static final LinkUtils instance = LinkUtils._();
 
   /// The domain used for building Hapnium URLs.
-  String _domain = "hapnium";
+  final String _domain = "hapnium";
 
   /// Constructs a URL based on an alias.
   String _urlBuilder(String alias) => "https://$alias.$_domain.com";

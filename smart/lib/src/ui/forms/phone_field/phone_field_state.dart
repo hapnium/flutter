@@ -4,7 +4,7 @@ class _PhoneFieldState extends State<PhoneField> {
   late Country _selectedCountry;
   String? validatorMessage;
 
-  CountryUtil _countryUtil = CountryUtil.instance;
+  final CountryUtil _countryUtil = CountryUtil.instance;
 
   @override
   void initState() {

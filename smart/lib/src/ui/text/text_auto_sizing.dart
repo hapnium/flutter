@@ -169,7 +169,7 @@ class TextAutoSizing extends StatefulWidget {
   /// If the [style] argument is null, the text will use the style from the
   /// closest enclosing [DefaultTextStyle].
   const TextAutoSizing(String this.data, {
-    Key? key,
+    super.key,
     this.textKey,
     this.style,
     this.strutStyle,
@@ -188,11 +188,11 @@ class TextAutoSizing extends StatefulWidget {
     this.textScaleFactor,
     this.maxLines,
     this.semanticsLabel,
-  }) : textSpan = null, super(key: key);
+  }) : textSpan = null;
 
   /// Creates a [TextAutoSizing] widget with a [TextSpan].
   const TextAutoSizing.rich(TextSpan this.textSpan, {
-    Key? key,
+    super.key,
     this.textKey,
     this.style,
     this.strutStyle,
@@ -211,7 +211,7 @@ class TextAutoSizing extends StatefulWidget {
     this.textScaleFactor,
     this.maxLines,
     this.semanticsLabel,
-  }) : data = null, super(key: key);
+  }) : data = null;
 
   @override
   _TextAutoSizingState createState() => _TextAutoSizingState();

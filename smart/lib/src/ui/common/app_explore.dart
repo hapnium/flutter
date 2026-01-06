@@ -167,70 +167,70 @@ class AppExplore extends StatelessWidget {
         : app.isProvider ? LinkUtils.instance.provider
         : app.isNearby ? LinkUtils.instance.nearby
         : LinkUtils.instance.user;
-    Color _primaryColorLight = primaryColorLight ?? Theme.of(context).primaryColorLight;
-    Color _primaryColor = primaryColor ?? Theme.of(context).primaryColor;
-    BorderRadiusGeometry _imageBorderRadius = imageBorderRadius ?? BorderRadius.circular(10);
-    double _headerTextSize = headerTextSize ?? Sizing.font(14);
-    double _subtitleTextSize = subtitleTextSize ?? Sizing.font(12);
-    double _spacing = spacing ?? Sizing.font(10);
-    EdgeInsetsGeometry _padding = padding ?? const EdgeInsets.all(12);
-    EdgeInsetsGeometry _itemPadding = itemPadding ?? EdgeInsets.symmetric(horizontal: 8.0, vertical: 12);
-    double _itemSpacing = itemSpacing ?? Sizing.font(10);
-    double _textSpacing = textSpacing ?? Sizing.font(2);
-    Color? _itemBackgroundColor = itemBackgroundColor ?? Theme.of(context).textSelectionTheme.selectionColor;
-    BorderRadiusGeometry _itemBorderRadius = itemBorderRadius ?? BorderRadius.circular(12);
+    Color primaryColorLight = this.primaryColorLight ?? Theme.of(context).primaryColorLight;
+    Color primaryColor = this.primaryColor ?? Theme.of(context).primaryColor;
+    BorderRadiusGeometry imageBorderRadius = this.imageBorderRadius ?? BorderRadius.circular(10);
+    double headerTextSize = this.headerTextSize ?? Sizing.font(14);
+    double subtitleTextSize = this.subtitleTextSize ?? Sizing.font(12);
+    double spacing = this.spacing ?? Sizing.font(10);
+    EdgeInsetsGeometry padding = this.padding ?? const EdgeInsets.all(12);
+    EdgeInsetsGeometry itemPadding = this.itemPadding ?? EdgeInsets.symmetric(horizontal: 8.0, vertical: 12);
+    double itemSpacing = this.itemSpacing ?? Sizing.font(10);
+    double textSpacing = this.textSpacing ?? Sizing.font(2);
+    Color? itemBackgroundColor = this.itemBackgroundColor ?? Theme.of(context).textSelectionTheme.selectionColor;
+    BorderRadiusGeometry itemBorderRadius = this.itemBorderRadius ?? BorderRadius.circular(12);
 
     return Column(
-      spacing: _spacing,
+      spacing: spacing,
       children: [
         if(more.isNotEmpty) ...[
           Padding(
-            padding: _padding,
+            padding: padding,
             child: Column(
-              spacing: _spacing,
+              spacing: spacing,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 TextBuilder(
                   text: "More from Hapnium",
-                  size: _headerTextSize,
-                  color: _primaryColorLight
+                  size: headerTextSize,
+                  color: primaryColorLight
                 ),
                 ClipRRect(
-                  borderRadius: _itemBorderRadius,
+                  borderRadius: itemBorderRadius,
                   child: Container(
-                    color: _itemBackgroundColor,
+                    color: itemBackgroundColor,
                     child: Column(
-                      spacing: _itemSpacing,
+                      spacing: itemSpacing,
                       children: more.map((view) {
                         return Material(
                           color: Colors.transparent,
                           child: InkWell(
                             onTap: () => handle(view),
                             child: Padding(
-                              padding: _itemPadding,
+                              padding: itemPadding,
                               child: Row(
-                                spacing: _spacing,
+                                spacing: spacing,
                                 crossAxisAlignment: CrossAxisAlignment.center,
                                 children: [
                                   ClipRRect(
-                                    borderRadius: _imageBorderRadius,
+                                    borderRadius: imageBorderRadius,
                                     child: Image.asset(view.image, width: imageWidth ?? 45)
                                   ),
                                   Expanded(
                                     child: Column(
-                                      spacing: _textSpacing,
+                                      spacing: textSpacing,
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
                                         TextBuilder(
                                           text: view.header,
-                                          size: _headerTextSize,
-                                          color: _primaryColor
+                                          size: headerTextSize,
+                                          color: primaryColor
                                         ),
                                         TextBuilder(
                                           text: view.body,
-                                          size: _subtitleTextSize,
+                                          size: subtitleTextSize,
                                           flow: TextOverflow.ellipsis,
-                                          color: _primaryColorLight
+                                          color: primaryColorLight
                                         ),
                                       ],
                                     ),
@@ -250,32 +250,32 @@ class AppExplore extends StatelessWidget {
         ],
         if(isWeb) ...[
           Padding(
-            padding: _padding,
+            padding: padding,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 TextBuilder(
                   text: "It is more easier in the app",
-                  size: _headerTextSize,
-                  color: _primaryColorLight
+                  size: headerTextSize,
+                  color: primaryColorLight
                 ),
                 ClipRRect(
-                  borderRadius: _imageBorderRadius,
+                  borderRadius: imageBorderRadius,
                   child: SmartButton(
                     tab: ButtonView(
                       header: "Download the ${app.type} app",
                       body: "Click to download from your favorite stores",
                       image: appImage,
                     ),
-                    bodyTextSize: _subtitleTextSize,
-                    headerTextSize: _headerTextSize,
-                    backgroundColor: _itemBackgroundColor,
+                    bodyTextSize: subtitleTextSize,
+                    headerTextSize: headerTextSize,
+                    backgroundColor: itemBackgroundColor,
                     onTap: () {
                       if(onAppClicked.isNotNull) {
                         onAppClicked!(appLink);
                       }
                     },
-                    color: _primaryColor,
+                    color: primaryColor,
                   ),
                 )
               ],

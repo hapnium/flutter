@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import 'models/notifier.dart';
-import 'tappy_mixin.dart';
+import 'controller/tappy_mixin.dart';
 
 /// An abstract class defining a service for updating notification-related streams.
 ///
@@ -14,37 +14,37 @@ import 'tappy_mixin.dart';
 /// ```dart
 /// class MyNotificationService extends TappyUpdateService {
 ///   @override
-///   void onCreated(Notifier<T> notifier) {
+///   void onCreated(Notifier notifier) {
 ///     // Handle logic for created notifications.
 ///     super.onCreated(notifier);
 ///   }
 ///
 ///   @override
-///   void onReceived(Notifier<T> notifier) {
+///   void onReceived(Notifier notifier) {
 ///     // Handle logic for received notifications.
 ///     super.onReceived(notifier);
 ///   }
 ///
 ///   @override
-///   void onScheduled(Notifier<T> notifier) {
+///   void onScheduled(Notifier notifier) {
 ///     // Handle logic for scheduled notifications.
 ///     super.onScheduled(notifier);
 ///   }
 ///
 ///   @override
-///   void onAppLaunched(Notifier<T> notifier) {
+///   void onAppLaunched(Notifier notifier) {
 ///     // Handle logic for app launched notifications.
 ///     super.onAppLaunched(notifier);
 ///   }
 ///
 ///   @override
-///   void onTapped(Notifier<T> notifier) {
+///   void onTapped(Notifier notifier) {
 ///     // Handle logic for tapped notifications.
 ///     super.onTapped(notifier);
 ///   }
 ///
 ///   @override
-///   void onUseInApp(Notifier<T> notifier) {
+///   void onUseInApp(Notifier notifier) {
 ///     // Handle logic for in-app notifications.
 ///     super.onUseInApp(notifier);
 ///   }
@@ -52,7 +52,7 @@ import 'tappy_mixin.dart';
 ///   // Implement other methods as needed.
 /// }
 /// ```
-abstract class TappyLifecycle<T> with TappyMixin {
+abstract class TappyLifecycle with TappyMixin {
   /// Updates the stream with a created notification.
   ///
   /// This method should be called when a new notification is created.
@@ -66,9 +66,9 @@ abstract class TappyLifecycle<T> with TappyMixin {
   /// listeners.
   ///
   /// #### Parameters:
-  /// - [notifier]: The `Notifier<T>` object containing details about the created notification.
+  /// - [notifier]: The `Notifier` object containing details about the created notification.
   @mustCallSuper
-  void onCreated(Notifier<T> notifier) {
+  void onCreated(Notifier notifier) {
     if(!controller.hasCreatedNotification(notifier)) {
       controller.addCreated(notifier);
       controller.createdController.add(notifier);
@@ -86,9 +86,9 @@ abstract class TappyLifecycle<T> with TappyMixin {
   /// notifications triggered by the app.
   ///
   /// #### Parameters:
-  /// - [notifier]: The `Notifier<T>` object containing details about the received notification.
+  /// - [notifier]: The `Notifier` object containing details about the received notification.
   @mustCallSuper
-  void onReceived(Notifier<T> notifier) {
+  void onReceived(Notifier notifier) {
     controller.receivedController.add(notifier);
   }
 
@@ -102,9 +102,9 @@ abstract class TappyLifecycle<T> with TappyMixin {
   /// - Notifications are configured to recur periodically (e.g., daily, weekly).
   ///
   /// #### Parameters:
-  /// - [notifier]: The `Notifier<T>` object containing details about the scheduled notification.
+  /// - [notifier]: The `Notifier` object containing details about the scheduled notification.
   @mustCallSuper
-  void onScheduled(Notifier<T> notifier) {
+  void onScheduled(Notifier notifier) {
     controller.scheduledController.add(notifier);
   }
 
@@ -119,9 +119,9 @@ abstract class TappyLifecycle<T> with TappyMixin {
   /// - Handling any payload or action associated with the notification tap.
   ///
   /// #### Parameters:
-  /// - [notifier]: The `Notifier<T>` object containing details about the notification that triggered the app launch.
+  /// - [notifier]: The `Notifier` object containing details about the notification that triggered the app launch.
   @mustCallSuper
-  void onAppLaunched(Notifier<T> notifier) {
+  void onAppLaunched(Notifier notifier) {
     controller.launchedAppController.add(notifier);
   }
 
@@ -134,9 +134,9 @@ abstract class TappyLifecycle<T> with TappyMixin {
   /// - Processing user input provided via the notification action.
   ///
   /// #### Parameters:
-  /// - [notifier]: The `Notifier<T>` object containing details about the tapped notification.
+  /// - [notifier]: The `Notifier` object containing details about the tapped notification.
   @mustCallSuper
-  void onTapped(Notifier<T> notifier) {
+  void onTapped(Notifier notifier) {
     if (controller.tappedController.hasListener) {
       controller.tappedController.add(notifier);
     } else {
@@ -156,9 +156,9 @@ abstract class TappyLifecycle<T> with TappyMixin {
   /// - Handle custom logic or analytics related to in-app notifications.
   ///
   /// #### Parameters:
-  /// - [notifier]: The `Notifier<T>` object containing details about the in-app notification.
+  /// - [notifier]: The `Notifier` object containing details about the in-app notification.
   @mustCallSuper
-  void onUseInApp(Notifier<T> notifier) {
+  void onUseInApp(Notifier notifier) {
     controller.inAppReceivedController.add(notifier);
   }
 }

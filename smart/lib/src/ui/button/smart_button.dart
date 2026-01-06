@@ -213,19 +213,19 @@ class SmartButton extends StatelessWidget {
     this.selectiveWidth,
     this.showIcon = true,
     this.mainAxisSize = MainAxisSize.min
-  }) : this.bodyWeight = null,
-    this.isSelective = true,
-    this.imageBorderRadius = null,
-    this.bodyColor = null,
-    this.notificationColor = null,
-    this.notificationPadding = null,
-    this.needNotification = false,
-    this.notification = null,
-    this.headerTextSize = null,
-    this.bodyTextSize = null,
-    this.imageColor = null,
-    this.imageHeight = null,
-    this.imageWidth = null;
+  }) : bodyWeight = null,
+    isSelective = true,
+    imageBorderRadius = null,
+    bodyColor = null,
+    notificationColor = null,
+    notificationPadding = null,
+    needNotification = false,
+    notification = null,
+    headerTextSize = null,
+    bodyTextSize = null,
+    imageColor = null,
+    imageHeight = null,
+    imageWidth = null;
 
   @override
   Widget build(BuildContext context) {

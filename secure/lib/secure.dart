@@ -38,7 +38,7 @@
 /// }
 /// ```
 /// {@endtemplate}
-library secure;
+library;
 
 /// {@macro secure}
 

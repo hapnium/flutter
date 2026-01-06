@@ -30,7 +30,7 @@ class ProgressSlider extends LeafRenderObjectWidget {
   /// 
   /// {@macro progress_slider}
   const ProgressSlider({
-    Key? key,
+    super.key,
     required this.progress,
     required this.total,
     this.buffered,
@@ -52,7 +52,7 @@ class ProgressSlider extends LeafRenderObjectWidget {
     this.timeLabelType,
     this.timeLabelTextStyle,
     this.timeLabelPadding = 0.0,
-  }) : super(key: key);
+  });
 
   /// The elapsed playing time of the media.
   ///

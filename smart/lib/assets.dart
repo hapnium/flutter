@@ -1,4 +1,4 @@
-library assets;
+library;
 
 export 'src/assets/social_assets.dart';
 export 'src/assets/anim_assets.dart';

@@ -67,7 +67,7 @@
 /// Hapnium is modular and well-structured, allowing you to use only the components you need.
 ///
 /// {@endtemplate}
-library hapnium;
+library;
 
 /// =========================
 /// ========== API =========

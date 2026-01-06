@@ -1,4 +1,5 @@
 /// Utility class for country-related operations.
+library;
 import 'package:flutter/widgets.dart';
 import 'package:hapnium/hapnium.dart';
 import 'package:smart/ui.dart';
@@ -21,7 +22,7 @@ class CountryUtil {
   static CountryUtil instance = CountryUtil._internal();
 
   List<Country> _list = [];
-  set (List<Country> countries) {
+  void set (List<Country> countries) {
     if(countries.isNotEmpty) {
       _list = countries;
     } else {

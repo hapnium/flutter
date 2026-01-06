@@ -1,4 +1,5 @@
 /// Represents the different types of Smart applications.
+library;
 
 /// This enum defines the different types of Smart applications that exist within the system.
 /// Each value represents a specific category or role within the Smart ecosystem.

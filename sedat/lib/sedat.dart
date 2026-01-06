@@ -85,7 +85,7 @@
 /// final addressRepository = AddressRepository();
 /// final address = await addressRepository.save(Address(street: '123 Main St', city: 'Anytown'));
 /// ```
-library sedat;
+library;
 
 /// CORE
 export 'src/core/abstract_secure_database_configurer.dart';

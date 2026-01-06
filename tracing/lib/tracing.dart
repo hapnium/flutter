@@ -74,7 +74,7 @@
 /// - [LogType] — enum for built-in printer styles
 /// - [LogPrinter] — base class for custom printer implementations
 /// - [TracingListener] — interface for log event listening
-library logger;
+library;
 
 import 'src/default_tracing_listener.dart';
 import 'src/enums/log_level.dart';

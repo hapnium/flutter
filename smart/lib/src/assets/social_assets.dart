@@ -1,4 +1,5 @@
 /// A class for managing asset paths within the application.
+library;
 
 /// This class provides a convenient way to access and manage the paths to
 /// various assets used throughout the application.

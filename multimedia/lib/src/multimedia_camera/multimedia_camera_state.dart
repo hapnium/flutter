@@ -129,10 +129,10 @@ class _MultimediaCameraState extends State<MultimediaCamera> with WidgetsBinding
   Animation<Color?> get progressValueColor => parent.progressValueColor ?? AlwaysStoppedAnimation<Color>(Color(0xffFF3B3B));
 
   @protected
-  Color? get progressColor => parent.progressColor ?? null;
+  Color? get progressColor => parent.progressColor;
 
   @protected
-  StrokeCap? get progressStrokeCap => parent.progressStrokeCap ?? null;
+  StrokeCap? get progressStrokeCap => parent.progressStrokeCap;
 
   @protected
   double get progressStrokeWidth => parent.progressStrokeWidth ?? 4.0;
@@ -360,10 +360,6 @@ class _MultimediaCameraState extends State<MultimediaCamera> with WidgetsBinding
     }
   }
 
-  @override
-  void didUpdateWidget(covariant MultimediaCamera oldWidget) {
-    super.didUpdateWidget(oldWidget);
-  }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {

@@ -114,7 +114,7 @@ class AnsiColor {
   /// ```
   String call(String msg) {
     if (color) {
-      return '${this}$msg$ansiDefault';
+      return '$this$msg$ansiDefault';
     } else {
       return msg;
     }

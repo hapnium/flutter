@@ -126,11 +126,10 @@ class FakeField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Default padding if `needPadding` is true
-    EdgeInsetsGeometry _padding = padding ?? 
-        (needPadding ? const EdgeInsets.symmetric(horizontal: 12.0) : EdgeInsets.zero);
+    EdgeInsetsGeometry padding = this.padding ?? (needPadding ? const EdgeInsets.symmetric(horizontal: 12.0) : EdgeInsets.zero);
 
     return Padding(
-      padding: _padding,
+      padding: padding,
       child: ClipRRect(
         borderRadius: borderRadius ?? BorderRadius.circular(16),
         child: Material(

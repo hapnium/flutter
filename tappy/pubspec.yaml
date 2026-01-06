@@ -14,9 +14,13 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  flutter_local_notifications: ^19.3.0
-  fluttertoast: ^8.2.12
+  flutter_local_notifications: ^19.5.0
+  fluttertoast: ^9.0.0
+  timezone: ^0.10.1
   toastification: ^3.0.3
 
   tracing:
     path: ../tracing
+
+dev_dependencies:
+  lints: ^6.0.0

@@ -32,7 +32,7 @@ import '../enums/tappy_type.dart';
 /// The [Notifier] class also supports conversion to/from JSON, making it suitable
 /// for use with APIs and local persistence mechanisms.
 /// {@endtemplate}
-class Notifier<T> {
+final class Notifier {
   /// Unique identifier for the notification.
   ///
   /// This is often used to track or update specific notifications in local
@@ -75,7 +75,7 @@ class Notifier<T> {
   /// This is a generic object and can hold any model type relevant to the `type`.
   ///
   /// Default: `null`
-  final T data;
+  final Map<String, dynamic> data;
 
   /// {@macro notifier}
   Notifier({
@@ -98,7 +98,7 @@ class Notifier<T> {
   /// {@macro notifier}
   Notifier copyWith({
     TappyType? type,
-    T? data,
+    Map<String, dynamic>? data,
     int? id,
     String? action,
     String? input,
@@ -121,34 +121,30 @@ class Notifier<T> {
   /// Expects a valid map containing required fields. Falls back to defaults if not present.
   /// 
   /// {@macro notifier}
-  factory Notifier.fromJson(Map<String, dynamic> json) {
-    return Notifier(
-      id: json["id"] ?? -1,
-      type: TappyType.fromString(json["type"] ?? ""),
-      data: json["data"],
-      action: json["action"] ?? "",
-      input: json["input"] ?? "",
-      from: json["from"] ?? "",
-      foreign: json["foreign"] ?? "",
-    );
-  }
+  factory Notifier.fromJson(Map<String, dynamic> json) => Notifier(
+    id: json["id"] ?? -1,
+    type: TappyType.fromString(json["type"] ?? ""),
+    data: json["data"],
+    action: json["action"] ?? "",
+    input: json["input"] ?? "",
+    from: json["from"] ?? "",
+    foreign: json["foreign"] ?? "",
+  );
 
   /// Creates an empty [Notifier] instance with default values.
   ///
   /// Useful for initializing variables or representing no-notification states.
   /// 
   /// {@macro notifier}
-  factory Notifier.empty() {
-    return Notifier(
-      id: -1,
-      type: TappyType.OTHERS,
-      data: null as T,
-      action: "",
-      input: "",
-      from: "",
-      foreign: "",
-    );
-  }
+  factory Notifier.empty() => Notifier(
+    id: -1,
+    type: TappyType.OTHERS,
+    data: {},
+    action: "",
+    input: "",
+    from: "",
+    foreign: "",
+  );
 
   /// Parses a JSON string to create a [Notifier] instance.
   ///
@@ -181,9 +177,7 @@ class Notifier<T> {
   ///
   /// Uses [toJson] internally and `jsonEncode`.
   @override
-  String toString() {
-    return jsonEncode(toJson());
-  }
+  String toString() => jsonEncode(toJson());
 
   /// Returns `true` if the notification has a non-empty `action`.
   ///

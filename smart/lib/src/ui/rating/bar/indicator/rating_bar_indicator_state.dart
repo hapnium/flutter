@@ -1,3 +1,5 @@
+// ignore_for_file: deprecated_member_use
+
 part of 'rating_bar_indicator.dart';
 
 class _RatingBarIndicatorState extends State<RatingBarIndicator> {

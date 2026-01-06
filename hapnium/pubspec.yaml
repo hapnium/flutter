@@ -10,6 +10,9 @@ repository: https://github.com/Hapnium/flutter/tree/main/hapnium
 environment:
   sdk: ^3.7.0
 
+dependencies:
+  meta: ^1.17.0
+
 dev_dependencies:
   test: ^1.28.0
   lints: ^6.0.0

@@ -20,6 +20,7 @@ dev_dependencies:
     sdk: flutter
   tracing:
     path: ../tracing
+  lints: ^6.0.0
 
 flutter:
   plugin:

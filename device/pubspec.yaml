@@ -13,11 +13,14 @@ environment:
   sdk: ^3.0.0
 
 dependencies:
-  device_info_plus: ^11.4.0
-  meta: ^1.16.0
-  universal_io: ^2.2.2
+  device_info_plus: ^12.3.0
+  meta: ^1.17.0
+  universal_io: ^2.3.1
 
   tracing:
     path: ../tracing
   hapnium:
     path: ../hapnium
+
+dev_dependencies:
+  lints: ^6.0.0

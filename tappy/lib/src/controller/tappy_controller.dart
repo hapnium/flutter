@@ -1,6 +1,7 @@
 import 'dart:async';
+import 'dart:collection';
 
-import 'models/notifier.dart';
+import '../models/notifier.dart';
 
 /// {@template tappy_controller}
 /// A singleton controller for managing notification events in the application.
@@ -22,7 +23,7 @@ import 'models/notifier.dart';
 /// ```
 /// 
 /// {@endtemplate}
-final class TappyController<T> {
+final class TappyController {
   /// The private constructor for the class.
   /// 
   /// {@macro tappy_controller}
@@ -37,64 +38,62 @@ final class TappyController<T> {
   /// Stream controller for notifications received.
   ///
   /// Emits events when a notification is received.
-  final StreamController<Notifier<T>> receivedController = StreamController.broadcast();
+  final StreamController<Notifier> receivedController = StreamController.broadcast();
 
   /// Stream controller for notifications created.
   ///
   /// Emits events when a notification is created.
-  final StreamController<Notifier<T>> createdController = StreamController.broadcast();
+  final StreamController<Notifier> createdController = StreamController.broadcast();
 
   /// Stream controller for in-app notifications received.
   ///
   /// Emits events when an in-app notification is received.
-  final StreamController<Notifier<T>> inAppReceivedController = StreamController.broadcast();
+  final StreamController<Notifier> inAppReceivedController = StreamController.broadcast();
 
   /// Stream controller for notifications scheduled.
   ///
   /// Emits events when a notification is scheduled.
-  final StreamController<Notifier<T>> scheduledController = StreamController.broadcast();
+  final StreamController<Notifier> scheduledController = StreamController.broadcast();
 
   /// Stream controller for app launches triggered by notifications.
   ///
   /// Emits events when the app is launched by tapping a notification.
-  final StreamController<Notifier<T>> launchedAppController = StreamController.broadcast();
+  final StreamController<Notifier> launchedAppController = StreamController.broadcast();
 
   /// Stream controller for tapped notifications.
   ///
   /// Emits events when a notification is tapped.
-  final StreamController<Notifier<T>> tappedController = StreamController.broadcast();
+  final StreamController<Notifier> tappedController = StreamController.broadcast();
 
   // Internal buffer to store created notifications when no listeners are active.
-  final List<Notifier<T>> _createdNotifications = [];
+  final List<Notifier> _createdNotifications = [];
 
   // Internal buffer to store tapped notifications when no listeners are active.
-  final List<Notifier<T>> _tappedNotifications = [];
+  final List<Notifier> _tappedNotifications = [];
 
   /// List of tapped notifications
   /// 
   /// Returns a list of [Notifier] objects that have been tapped.
-  List<Notifier<T>> get tappedNotifications => _tappedNotifications;
+  List<Notifier> getTappedNotifications() => UnmodifiableListView(_tappedNotifications);
 
   /// List of created notifications
   /// 
   /// Returns a list of [Notifier] objects that have been created.  
-  List<Notifier<T>> get createdNotifications => _createdNotifications;
+  List<Notifier> getCreatedNotifications() => UnmodifiableListView(_createdNotifications);
 
   /// Checks whether a notification has already been created.
   ///
   /// - **notifier**: The notification to verify.
   ///
   /// Helps avoid showing duplicate notifications by checking internal records.
-  bool hasCreatedNotification(Notifier<T> notifier) {
-    return _createdNotifications.any((c) => c.foreign == notifier.foreign);
-  }
+  bool hasCreatedNotification(Notifier notifier) => _createdNotifications.any((c) => c.foreign == notifier.foreign);
 
   /// Adds a newly created [Notifier] to the internal list.
   ///
   /// - **notifier**: The notification that was created.
   ///
   /// Prevents the same notification from being created multiple times.
-  void addCreated(Notifier<T> notifier) {
+  void addCreated(Notifier notifier) {
     _createdNotifications.add(notifier);
   }
 
@@ -107,9 +106,7 @@ final class TappyController<T> {
   void removeCreated({String? foreign, int? id}) {
     assert(foreign != null || id != null, "Either foreign or id must be provided");
 
-    _createdNotifications.removeWhere((n) {
-      return (foreign != null && n.foreign == foreign) || (id != null && n.id == id);
-    });
+    _createdNotifications.removeWhere((n) => (foreign != null && n.foreign == foreign) || (id != null && n.id == id));
   }
 
   /// Removes a tapped [Notifier] from the internal list.
@@ -121,9 +118,7 @@ final class TappyController<T> {
   void removeTapped({String? foreign, int? id}) {
     assert(foreign != null || id != null, "Either foreign or id must be provided");
 
-    _tappedNotifications.removeWhere((n) {
-      return (foreign != null && n.foreign == foreign) || (id != null && n.id == id);
-    });
+    _tappedNotifications.removeWhere((n) => (foreign != null && n.foreign == foreign) || (id != null && n.id == id));
   }
 
   /// Flushes all created notifications and exposes them.
@@ -154,7 +149,7 @@ final class TappyController<T> {
   /// - **notifier**: The notification instance that was tapped.
   ///
   /// Used when the user interacts with the notification.
-  void addTapped(Notifier<T> notifier) {
+  void addTapped(Notifier notifier) {
     _tappedNotifications.add(notifier);
   }
 }

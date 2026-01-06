@@ -61,10 +61,10 @@ abstract class BaseRepository<Result, Insert> implements RepositoryService<Resul
   Result? _defaultValue;
 
   /// Tag for log messages from this class.
-  String _from = "[SD-REPOSITORY]";
+  final String _from = "[SD-REPOSITORY]";
 
   /// Tag for exception messages from this class.
-  String _exPrefix = "[SD-EXCEPTION]";
+  final String _exPrefix = "[SD-EXCEPTION]";
 
   /// Creates a new [BaseRepository] instance.
   ///
@@ -80,7 +80,7 @@ abstract class BaseRepository<Result, Insert> implements RepositoryService<Resul
   StreamSubscription<BoxEvent>? _subscription;
 
   /// The stream controller for broadcasting data changes.
-  StreamController<Result> _controller = StreamController<Result>.broadcast();
+  final StreamController<Result> _controller = StreamController<Result>.broadcast();
 
   /// Opens the Hive box and initializes the repository.
   ///
@@ -142,7 +142,7 @@ abstract class BaseRepository<Result, Insert> implements RepositoryService<Resul
     _subscription = _box.watch(key: _key).listen((event) {
       if (event.deleted) {
         if(_defaultValue != null) {
-          _notifyListeners(_defaultValue!);
+          _notifyListeners(_defaultValue as Result);
         } else {
           _notifyListeners(fromStore(null));
         }

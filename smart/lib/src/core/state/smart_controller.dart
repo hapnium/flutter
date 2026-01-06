@@ -4,15 +4,7 @@ import '../mixins/smart_lifecycle.dart';
 import 'list_notifier.dart';
 
 abstract class SmartController extends ListNotifier with SmartLifecycle {
-  bool _isPermanent = false;
-
-  set isPermanent(bool value) {
-    _isPermanent = value;
-  }
-
-  bool get isPermanent {
-    return _isPermanent;
-  }
+  bool isPermanent = false;
 
   /// Rebuilds `GetBuilder` each time you call `update()`;
   /// Can take a List of [ids], that will only update the matching

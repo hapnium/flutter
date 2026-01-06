@@ -95,7 +95,7 @@ class SteppingListView extends StatelessWidget {
     this.restorationId,
     this.keyboardDismissBehavior = ScrollViewKeyboardDismissBehavior.manual,
     this.clipBehavior = Clip.hardEdge,
-  }) : this.useSeparated = true, this.useBuilder = false, this.itemExtent = null;
+  }) : useSeparated = true, useBuilder = false, itemExtent = null;
 
   /// Constructor for a builder [SteppingListView].
   const SteppingListView.builder({
@@ -113,7 +113,7 @@ class SteppingListView extends StatelessWidget {
     this.itemExtent,
     this.keyboardDismissBehavior = ScrollViewKeyboardDismissBehavior.manual,
     this.clipBehavior = Clip.hardEdge,
-  }) : this.useSeparated = false, this.useBuilder = true, this.separatorBuilder = null;
+  }) : useSeparated = false, useBuilder = true, separatorBuilder = null;
 
   @override
   Widget build(BuildContext context) {

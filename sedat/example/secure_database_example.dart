@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 import 'package:sedat/sedat.dart';
 
 // 1. Define your data model
@@ -37,8 +36,6 @@ class MyAppDatabaseConfigurer extends AbstractSecureDatabaseConfigurer {
 }
 
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized(); // Important for Hive
-
   // 4. Initialize the database
   final configurer = MyAppDatabaseConfigurer();
   await configurer.initialize();

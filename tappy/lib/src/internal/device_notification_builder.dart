@@ -1,3 +1,4 @@
+import 'dart:collection';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -22,7 +23,7 @@ import '../models/types/schedule_notification.dart';
 import '../models/types/transaction_notification.dart';
 import '../models/types/trip_notification.dart';
 import '../tappy.dart';
-import '../tappy_mixin.dart';
+import '../controller/tappy_mixin.dart';
 import 'device_notification.dart';
 
 class DefaultDeviceNotificationBuilder<T> with TappyMixin implements DeviceNotificationBuilderInterface<T> {
@@ -193,7 +194,7 @@ class DefaultDeviceNotificationBuilder<T> with TappyMixin implements DeviceNotif
       body = body.isEmpty ? "Chat message from ${message.name}" : body;
 
       if(Tappy.showLogs) {
-        console.info("Notification body info: Encrypted = ${notification.body} | Decrypted = ${body}", tag: prefix);
+        console.info("Notification body info: Encrypted = ${notification.body} | Decrypted = $body", tag: prefix);
       }
 
       await plugin.show(id, notification.title, body, notificationDetails, payload: notifier.toString()).then((v) {
@@ -937,7 +938,7 @@ class DefaultDeviceNotificationBuilder<T> with TappyMixin implements DeviceNotif
     Notifier notifier = Notifier(
       type: TappyType.OTHERS,
       id: id,
-      data: notification.data,
+      data: OtherNotificationData(notification.data),
       from: notification.token,
       foreign: notification.title
     );
@@ -997,4 +998,8 @@ class DefaultDeviceNotificationBuilder<T> with TappyMixin implements DeviceNotif
       Tappy.lifecycle.onCreated(notifier);
     }
   }
+}
+
+final class OtherNotificationData extends MapView<String, dynamic> {
+  OtherNotificationData(dynamic data) : super({"other": data});
 }

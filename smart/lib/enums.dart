@@ -1,4 +1,4 @@
-library enums;
+library;
 
 export 'src/enums/smart_app.dart';
 

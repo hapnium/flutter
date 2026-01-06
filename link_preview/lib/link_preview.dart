@@ -15,7 +15,7 @@
 /// - **UI Components**: Easily render previews and linkified text widgets.
 /// - **Extensibility**: Modular extensions on URLs, strings, and UI elements.
 /// {@endtemplate}
-library link_preview;
+library;
 
 export 'src/link_preview.dart';
 

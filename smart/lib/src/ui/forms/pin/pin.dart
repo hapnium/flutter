@@ -112,12 +112,11 @@ class Pin extends StatefulWidget {
     this.pinputAutovalidateMode = PinAutovalidateMode.onSubmit,
     this.scrollPadding = const EdgeInsets.all(20),
     this.contextMenuBuilder = _defaultContextMenuBuilder,
-    Key? key,
+    super.key,
   })  : assert(obscuringCharacter.length == 1),
         assert(length > 0),
         assert(textInputAction != TextInputAction.newline, 'Pin is not multiline'),
-        _builder = null,
-        super(key: key);
+        _builder = null;
 
   /// Creates a PinPut widget with custom pin item builder
   /// This gives you full control over the pin item widget
@@ -161,7 +160,7 @@ class Pin extends StatefulWidget {
     this.pinputAutovalidateMode = PinAutovalidateMode.onSubmit,
     this.scrollPadding = const EdgeInsets.all(20),
     this.contextMenuBuilder = _defaultContextMenuBuilder,
-    Key? key,
+    super.key,
   })  : assert(length > 0),
         assert(textInputAction != TextInputAction.newline, 'Pin is not multiline'),
         _builder = _PinItemBuilder(
@@ -187,8 +186,7 @@ class Pin extends StatefulWidget {
         obscuringWidget = null,
         errorText = null,
         errorBuilder = null,
-        errorTextStyle = null,
-        super(key: key);
+        errorTextStyle = null;
 
   Pin copyWith({
     PinItemConfig? defaultPinConfig,

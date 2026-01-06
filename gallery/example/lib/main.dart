@@ -153,7 +153,7 @@ class AlbumPage extends StatefulWidget {
   final Album album;
 
   /// The constructor of AlbumPage
-  AlbumPage(Album album) : album = album;
+  AlbumPage(this.album);
 
   @override
   State<StatefulWidget> createState() => _AlbumPageState();
@@ -223,7 +223,7 @@ class ViewerPage extends StatelessWidget {
   final Medium medium;
 
   /// The constructor of ViewerPage
-  ViewerPage(Medium medium) : medium = medium;
+  ViewerPage(this.medium);
 
   @override
   Widget build(BuildContext context) {

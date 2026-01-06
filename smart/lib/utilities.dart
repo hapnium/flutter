@@ -1,4 +1,4 @@
-library utilities;
+library;
 
 export 'src/utilities/typedefs.dart';
 

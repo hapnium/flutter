@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:tappy/src/models/notifier.dart';
 
-import 'tappy.dart';
+import '../tappy.dart';
 import 'tappy_controller.dart';
 
 /// {@template tappy_mixin}
@@ -52,30 +52,4 @@ mixin TappyMixin {
 
   /// Stream of notifications that caused the app to launch.
   Stream<Notifier> get launchedAppStream => controller.launchedAppController.stream;
-
-  /// List of all tapped notifications held in memory.
-  ///
-  /// Useful for retrieving previously tapped notifications.
-  List<Notifier> get tappedNotifications => controller.tappedNotifications;
-
-  /// List of all created notifications held in memory.
-  ///
-  /// These are not flushed until explicitly cleared.
-  List<Notifier> get createdNotifications => controller.createdNotifications;
-
-  /// Remove a created notification from memory.
-  ///
-  /// You can provide either [foreign] (external ID) or [id] (internal ID).
-  void removeCreated({String? foreign, int? id}) => controller.removeCreated(foreign: foreign, id: id);
-
-  /// Remove a tapped notification from memory.
-  ///
-  /// You can provide either [foreign] (external ID) or [id] (internal ID).
-  void removeTapped({String? foreign, int? id}) => controller.removeTapped(foreign: foreign, id: id);
-
-  /// Clear all buffered created notifications from memory.
-  void flushCreatedNotifications() => controller.flushCreatedNotifications();
-
-  /// Clear all buffered tapped notifications from memory.
-  void flushTappedNotifications() => controller.flushPendingTappedNotifications();
 }

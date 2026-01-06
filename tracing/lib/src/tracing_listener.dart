@@ -54,15 +54,15 @@ import 'printers/simple_printer.dart';
 /// {@endtemplate}
 abstract class TracingListener {
   /// {@macro application_log_listener}
-  LogLevel _level;
+  final LogLevel _level;
 
   /// {@macro application_log_listener}
-  LogPrinter _printer;
+  final LogPrinter _printer;
 
   /// {@macro application_log_listener}
-  void Function(String)? _output;
+  final void Function(String)? _output;
 
-  String _name;
+  final String _name;
 
   /// {@macro application_log_listener}
   TracingListener({

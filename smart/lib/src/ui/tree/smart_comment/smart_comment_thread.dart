@@ -65,6 +65,8 @@
 /// )
 /// ```
 ///
+library;
+
 import 'package:flutter/material.dart';
 import 'package:smart/smart.dart';
 

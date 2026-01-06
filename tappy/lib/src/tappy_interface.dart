@@ -6,7 +6,7 @@ import 'in_app_notification.dart';
 import 'models/tappy_information.dart';
 import 'device_notification_manager.dart';
 import 'tappy_lifecycle.dart';
-import 'tappy_controller.dart';
+import 'controller/tappy_controller.dart';
 
 /// {@template tappy_interface}
 /// An abstract base class that holds all core dependencies and configuration
@@ -20,7 +20,7 @@ import 'tappy_controller.dart';
 /// result in a [TappyException].
 /// {@endtemplate}
 abstract class TappyInterface {
-  bool _showLogs = true;
+  bool showLogs = true;
   TappyPlatform? _platform;
   TappyLifecycle? _lifecycle;
   TappyInformation? _info;
@@ -74,13 +74,6 @@ abstract class TappyInterface {
   /// Sets the target platform (Android/iOS).
   set platform(TappyPlatform platform) {
     _platform = platform;
-  }
-
-  /// Enables or disables logging.
-  ///
-  /// Defaults to `true`. Set this to `false` in production.
-  set showLogs(bool showLogs) {
-    _showLogs = showLogs;
   }
 
   /// Gets the in-app notification service.
@@ -140,9 +133,6 @@ abstract class TappyInterface {
     if (_deviceBuilder == null) _throwException();
     return _deviceBuilder!;
   }
-
-  /// Returns whether logging is enabled.
-  bool get showLogs => _showLogs;
 }
 
 /// Throws a [TappyException] if the application is not properly initialized.

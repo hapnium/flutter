@@ -14,14 +14,15 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  camera: ^0.11.1
-  file_picker: ^10.2.0
+  camera: ^0.11.3
+  file_picker: ^10.3.8
 
   gallery:
     path: ../gallery
+  smart:
+    path: ../smart
 
 dev_dependencies:
   tracing:
     path: ../tracing
-  smart:
-    path: ../smart
+  lints: ^6.0.0

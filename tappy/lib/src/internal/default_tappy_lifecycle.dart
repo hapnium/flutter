@@ -1,4 +1,3 @@
-import '../models/notifier.dart';
 import '../tappy_lifecycle.dart';
 
 /// {@template tappy_controller}
@@ -21,34 +20,4 @@ import '../tappy_lifecycle.dart';
 /// ```
 /// 
 /// {@endtemplate}
-final class DefaultTappyLifecycle<T> extends TappyLifecycle<T> {
-  @override
-  void onAppLaunched(Notifier<T> notifier) {
-    super.onAppLaunched(notifier);
-  }
-
-  @override
-  void onCreated(Notifier<T> notifier) {
-    super.onCreated(notifier);
-  }
-
-  @override
-  void onReceived(Notifier<T> notifier) {
-    super.onReceived(notifier);
-  }
-
-  @override
-  void onScheduled(Notifier<T> notifier) {
-    super.onScheduled(notifier);
-  }
-
-  @override
-  void onTapped(Notifier<T> notifier) {
-    super.onTapped(notifier);
-  }
-
-  @override
-  void onUseInApp(Notifier<T> notifier) {
-    super.onUseInApp(notifier);
-  }
-}
+final class DefaultTappyLifecycle extends TappyLifecycle {}

@@ -25,7 +25,7 @@ final FlutterLocalNotificationsPlugin plugin = FlutterLocalNotificationsPlugin()
 /// notificationService.init(appInfo, true, handler, backgroundHandler);
 /// ```
 /// {@endtemplate}
-class DefaultDeviceNotification<T> implements DeviceNotificationInterface<T> {
+class DefaultDeviceNotification implements DeviceNotificationInterface {
   /// Label prefix used for logging and debugging.
   ///
   /// Defaults to `"Tappy Device Core"`.
@@ -184,7 +184,7 @@ class DefaultDeviceNotification<T> implements DeviceNotificationInterface<T> {
   }
 
   @override
-  void onAppLaunchedByNotification(NotificationTapHandler<T> onReceived) async {
+  void onAppLaunchedByNotification(NotificationTapHandler onReceived) async {
     final NotificationAppLaunchDetails? details = !PlatformEngine.isWeb
         ? null
         : await plugin.getNotificationAppLaunchDetails();

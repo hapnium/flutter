@@ -83,7 +83,7 @@ void main() {
         String? result = Instance.ambiguate<String>(nullableString);
         expect(result, "Hello");
 
-        int? nullableInt = null;
+        int? nullableInt;
         int? resultInt = Instance.ambiguate<int>(nullableInt);
         expect(resultInt, null);
       });

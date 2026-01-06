@@ -90,7 +90,7 @@ abstract class ChatResponse {
 
   /// Encodes the response to a JSON string.
   @override
-  String toString() => jsonEncode(this.toJson());
+  String toString() => jsonEncode(toJson());
 
   /// Reconstructs a [ChatResponse] from a JSON string.
   ChatResponse fromString(String source) => ChatResponse.fromJson(jsonDecode(source));
@@ -566,12 +566,14 @@ class ChatRoom extends ChatResponse {
   }) : super(ChatDataType.room);
 
   /// The unique identifier of the chat room.
+  @override
   final String room;
 
   /// ID of the user associated with this chat.
   final String roommate;
 
   /// Name of the participant or chat room.
+  @override
   final String name;
 
   /// Avatar URL or path.
@@ -635,6 +637,7 @@ class ChatRoom extends ChatResponse {
   final String type;
 
   /// Shortened summary of the latest interaction.
+  @override
   final String summary;
 
   /// Creates a modified copy of this [ChatRoom] with selectively overridden fields.
@@ -765,7 +768,7 @@ class ChatRoom extends ChatResponse {
   /// 
   /// {@macro chat_room}
   @override
-  String toString() => jsonEncode(this.toJson());
+  String toString() => jsonEncode(toJson());
 
   /// Parses the object from a JSON string.
   /// 
@@ -789,6 +792,7 @@ class ChatNotification extends ChatResponse {
   final String id;
 
   /// Room or topic identifier that this notification belongs to.
+  @override
   final String room;
 
   /// Encoded or signed notification token or timestamp.
@@ -801,12 +805,14 @@ class ChatNotification extends ChatResponse {
   final String category;
 
   /// Brief summary of the notification content.
+  @override
   final String summary;
 
   /// Public encryption key associated with the user or notification sender.
   final String ePubKey;
 
   /// Name of the sender or subject.
+  @override
   final String name;
 
   /// {@macro chat_notification}

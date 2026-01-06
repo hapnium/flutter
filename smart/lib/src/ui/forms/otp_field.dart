@@ -252,7 +252,7 @@ class OtpField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final double _borderRadius = borderRadius ?? 10;
+    final double borderRadius = this.borderRadius ?? 10;
 
     final config = PinItemConfig(
       width: width ?? 60,
@@ -283,19 +283,19 @@ class OtpField extends StatelessWidget {
     if(builder.isNotNull) {
       return builder!(getPin(), context);
     } else if(type.isFilled) {
-      return _buildFilled(getPin(), context, config, _borderRadius);
+      return _buildFilled(getPin(), context, config, borderRadius);
     } else if(type.isBox) {
-      return _buildBox(getPin(), context, config, _borderRadius);
+      return _buildBox(getPin(), context, config, borderRadius);
     } else {
-      return _buildBottom(getPin(), context, config, _borderRadius);
+      return _buildBottom(getPin(), context, config, borderRadius);
     }
   }
 
   Pin _buildFilled(Pin pin, BuildContext context, PinItemConfig config, double borderRadius) {
-    Pin _pin = pin;
+    Pin pin0 = pin;
 
     if(defaultPinConfig.isNull) {
-      _pin = _pin.copyWith(defaultPinConfig: config.copyWith(
+      pin0 = pin0.copyWith(defaultPinConfig: config.copyWith(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(borderRadius),
           color: surfaceColor ?? Theme.of(context).colorScheme.surface
@@ -304,7 +304,7 @@ class OtpField extends StatelessWidget {
     }
 
     if(focusedPinConfig.isNull) {
-      _pin = _pin.copyWith(focusedPinConfig: config.copyWith(
+      pin0 = pin0.copyWith(focusedPinConfig: config.copyWith(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(focusedBorderRadius ?? borderRadius),
           border: Border.all(
@@ -315,14 +315,14 @@ class OtpField extends StatelessWidget {
       ));
     }
 
-    return _pin;
+    return pin0;
   }
 
   Pin _buildBox(Pin pin, BuildContext context, PinItemConfig config, double borderRadius) {
-    Pin _pin = pin;
+    Pin pin0 = pin;
 
     if(defaultPinConfig.isNull) {
-      _pin = _pin.copyWith(defaultPinConfig: config.copyWith(
+      pin0 = pin0.copyWith(defaultPinConfig: config.copyWith(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(borderRadius),
           border: Border.all(color: primaryColor ?? Theme.of(context).primaryColor)
@@ -331,7 +331,7 @@ class OtpField extends StatelessWidget {
     }
 
     if(focusedPinConfig.isNull) {
-      _pin = _pin.copyWith(focusedPinConfig: config.copyWith(
+      pin0 = pin0.copyWith(focusedPinConfig: config.copyWith(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(focusedBorderRadius ?? borderRadius),
           border: Border.all(
@@ -342,7 +342,7 @@ class OtpField extends StatelessWidget {
       ));
     }
 
-    return _pin;
+    return pin0;
   }
 
   Widget _buildBottom(Pin pin, BuildContext context, PinItemConfig config, double borderRadius) {

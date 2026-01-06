@@ -84,7 +84,7 @@
 /// ---
 ///
 /// {@category Notification}
-library tappy;
+library;
 
 /// CONFIG
 export 'src/config/tappy_event.dart';
@@ -121,10 +121,10 @@ export 'src/exception/tappy_exception.dart';
 
 /// CORE
 export 'src/tappy_application.dart';
-export 'src/tappy_mixin.dart';
+export 'src/controller/tappy_mixin.dart';
 export 'src/tappy_lifecycle.dart';
 export 'src/tappy.dart';
-export 'src/tappy_controller.dart';
+export 'src/controller/tappy_controller.dart';
 export 'src/device_notification.dart';
 export 'src/device_notification_builder.dart';
 export 'src/device_notification_manager.dart';

@@ -93,7 +93,7 @@ class LogCommons {
     final minute = local.minute.toString().padLeft(2, '0');
     final period = local.hour >= 12 ? 'PM' : 'AM';
 
-    return '$weekday, ${day}$suffix $month, $year | $hour:$minute$period';
+    return '$weekday, $day$suffix $month, $year | $hour:$minute$period';
   }
 
   /// Returns the name of the weekday for the given weekday number.

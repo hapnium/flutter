@@ -74,7 +74,7 @@ typedef PermissionCallback = void Function(bool granted);
 ///
 /// The [NotificationTapHandler] is invoked when a notification is tapped,
 /// providing the associated [Notifier] object.
-typedef NotificationTapHandler<T> = void Function(Notifier<T> notifier);
+typedef NotificationTapHandler = void Function(Notifier notifier);
 
 /// Callback type for handling notification responses.
 ///
@@ -130,7 +130,7 @@ T qualify<T>(T value, {T? orElse}) {
 R? process<T, R>(T? value, {R Function(T value)? onProcess, R Function()? orElse}) {
   if (isNotNull(value)) {
     if (onProcess != null) {
-      return onProcess(value!);
+      return onProcess(value as T);
     } else {
       return value as R?;
     }

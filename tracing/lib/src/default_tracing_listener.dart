@@ -1,7 +1,4 @@
 import 'enums/log_level.dart';
-import 'enums/log_type.dart';
-import 'log_printer.dart';
-import 'models/log_config.dart';
 import 'tracing_listener.dart';
 
 /// {@template default_log_listener}
@@ -53,11 +50,11 @@ import 'tracing_listener.dart';
 class DefaultTracingListener extends TracingListener {
   /// {@macro default_logger_listener}
   DefaultTracingListener({
-    LogLevel level = LogLevel.INFO,
-    LogPrinter? printer,
-    LogType type = LogType.SIMPLE,
-    void Function(String)? output,
-    String name = "",
-    LogConfig? config,
-  }) : super(level: level, printer: printer, type: type, output: output, name: name, config: config);
+    super.level,
+    super.printer,
+    super.type,
+    super.output,
+    super.name,
+    super.config,
+  });
 }

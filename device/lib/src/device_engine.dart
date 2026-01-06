@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:universal_io/io.dart';
 import 'package:tracing/tracing.dart';
@@ -68,15 +67,23 @@ class DeviceEngine {
   /// Default: [Device.empty()]
   Device _device = Device.empty();
 
+  bool _isWasm = false;
+  bool _isWeb = false;
+  bool _isDebugMode = false;
+
   /// Initializes the [DeviceEngine] by gathering platform and network details.
   ///
   /// This must be called once before accessing other properties.
   ///
   /// You can optionally provide a [debug] flag to log output and a
   /// [ipAddressSupplier] function to override the default IP fetch logic.
-  Future<void> initialize({bool debug = false, IpAddressFetcher? ipAddressSupplier}) async {
+  Future<void> initialize({bool debug = false, IpAddressFetcher? ipAddressSupplier, bool? isWasm, bool? isWeb, bool? isDebugMode}) async {
     _customIpAddressFetcher = ipAddressSupplier;
     _ipAddress = await _fetchDeviceIpAddress();
+    _isWasm = isWasm ?? false;
+    _isWeb = isWeb ?? false;
+    _isDebugMode = isDebugMode ?? false;
+
     await _prepareDevice();
 
     if(debug) {
@@ -240,10 +247,10 @@ class DeviceEngine {
   }
 
   /// Returns `true` if the application is running on a web platform for `wasm`.
-  bool get isWebWasm => kIsWasm;
+  bool get isWebWasm => _isWasm;
 
   /// Returns `true` if the application is running on a web platform.
-  bool get isWeb => kIsWeb || isWebWasm;
+  bool get isWeb => _isWeb || isWebWasm;
 
   /// Returns `true` if the application is running on an Android device.
   bool get isAndroid => !isWeb && Platform.isAndroid;
@@ -292,7 +299,7 @@ class DeviceEngine {
   Device get device => _device;
 
   /// Returns whether the application is running in debug mode.
-  bool get debug => kDebugMode;
+  bool get debug => _isDebugMode;
 
   /// Returns the name of the current platform.
   ///

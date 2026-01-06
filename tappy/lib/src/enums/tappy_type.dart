@@ -150,42 +150,42 @@ enum TappyType {
   /// 
   /// {@macro tappy_type}
   static TappyType fromData(Data data) {
-    bool hasDefault = data.containsKey(DEFAULT);
-    bool hasDefaultCall = data.containsKey(DEFAULT_CALL);
+    bool hasDefault = data.containsKey(DEFAULT.name);
+    bool hasDefaultCall = data.containsKey(DEFAULT_CALL.name);
     
-    if(hasDefault && data[DEFAULT] == CHAT) {
+    if(hasDefault && data[DEFAULT.name] == CHAT) {
       return CHAT;
     }
 
-    if((hasDefault && data[DEFAULT] == CALL) || (hasDefaultCall && data[DEFAULT_CALL] == CALL)) {
+    if((hasDefault && data[DEFAULT.name] == CALL) || (hasDefaultCall && data[DEFAULT_CALL.name] == CALL)) {
       return CALL;
     }
 
-    if(hasDefault && data[DEFAULT] == TRANSACTION) {
+    if(hasDefault && data[DEFAULT.name] == TRANSACTION) {
       return TRANSACTION;
     }
 
-    if(hasDefault && data[DEFAULT] == TRIP) {
+    if(hasDefault && data[DEFAULT.name] == TRIP) {
       return TRIP;
     }
 
-    if(hasDefault && data[DEFAULT] == SCHEDULE) {
+    if(hasDefault && data[DEFAULT.name] == SCHEDULE) {
       return SCHEDULE;
     }
 
-    if(hasDefault && data[DEFAULT] == NEARBY_BCAP) {
+    if(hasDefault && data[DEFAULT.name] == NEARBY_BCAP) {
       return NEARBY_BCAP;
     }
 
-    if(hasDefault && data[DEFAULT] == NEARBY_ACTIVITY) {
+    if(hasDefault && data[DEFAULT.name] == NEARBY_ACTIVITY) {
       return NEARBY_ACTIVITY;
     }
 
-    if(hasDefault && data[DEFAULT] == NEARBY_TREND) {
+    if(hasDefault && data[DEFAULT.name] == NEARBY_TREND) {
       return NEARBY_TREND;
     }
 
-    if(hasDefault && data[DEFAULT] == NEARBY_TOURNAMENT) {
+    if(hasDefault && data[DEFAULT.name] == NEARBY_TOURNAMENT) {
       return NEARBY_TOURNAMENT;
     }
 

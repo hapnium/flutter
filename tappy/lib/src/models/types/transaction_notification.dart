@@ -490,7 +490,7 @@ class Transaction extends TransactionResponse {
 
   /// Serializes this [Transaction] object into a JSON string.
   @override
-  String toString() => jsonEncode(this.toJson());
+  String toString() => jsonEncode(toJson());
 
   /// Parses a JSON string and returns a [Transaction] instance.
   /// 
@@ -587,7 +587,7 @@ abstract class TransactionResponse {
 
   /// Converts this response to a JSON string.
   @override
-  String toString() => jsonEncode(this.toJson());
+  String toString() => jsonEncode(toJson());
 
   /// Parses a JSON string and returns a [TransactionResponse].
   /// 
@@ -681,7 +681,7 @@ class TransactionNotification extends TransactionResponse {
 
   /// Converts this notification into a JSON string.
   @override
-  String toString() => jsonEncode(this.toJson());
+  String toString() => jsonEncode(toJson());
 
   /// Parses a JSON string into a [TransactionNotification].
   /// 

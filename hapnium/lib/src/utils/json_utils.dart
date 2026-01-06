@@ -18,7 +18,7 @@ class JsonUtils<T> {
   /// {@macro json_utils}
   JsonUtils();
 
-  Map<Type, JsonUtilsDecoder<dynamic>> _adapters = {};
+  final Map<Type, JsonUtilsDecoder<dynamic>> _adapters = {};
 
   /// Registers a type adapter for the specified type `T`.
   JsonUtils<T> registerAdapter(JsonUtilsDecoder<T> decoder) {
@@ -28,7 +28,7 @@ class JsonUtils<T> {
   }
 
   /// Finds and applies the registered adapter for the given type `T`.
-  T? _decodeWithAdapter<T>(Map<String, dynamic> json) {
+  T? _decodeWithAdapter(Map<String, dynamic> json) {
     JsonUtilsDecoder? adapter = _adapters[T] as JsonUtilsDecoder<T>?;
     if (adapter.isNotNull) {
       return adapter!(json);
@@ -47,7 +47,7 @@ class JsonUtils<T> {
     } catch (_) {
       JsonMap value = JsonMap.from(jsonDecode(data));
 
-      T? result = _decodeWithAdapter<T>(value);
+      T? result = _decodeWithAdapter(value);
       if (result.isNotNull) {
         return result!;
       } else {

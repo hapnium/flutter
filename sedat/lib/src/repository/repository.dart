@@ -66,6 +66,7 @@ abstract class Repository<Result, Insert> extends BaseRepository<Result, Insert>
   /// **Returns:**
   ///
   /// The [Repository] instance for method chaining.
+  @override
   Repository<Result, Insert> registerDefault(Result value) {
     _defaultValue = value;
     _isDefaultRegistered = true;
@@ -146,7 +147,7 @@ abstract class Repository<Result, Insert> extends BaseRepository<Result, Insert>
     }
 
     if (_adapter.isNotNull) {
-      return _adapter!(data!);
+      return _adapter!(data as Insert);
     }
 
     throw SecureDatabaseException("[SD-EXCEPTION] You must call `registerAdapter`");

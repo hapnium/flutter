@@ -192,7 +192,7 @@ abstract class BaseAvatar extends StatelessWidget {
     final ImageProvider? foreground = foregroundImageBuilder.isNotNull ? foregroundImageBuilder!(context, fallback) : null;
     final ImageErrorListener foregroundError = onForegroundImageError ?? (Object exception, StackTrace? stackTrace) {
       if (showLogs) {
-        console.log("${exception} || ${stackTrace}", tag: "[BASE AVATAR - onForegroundImageError]");
+        console.log("$exception || $stackTrace", tag: "[BASE AVATAR - onForegroundImageError]");
       }
     };
 
@@ -200,7 +200,7 @@ abstract class BaseAvatar extends StatelessWidget {
     final ImageProvider? background = backgroundImageBuilder.isNotNull ? backgroundImageBuilder!(context, fallback) : null;
     final ImageErrorListener? backgroundError = background.isNotNull ? onBackgroundImageError ?? (Object exception, StackTrace? stackTrace) {
       if (showLogs) {
-        console.log("${exception} || ${stackTrace}", tag: "[BASE AVATAR - onBackgroundImageError]");
+        console.log("$exception || $stackTrace", tag: "[BASE AVATAR - onBackgroundImageError]");
       }
     } : null;
 

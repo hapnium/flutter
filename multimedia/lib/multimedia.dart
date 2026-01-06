@@ -16,7 +16,7 @@
 /// - **Widgets**: Core camera/gallery widgets and progress slider
 ///
 /// {@endtemplate}
-library multimedia;
+library;
 
 /// {@template multimedia_typedefs_exports}
 /// # Typedefs

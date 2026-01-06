@@ -74,7 +74,7 @@ class AlbumListView extends StatelessWidget {
                 shape: isSelected ? configuration.selectedShape ?? RoundedRectangleBorder(
                   side: BorderSide(color: color, width: 2),
                   borderRadius: BorderRadius.circular(6),
-                ) : configuration.unselectedShape ?? null,
+                ) : configuration.unselectedShape,
                 child: InkWell(
                   onTap: () => onSelected(medium),
                   child: Column(

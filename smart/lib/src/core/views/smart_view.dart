@@ -1,7 +1,7 @@
 import 'package:meta/meta.dart';
-
 import 'package:flutter/widgets.dart' show StatelessWidget, Widget, BuildContext;
 import 'package:smart/responsive.dart';
+
 import '../di/smart_di.dart';
 import '../state/smart_controller.dart';
 

@@ -1,4 +1,4 @@
-library styles;
+library;
 
 /// MODELS
 export 'src/styles/models/theme_settings.dart';

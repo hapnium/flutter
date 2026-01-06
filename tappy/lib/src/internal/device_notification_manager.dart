@@ -40,11 +40,11 @@ class DefaultDeviceNotificationManager<T> implements DeviceNotificationManagerIn
     notifications = notifications.where((n) => n.channelId == id).toList();
 
     if(notifications.isNotEmpty) {
-      notifications.forEach((n) async {
+      for (final n in notifications) {
         if(n.id != null) {
           await plugin.cancel(n.id!);
         }
-      });
+      }
     }
   }
 
@@ -54,11 +54,11 @@ class DefaultDeviceNotificationManager<T> implements DeviceNotificationManagerIn
     notifications = notifications.where((n) => n.groupKey == groupKey).toList();
 
     if(notifications.isNotEmpty) {
-      notifications.forEach((n) async {
+      for (final n in notifications) {
         if(n.id != null) {
           await plugin.cancel(n.id!);
         }
-      });
+      }
     }
   }
 }

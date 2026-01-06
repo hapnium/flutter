@@ -35,4 +35,9 @@ enum TappyApp {
   ///
   /// This app is intended for AI security platform, blink.
   blink,
+
+  /// The relay-focused app.
+  ///
+  /// This app is intended for call screening and management.
+  relay
 }

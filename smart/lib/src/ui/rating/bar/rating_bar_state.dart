@@ -1,3 +1,5 @@
+// ignore_for_file: deprecated_member_use
+
 part of 'rating_bar.dart';
 
 class _RatingBarState extends State<RatingBar> {
@@ -55,10 +57,10 @@ class _RatingBarState extends State<RatingBar> {
     Widget? item = widget._itemBuilder.isNotNull ? widget._itemBuilder!(context, index) : null;
     double ratingOffset = widget.allowHalfRating ? 0.5 : 1.0;
 
-    Widget _child;
+    Widget child0;
 
     if (index >= _rating) {
-      _child = _NoRatingWidget(
+      child0 = _NoRatingWidget(
         size: widget.itemSize,
         child: child?.empty ?? item!,
         enableMask: child == null,
@@ -66,7 +68,7 @@ class _RatingBarState extends State<RatingBar> {
       );
     } else if (index >= _rating - ratingOffset && widget.allowHalfRating) {
       if (child?.half == null) {
-        _child = _HalfRatingWidget(
+        child0 = _HalfRatingWidget(
           size: widget.itemSize,
           child: item!,
           enableMask: child == null,
@@ -74,7 +76,7 @@ class _RatingBarState extends State<RatingBar> {
           unratedColor: widget.unratedColor ?? Theme.of(context).disabledColor,
         );
       } else {
-        _child = SizedBox(
+        child0 = SizedBox(
           width: widget.itemSize,
           height: widget.itemSize,
           child: FittedBox(
@@ -90,7 +92,7 @@ class _RatingBarState extends State<RatingBar> {
       }
       iconRating += 0.5;
     } else {
-      _child = SizedBox(
+      child0 = SizedBox(
         width: widget.itemSize,
         height: widget.itemSize,
         child: FittedBox(
@@ -154,7 +156,7 @@ class _RatingBarState extends State<RatingBar> {
               }
               return child!;
             },
-            child: _child,
+            child: child0,
           ),
         ),
       ),
@@ -168,12 +170,12 @@ class _RatingBarState extends State<RatingBar> {
       final box = context.findRenderObject() as RenderBox?;
       if (box == null) return;
 
-      final _pos = box.globalToLocal(dragDetails.globalPosition);
+      final pos = box.globalToLocal(dragDetails.globalPosition);
       double i;
       if (widget.direction == Axis.horizontal) {
-        i = _pos.dx / (widget.itemSize + widget.itemPadding.horizontal);
+        i = pos.dx / (widget.itemSize + widget.itemPadding.horizontal);
       } else {
-        i = _pos.dy / (widget.itemSize + widget.itemPadding.vertical);
+        i = pos.dy / (widget.itemSize + widget.itemPadding.vertical);
       }
 
       var currentRating = widget.allowHalfRating ? i : i.round().toDouble();

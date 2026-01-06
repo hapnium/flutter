@@ -7,7 +7,7 @@ class _PreferenceSelectorState extends State<PreferenceSelector> {
   late PreferenceOption _preference;
   late SecurityType _security;
 
-  bool _isLoading = false;
+  final bool _isLoading = false;
 
   @override
   void initState() {

@@ -38,7 +38,7 @@ abstract class SecureMessaging implements SecureMessagingService {
   /// on the provided [PemStyle].
   /// 
   /// {@macro secure_messaging}
-  @deprecated
+  @Deprecated("`resolve` is now deprecated and will be removed. Use `SecureMessaging.ec or SecureMessaging.rsa")
   static SecureMessaging resolve(PemStyle style) {
     if (style == PemStyle.RSA) {
       return SecureMessaging.rsa();

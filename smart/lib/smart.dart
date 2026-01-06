@@ -12,7 +12,7 @@
 /// ## 🔧 Modules Exported
 /// This library exports the following key parts of the application:
 
-library smart;
+library;
 
 /// ---------------------------------------------------------------------------
 /// 📁 Core Application Libraries

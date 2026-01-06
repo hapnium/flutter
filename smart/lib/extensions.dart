@@ -1,4 +1,4 @@
-library extensions;
+library;
 
 /// ENUMS
 export 'src/extensions/enums/enum.dart';

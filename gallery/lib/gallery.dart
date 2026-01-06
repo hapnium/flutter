@@ -30,7 +30,7 @@
 ///
 /// > Note: Some methods may behave differently across platforms. Ensure permissions are handled properly on Android and iOS.
 /// {@endtemplate}
-library gallery;
+library;
 
 /// Exposes the [MediumType] enum and related utilities for describing types of media.
 ///

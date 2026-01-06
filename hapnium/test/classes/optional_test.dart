@@ -713,7 +713,7 @@ void main() {
     });
 
     test('nullable types work correctly', () {
-      String? nullableString = null;
+      String? nullableString;
       Optional<String> opt = Optional.ofNullable(nullableString);
       expect(opt.isEmpty(), isTrue);
       

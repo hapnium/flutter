@@ -46,7 +46,7 @@
 /// This library makes use of the `Device` model to encapsulate relevant device information,
 /// and `DeviceValidator` to represent the outcome of each validation.
 /// {@endtemplate}
-library device;
+library;
 
 export 'src/models/device.dart';
 export 'src/models/device_validator.dart';

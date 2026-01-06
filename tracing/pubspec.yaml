@@ -9,3 +9,6 @@ repository: https://github.com/Hapnium/flutter/tree/main/tracing
 
 environment:
   sdk: ^3.0.0
+
+dev_dependencies:
+  lints: ^6.0.0
