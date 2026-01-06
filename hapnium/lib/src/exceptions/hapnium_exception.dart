@@ -8,7 +8,7 @@
 /// these errors occur.
 /// 
 /// {@endtemplate}
-class HapniumException implements Exception {
+class HapniumException extends Error implements Exception {
   /// A descriptive message that explains the cause of the exception.
   String message;
 
@@ -41,11 +41,5 @@ class HapniumException implements Exception {
   /// // Output: "Main Exception: An error occurred. Code: 500"
   /// ```
   @override
-  String toString() {
-    if (code != null) {
-      return "Global Hapnium Exception: $message. Code: $code";
-    }
-
-    return "Global Hapnium Exception: $message";
-  }
+  String toString() => message;
 }

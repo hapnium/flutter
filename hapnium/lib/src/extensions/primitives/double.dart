@@ -1,11 +1,28 @@
+// ---------------------------------------------------------------------------
+// 🍃 JetLeaf Framework - https://jetleaf.hapnium.com
+//
+// Copyright © 2025 Hapnium & JetLeaf Contributors. All rights reserved.
+//
+// This source file is part of the JetLeaf Framework and is protected
+// under copyright law. You may not copy, modify, or distribute this file
+// except in compliance with the JetLeaf license.
+//
+// For licensing terms, see the LICENSE file in the root of this project.
+// ---------------------------------------------------------------------------
+// 
+// 🔧 Powered by Hapnium — the Dart backend engine 🍃
+
 import 'dart:math';
 
 import 'int.dart';
-import './iterable.dart';
+import 'iterable.dart';
 
 extension DoubleExtensions on double {
   /// Case equality check.
   bool equals(double other) => this == other;
+
+  /// Case equality check.
+  bool isEqualTo(double other) => equals(other);
 
   /// Checks if double equals any item in the list
   bool equalsAny(List<double> values) => values.any((v) => equals(v));
@@ -15,6 +32,9 @@ extension DoubleExtensions on double {
 
   /// Case in-equality check.
   bool notEquals(double other) => this != other;
+
+  /// Case in-equality check.
+  bool isNotEqualTo(double other) => notEquals(other);
 
   /// Checks if double does not equals any item in the list
   bool notEqualsAny(List<double> values) => !values.any((v) => equals(v));

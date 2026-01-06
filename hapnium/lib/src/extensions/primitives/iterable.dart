@@ -1,4 +1,18 @@
-import 'package:hapnium/hapnium.dart';
+// ---------------------------------------------------------------------------
+// 🍃 JetLeaf Framework - https://jetleaf.hapnium.com
+//
+// Copyright © 2025 Hapnium & JetLeaf Contributors. All rights reserved.
+//
+// This source file is part of the JetLeaf Framework and is protected
+// under copyright law. You may not copy, modify, or distribute this file
+// except in compliance with the JetLeaf license.
+//
+// For licensing terms, see the LICENSE file in the root of this project.
+// ---------------------------------------------------------------------------
+// 
+// 🔧 Powered by Hapnium — the Dart backend engine 🍃
+
+import '../../utils/typedefs.dart';
 
 extension IterableExtension<T> on Iterable<T> {
   /// Flattens lists of items into a single iterable.
@@ -70,14 +84,27 @@ extension IterableExtension<T> on Iterable<T> {
     return true;
   }
 
+  /// Checks whether all elements in [items] are contained in this collection.
+  ///
+  /// Returns `true` if every element of [items] exists in this collection; 
+  /// otherwise returns `false`.
+  ///
+  /// Example:
+  /// ```dart
+  /// final mySet = {1, 2, 3};
+  /// print(mySet.matches([1, 2])); // true
+  /// print(mySet.matches([1, 4])); // false
+  /// ```
+  bool matches(Iterable<T> items) => every(items.contains);
+
   /// Finds the index of the first element that satisfies the given predicate.
   ///
   /// Returns the index of the first element in the iterable
   /// that matches the provided `test` function.
   /// Returns -1 if no such element is found.
   int findIndex(ConditionTester<T> test) {
-    for (var i = 0; i < this.length; i++) {
-      if (test(this.elementAt(i))) {
+    for (var i = 0; i < length; i++) {
+      if (test(elementAt(i))) {
         return i;
       }
     }
@@ -93,6 +120,34 @@ extension IterableExtension<T> on Iterable<T> {
       if (test(element)) {
         return element;
       }
+    }
+    return null;
+  }
+
+  /// Returns the first element that satisfies the predicate or `null` if none match.
+  /// 
+  /// ## Parameters
+  /// - `test`: The predicate to check
+  /// 
+  /// ## Returns
+  /// - The first element that satisfies the predicate or `null` if none match
+  T? firstWhereOrNull(ConditionTester<T> test) {
+    for (var element in this) {
+      if (test(element)) return element;
+    }
+    return null;
+  }
+
+  /// Returns the last element that satisfies the predicate or `null` if none match.
+  /// 
+  /// ## Parameters
+  /// - `test`: The predicate to check
+  /// 
+  /// ## Returns
+  /// - The last element that satisfies the predicate or `null` if none match
+  T? lastWhereOrNull(ConditionTester<T> test) {
+    for (var element in toList().reversed) {
+      if (test(element)) return element;
     }
     return null;
   }
@@ -136,9 +191,6 @@ extension IterableExtension<T> on Iterable<T> {
   /// Checks if none of the elements match a condition using noneMatch.
   bool noneMatch(ConditionTester<T> test) => none(test);
 
-  /// Converts the iterable to a stream.
-  Stream<T> stream() => Stream.fromIterable(this);
-
   /// Finds the index of an element that satisfies the predicate or returns `null` if not found.
   int? indexWhereOrNull(ConditionTester<T> test) {
     for (var i = 0; i < length; i++) {
@@ -147,8 +199,11 @@ extension IterableExtension<T> on Iterable<T> {
     return null;
   }
 
+  /// Converts the iterable to a stream.
+  Stream<T> stream() => Stream.fromIterable(this);
+
   /// Filters elements of a specific type `T`.
-  Iterable<T> whereType<T>() => this.where((element) => element is T).cast<T>();
+  Iterable<T> whereType<U>() => where((element) => element is U).cast<T>();
 
   /// Returns an iterable with elements that match a condition, or `null` if none match.
   Iterable<T>? whereOrNull(ConditionTester<T> test) {
@@ -248,5 +303,116 @@ extension IterableExtension<T> on Iterable<T> {
     }
 
     return result;
+  }
+
+  /// Returns the first element of the iterable.
+  /// 
+  /// ## Returns
+  /// - The first element of the iterable
+  /// 
+  /// ## Throws
+  /// - `StateError` if the iterable is empty
+  /// 
+  /// ## Example
+  /// ```dart
+  /// final numbers = <int>[1, 2, 3, 5, 6, 7];
+  /// var result = numbers.getFirst(); // 1
+  /// ```
+  T getFirst() {
+    try {
+      return first;
+    } catch (e) {
+      throw StateError("Failed to get first element of iterable");
+    }
+  }
+
+  /// Returns the last element of the iterable.
+  /// 
+  /// ## Returns
+  /// - The last element of the iterable
+  /// 
+  /// ## Throws
+  /// - `StateError` if the iterable is empty
+  /// 
+  /// ## Example
+  /// ```dart
+  /// final numbers = <int>[1, 2, 3, 5, 6, 7];
+  /// var result = numbers.getLast(); // 7
+  /// ```
+  T getLast() {
+    try {
+      return last;
+    } catch (e) {
+      throw StateError("Failed to get last element of iterable");
+    }
+  }
+
+  /// Returns the element at the specified index.
+  /// 
+  /// ## Parameters
+  /// - `index`: The index of the element to return
+  /// 
+  /// ## Returns
+  /// - The element at the specified index
+  /// 
+  /// ## Throws
+  /// - `StateError` if the index is out of bounds
+  /// 
+  /// ## Example
+  /// ```dart
+  /// final numbers = <int>[1, 2, 3, 5, 6, 7];
+  /// var result = numbers.get(2); // 3
+  /// ```
+  T get([int index = 0]) {
+    try {
+      return elementAt(index);
+    } catch (e) {
+      throw StateError("Failed to get element at index $index. Found $length items");
+    }
+  }
+
+  /// Maps the iterable to a new iterable using the provided [mapper] function.
+  /// 
+  /// ## Parameters
+  /// - `mapper`: The function to apply to each element of the iterable
+  /// 
+  /// ## Returns
+  /// - A new iterable containing the mapped elements
+  /// 
+  /// ## Example
+  /// ```dart
+  /// final fruits = ["apple", "banana", "cherry"];
+  ///
+  /// final fruitLengthMap = fruits.toMap(
+  ///   (fruit) => fruit,        // key = the fruit itself
+  ///   (fruit) => fruit.length, // value = length of the fruit
+  /// );
+  // 
+  /// print(fruitLengthMap); // {apple: 5, banana: 6, cherry: 6}
+  /// ```
+  Map<K, V> toMap<K, V>(K Function(T item) keySelector, V Function(T item) valueSelector) {
+    final Map<K, V> result = {};
+    for (final element in this) {
+      final key = keySelector(element);
+      result.putIfAbsent(key, () => valueSelector(element));
+    }
+
+    return result;
+  }
+
+  /// Processes each element of the iterable using the provided [action] function.
+  /// 
+  /// ## Parameters
+  /// - `action`: The function to apply to each element of the iterable
+  /// 
+  /// ## Example
+  /// ```dart
+  /// final numbers = <int>[1, 2, 3, 5, 6, 7];
+  /// numbers.process((e) => print(e));
+  /// ```
+  void process(Function(T item) action) {
+    for (final element in this) {
+      action(element);
+    }
   }
 }

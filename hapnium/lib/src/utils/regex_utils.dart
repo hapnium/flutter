@@ -196,4 +196,30 @@ class RegexUtils {
     r'[\uD83F-\uD87F][\uDC00-\uDFFF]|'
     r'[\u2600-\u26FF]|[\u2700-\u27BF]',
   );
+
+  /// Emoji regex tuned to match emoji codepoint ranges (including Misc Technical U+2300–U+23FF)
+  /// while deliberately avoiding box-drawing (U+2500–U+257F) and many other non-emoji ranges.
+  /// The 'unicode: true' option is important.
+  static final RegExp targetedEmoji = RegExp(
+    // Match sequences of emoji codepoints, variation selectors, ZWJ and skin tone modifiers.
+    // This covers most emoji blocks: Emoticons, Misc Symbols & Pictographs, Transport & Map,
+    // Supplemental Symbols, Dingbats, Regional Indicators (flags), plus FE0F and ZWJ and skin tones.
+    r'[\u{1F1E6}-\u{1F1FF}' // regional indicator (flags)
+    r'\u{1F300}-\u{1F5FF}'  // Misc Symbols and Pictographs
+    r'\u{1F600}-\u{1F64F}'  // Emoticons
+    r'\u{1F680}-\u{1F6FF}'  // Transport & Map
+    r'\u{1F700}-\u{1F77F}'  // Alchemical Symbols etc
+    r'\u{1F780}-\u{1F7FF}'  // Geometric Shapes Extended
+    r'\u{1F900}-\u{1F9FF}'  // Supplemental Symbols and Pictographs
+    r'\u{1FA00}-\u{1FA6F}'  // Chess etc
+    r'\u{1FA70}-\u{1FAFF}'  // Symbols & Pictographs Extended-A
+    r'\u{2600}-\u{26FF}'    // Misc symbols (sun, cloud...)
+    r'\u{2700}-\u{27BF}'    // Dingbats
+    r'\u{2300}-\u{23FF}'    // Misc Technical
+    r'\u{FE0F}'             // Variation selector-16
+    r'\u{1F3FB}-\u{1F3FF}'  // Skin tone modifiers
+    r'\u200D'               // Zero-width joiner (ZWJ)
+    r']+',
+    unicode: true,
+  );
 }

@@ -1,11 +1,27 @@
+// ---------------------------------------------------------------------------
+// 🍃 JetLeaf Framework - https://jetleaf.hapnium.com
+//
+// Copyright © 2025 Hapnium & JetLeaf Contributors. All rights reserved.
+//
+// This source file is part of the JetLeaf Framework and is protected
+// under copyright law. You may not copy, modify, or distribute this file
+// except in compliance with the JetLeaf license.
+//
+// For licensing terms, see the LICENSE file in the root of this project.
+// ---------------------------------------------------------------------------
+// 
+// 🔧 Powered by Hapnium — the Dart backend engine 🍃
+
 import 'dart:math';
 
-import '../../exceptions/hapnium_exception.dart';
-import './iterable.dart';
+import 'iterable.dart';
 
 extension IntExtensions on int {
   /// Case equality check.
   bool equals(int other) => this == other;
+
+  /// Case equality check.
+  bool isEqualTo(int other) => equals(other);
 
   /// Checks if int equals any item in the list
   bool equalsAny(List<int> values) => values.any((v) => equals(v));
@@ -15,6 +31,9 @@ extension IntExtensions on int {
 
   /// Case in-equality check.
   bool notEquals(int other) => this != other;
+
+  /// Case in-equality check.
+  bool isNotEqualTo(int other) => notEquals(other);
 
   /// Checks if int does not equals any item in the list
   bool notEqualsAny(List<int> values) => !values.any((v) => equals(v));
@@ -33,13 +52,6 @@ extension IntExtensions on int {
 
   /// Generates a list of integers from 0 up to (but not including) this integer.
   List<int> get listGenerator => List.generate(this, (index) => index);
-
-  /// Converts the integer to a string suitable for an audio timer (MM or SS format).
-  @Deprecated("`toAudioTimer` is deprecated, use [toTimeUnit()] instead.")
-  String get toAudioTimer {
-    String numberStr = toString();
-    return this < 10 ? '0$numberStr' : numberStr;
-  }
 
   /// Formats the integer as a two-digit time unit for playback duration (MM or SS).
   ///
@@ -131,22 +143,22 @@ extension IntExtensions on int {
   bool isLengthBetween(int min, int max) => isLengthGreaterThanOrEqualTo(min) && isLengthLessThanOrEqualTo(max);
 
   /// Converts the double value to a `Duration` in seconds.
-  Duration get seconds => Duration(seconds: this.toInt());
+  Duration get seconds => Duration(seconds: toInt());
 
   /// Converts the double value to a `Duration` in days.
-  Duration get days => Duration(days: this.toInt());
+  Duration get days => Duration(days: toInt());
 
   /// Converts the double value to a `Duration` in hours.
-  Duration get hours => Duration(hours: this.toInt());
+  Duration get hours => Duration(hours: toInt());
 
   /// Converts the double value to a `Duration` in minutes.
-  Duration get minutes => Duration(minutes: this.toInt());
+  Duration get minutes => Duration(minutes: toInt());
 
   /// Converts the double value to a `Duration` in milliseconds.
-  Duration get milliseconds => Duration(milliseconds: this.toInt());
+  Duration get milliseconds => Duration(milliseconds: toInt());
 
   /// Converts the double value to a `Duration` in microseconds.
-  Duration get microseconds => Duration(microseconds: this.toInt());
+  Duration get microseconds => Duration(microseconds: toInt());
 
   /// Divides the current integer by the given value.
   double divideBy(int value) => this / value;
@@ -222,7 +234,7 @@ extension IntExtensions on int {
   /// A human-readable string representation of the input number.
   String get prettyFormat {
     if (this < 1000) {
-      return this.toString();
+      return toString();
     } else if (this < 1_000_000) {
       return "${(this / 1000.0).toStringAsFixed(1)}k";
     } else if (this < 1_000_000_000) {
@@ -256,7 +268,7 @@ extension IntExtensions on int {
   /// - If the integer already has the same or more digits, it returns the number as a string.
   String toDigits([int digits = 2]) {
     if(digits <= 0) {
-      throw HapniumException('digits must be greater than 0');
+      throw ArgumentError('digits must be greater than 0');
     }
 
     return toString().padLeft(digits, '0');

@@ -1,5 +1,16 @@
-import '../../exceptions/hapnium_exception.dart';
-import '../../utils/typedefs.dart' show JsonMapCollection, JsonMap;
+// ---------------------------------------------------------------------------
+// 🍃 JetLeaf Framework - https://jetleaf.hapnium.com
+//
+// Copyright © 2025 Hapnium & JetLeaf Contributors. All rights reserved.
+//
+// This source file is part of the JetLeaf Framework and is protected
+// under copyright law. You may not copy, modify, or distribute this file
+// except in compliance with the JetLeaf license.
+//
+// For licensing terms, see the LICENSE file in the root of this project.
+// ---------------------------------------------------------------------------
+// 
+// 🔧 Powered by Hapnium — the Dart backend engine 🍃
 
 /// Returns whether a dynamic value PROBABLY
 /// has the isEmpty getter/method by checking
@@ -11,7 +22,7 @@ bool _isEmpty(dynamic value) {
     return value.toString().trim().isEmpty;
   }
 
-  if (value is Iterable || value is Map || value is Set || value == JsonMap || value == JsonMapCollection) {
+  if (value is Iterable || value is Map || value is Set) {
     return value.isEmpty as bool? ?? false;
   }
   return false;
@@ -50,7 +61,7 @@ extension TExtensions<T> on T? {
   /// Executes the given [action] if the value is not null.
   ///
   /// Returns the result of the [action] or null if the value is null.
-  R? let<R>(R Function(T) action) => this != null ? action(this!) : null;
+  R? let<R>(R Function(T) action) => this != null ? action(this as T) : null;
 
   /// Executes the given [action] if the value is null.
   ///
@@ -60,11 +71,11 @@ extension TExtensions<T> on T? {
     return this;
   }
 
-  /// Returns this value if it is not null, otherwise throws a [GlobalHapniumException].
-  T? getOrThrow([String? message]) {
+  /// Returns this value if it is not null, otherwise throws a [JetException].
+  T getOrThrow([String? message]) {
     if (isNull) {
-      throw HapniumException(message ?? "");
+      throw ArgumentError(message ?? "");
     }
-    return this;
+    return this!;
   }
 }

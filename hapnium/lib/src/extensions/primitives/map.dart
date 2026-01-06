@@ -1,3 +1,17 @@
+// ---------------------------------------------------------------------------
+// 🍃 JetLeaf Framework - https://jetleaf.hapnium.com
+//
+// Copyright © 2025 Hapnium & JetLeaf Contributors. All rights reserved.
+//
+// This source file is part of the JetLeaf Framework and is protected
+// under copyright law. You may not copy, modify, or distribute this file
+// except in compliance with the JetLeaf license.
+//
+// For licensing terms, see the LICENSE file in the root of this project.
+// ---------------------------------------------------------------------------
+// 
+// 🔧 Powered by Hapnium — the Dart backend engine 🍃
+
 import '../../utils/instance.dart';
 import '../others/t.dart';
 
@@ -68,5 +82,45 @@ extension MapExtensions<K, V> on Map<K, V> {
   /// - `item`: The value to add
   void add(K key, V item) {
     update(key, (v) => v.notEquals(item) ? item : v, ifAbsent: () => item);
+  }
+
+  /// Add item
+  /// 
+  /// If the key already exists, it will be updated only if the value is different.
+  /// 
+  /// ## Parameters
+  /// - `key`: The key to add
+  /// - `value`: The value to add
+  void put(K key, V value) {
+    putIfAbsent(key, () => value);
+  }
+
+  /// Get value by key
+  /// 
+  /// ## Parameters
+  /// - `key`: The key to get
+  /// 
+  /// ## Returns
+  /// - The value associated with the key
+  V? get(K key) {
+    return this[key];
+  }
+
+  /// Computes a value for the given key if it is not already present in the map.
+  /// 
+  /// ## Parameters
+  /// - `key`: The key to compute a value for
+  /// - `ifAbsent`: The function to compute the value if the key is not present
+  /// 
+  /// ## Returns
+  /// - The computed value
+  V computeIfAbsent(K key, V Function(K key) ifAbsent) {
+    if (containsKey(key)) {
+      return this[key] as V;
+    } else {
+      final V newValue = ifAbsent(key);
+      this[key] = newValue;
+      return newValue;
+    }
   }
 }

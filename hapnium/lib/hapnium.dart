@@ -102,3 +102,6 @@ export 'src/utils/instance.dart';
 export 'src/utils/json_utils.dart';
 export 'src/utils/regex_utils.dart';
 export 'src/utils/typedefs.dart';
+
+export 'src/helpers/equals_and_hash_code.dart';
+export 'src/helpers/to_string.dart';
