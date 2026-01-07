@@ -216,23 +216,44 @@ class SmartField extends StatelessWidget {
 
   Widget _buildList(BuildContext context) {
     final children = items.asMap().entries.map((entry) {
-      Field field() {
-        if(entry.value.isPassword) {
-          return Field.password();
+      Field buildField() {
+        final field = entry.value;
+
+        if(field.isPassword) {
+          return Field.password(
+            label: field.label,
+            hint: field.hint,
+            onChanged: field.onChanged,
+            validator: field.validator,
+            keyboard: field.type,
+            controller: field.controller,
+            focus: field.focus,
+            obscureText: field.obscureText,
+            replaceHintWithLabel: field.replaceHintWithLabel,
+            onPressed: field.onVisibilityTapped,
+          );
         } else {
-          return Field();
+          return Field(
+            label: field.label,
+            hint: field.hint,
+            onChanged: field.onChanged,
+            validator: field.validator,
+            keyboard: field.type,
+            controller: field.controller,
+            focus: field.focus,
+            obscureText: field.obscureText,
+            replaceHintWithLabel: field.replaceHintWithLabel,
+          );
         }
       }
-
-      ItemMetadata<FieldItem> metadata = ItemMetadata(
+      
+      return itemBuilder(context, buildField(), ItemMetadata(
         isFirst: entry.key.equals(0),
         isLast: entry.key.equals(items.length - 1),
         index: entry.key,
         totalItems: items.length,
         item: entry.value,
-      );
-      
-      return itemBuilder(context, field(), metadata);
+      ));
     }).toList();
 
     return Column(
