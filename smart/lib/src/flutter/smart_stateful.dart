@@ -87,6 +87,33 @@ abstract class SmartState<T extends SmartStateful> extends State<T> {
   /// return DesktopLayout();
   /// ```
   ResponsiveUtil get responsive => ResponsiveUtil(context, config: getResponsiveConfiguration() ?? widget.getResponsiveConfiguration());
+
+  /// Provides access to the current theme data from the widget tree.
+  ///
+  /// This getter returns the [ThemeData] inherited from the nearest [Theme] ancestor
+  /// in the widget hierarchy. Use it to access color schemes, text styles, and other
+  /// theme properties for consistent theming throughout your application.
+  ///
+  /// ## Example
+  /// ```dart
+  /// // Access theme colors
+  /// Color primaryColor = theme.primaryColor;
+  /// Color backgroundColor = theme.scaffoldBackgroundColor;
+  ///
+  /// // Access text styles
+  /// TextStyle headlineStyle = theme.textTheme.headlineLarge;
+  /// TextStyle bodyStyle = theme.textTheme.bodyMedium;
+  ///
+  /// // Use theme in widgets
+  /// Container(
+  ///   color: theme.primaryColor,
+  ///   child: Text(
+  ///     'Themed Text',
+  ///     style: theme.textTheme.titleLarge,
+  ///   ),
+  /// );
+  /// ```
+  ThemeData get theme => Theme.of(context);
   
   /// Builds the widget using a responsive utility and theme.
   ///
@@ -95,7 +122,7 @@ abstract class SmartState<T extends SmartStateful> extends State<T> {
   /// {@macro smart_state}
   @override
   @nonVirtual
-  Widget build(BuildContext context) => create(context, responsive, Theme.of(context));
+  Widget build(BuildContext context) => create(context, responsive, theme);
 
   /// A method to construct the UI with responsive and theme context.
   ///
