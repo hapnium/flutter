@@ -836,13 +836,17 @@ final class PhoneField extends Field with FieldMixin {
       } else {
         fieldController.update<PhoneValidationMessageState, String?>(msg);
       }
-    } else if (whenValidated(value, fieldController) case final msg) {
-      if (msg == null || msg.isEmpty) {
-        if (onValidPhoneNumber case final onValidPhoneNumber?) {
-          onValidPhoneNumber(phoneNumber);
+    } else {
+      fieldController.update<PhoneValidationMessageState, String?>(null);
+
+      if (whenValidated(value, fieldController) case final msg) {
+        if (msg == null || msg.isEmpty) {
+          if (onValidPhoneNumber case final onValidPhoneNumber?) {
+            onValidPhoneNumber(phoneNumber);
+          }
+        } else {
+          fieldController.update<PhoneValidationMessageState, String?>(msg);
         }
-      } else {
-        fieldController.update<PhoneValidationMessageState, String?>(msg);
       }
     }
   }
