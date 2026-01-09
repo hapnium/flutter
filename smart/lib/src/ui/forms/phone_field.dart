@@ -15,8 +15,8 @@ import 'field_controller.dart';
 /// Used by [PhoneField] to manage country selection state.
 /// 
 /// {@macro field_state}
-final class _CountryState extends FieldState<Country> {
-  _CountryState(super.value);
+final class PhoneCountryState extends FieldState<Country> {
+  PhoneCountryState(super.value);
 }
 
 /// Internal state class for tracking the country utility instance.
@@ -24,8 +24,8 @@ final class _CountryState extends FieldState<Country> {
 /// Contains the [CountryUtil] instance with the country list.
 /// 
 /// {@macro field_state}
-final class _CountryUtilState extends FieldState<CountryUtil> {
-  _CountryUtilState(super.value);
+final class PhoneCountryUtilState extends FieldState<CountryUtil> {
+  PhoneCountryUtilState(super.value);
 }
 
 /// Internal state class for tracking custom validation messages.
@@ -33,8 +33,8 @@ final class _CountryUtilState extends FieldState<CountryUtil> {
 /// Stores error messages from the [phoneValidator] callback.
 /// 
 /// {@macro field_state}
-final class _ValidationMessageState extends FieldState<String?> {
-  _ValidationMessageState([super.value]);
+final class PhoneValidationMessageState extends FieldState<String?> {
+  PhoneValidationMessageState([super.value]);
 }
 
 /// {@template phone_field}
@@ -117,9 +117,9 @@ final class _ValidationMessageState extends FieldState<String?> {
 /// 
 /// ## State Management
 /// The field manages three internal states:
-/// 1. `_CountryState`: Currently selected country
-/// 2. `_CountryUtilState`: Country utility instance with country list
-/// 3. `_ValidationMessageState`: Custom validation messages from phoneValidator
+/// 1. `PhoneCountryState`: Currently selected country
+/// 2. `PhoneCountryUtilState`: Country utility instance with country list
+/// 3. `PhoneValidationMessageState`: Custom validation messages from phoneValidator
 /// 
 /// ```dart
 /// final fieldController = FieldController();
@@ -127,8 +127,8 @@ final class _ValidationMessageState extends FieldState<String?> {
 ///   stateController: fieldController,
 ///   onInit: (controller) {
 ///     // Access states
-///     final country = controller.find<_CountryState>().value;
-///     final validationMsg = controller.find<_ValidationMessageState>().value;
+///     final country = controller.find<PhoneCountryState>().value;
+///     final validationMsg = controller.find<PhoneValidationMessageState>().value;
 ///   },
 /// )
 /// ```
@@ -347,9 +347,9 @@ final class PhoneField extends Field with FieldMixin {
   /// 1. Sets up the country utility with provided or default countries
   /// 2. Finds the initial country based on [initialCountry] parameter
   /// 3. Adds three states to the controller:
-  ///    - `_CountryState`: Current selected country
-  ///    - `_ValidationMessageState`: Custom validation messages
-  ///    - `_CountryUtilState`: Country utility instance
+  ///    - `PhoneCountryState`: Current selected country
+  ///    - `PhoneValidationMessageState`: Custom validation messages
+  ///    - `PhoneCountryUtilState`: Country utility instance
   PhoneField({
     super.key,
     super.controller,
@@ -460,9 +460,9 @@ final class PhoneField extends Field with FieldMixin {
       countryUtil.set(countries ?? CountryData.instance.countries);
       
       // Add initial states to controller
-      controller.add(_CountryState(countryUtil.find(initialCountry ?? "")));
-      controller.add(_ValidationMessageState());
-      controller.add(_CountryUtilState(countryUtil));
+      controller.add(PhoneCountryState(countryUtil.find(initialCountry ?? "")));
+      controller.add(PhoneValidationMessageState());
+      controller.add(PhoneCountryUtilState(countryUtil));
     },
   );
 
@@ -672,8 +672,8 @@ final class PhoneField extends Field with FieldMixin {
   @override
   Widget buildField(BuildContext context, FieldController fieldController) {
     if(phoneBuilder case final phoneBuilder?) {
-      final country = fieldController.find<_CountryState>().value;
-      final util = fieldController.find<_CountryUtilState>().value;
+      final country = fieldController.find<PhoneCountryState>().value;
+      final util = fieldController.find<PhoneCountryUtilState>().value;
 
       return phoneBuilder(
         context,
@@ -695,14 +695,14 @@ final class PhoneField extends Field with FieldMixin {
 
   @override
   Widget? getPrefixIcon(BuildContext context, FieldController fieldController) {
-    final countryState = fieldController.find<_CountryState>();
+    final countryState = fieldController.find<PhoneCountryState>();
     final country = countryState.value;
 
     if (flagBuilder case final flagBuilder?) {
       return flagBuilder(context, country, (c) => _handleChangedCountry(fieldController, c));
     }
 
-    final util = fieldController.find<_CountryUtilState>();
+    final util = fieldController.find<PhoneCountryUtilState>();
     
     if (util.value.countries.isNotEmpty) {
       return Padding(
@@ -777,10 +777,10 @@ final class PhoneField extends Field with FieldMixin {
 
   /// Updates the selected country and notifies listeners.
   /// 
-  /// Updates the [_CountryState] in the controller and calls
+  /// Updates the [PhoneCountryState] in the controller and calls
   /// [onCountryChanged] callback if provided.
   void _handleChangedCountry(FieldController controller, Country country) {
-    controller.update<_CountryState, Country>(country);
+    controller.update<PhoneCountryState, Country>(country);
 
     if (onCountryChanged case final onCountryChanged?) {
       onCountryChanged(country);
@@ -789,7 +789,7 @@ final class PhoneField extends Field with FieldMixin {
 
   @override
   void whenChanged(String value, FieldController fieldController) async {
-    final country = fieldController.find<_CountryState>().value;
+    final country = fieldController.find<PhoneCountryState>().value;
     
     final phoneNumber = PhoneNumber(
       countryISOCode: country.code,
@@ -799,7 +799,7 @@ final class PhoneField extends Field with FieldMixin {
 
     if (phoneValidator != null) {
       final msg = await phoneValidator!(phoneNumber);
-      fieldController.update<_ValidationMessageState, String?>(msg);
+      fieldController.update<PhoneValidationMessageState, String?>(msg);
     }
 
     if (onPhoneChanged case final onPhoneChanged?) {
@@ -811,8 +811,8 @@ final class PhoneField extends Field with FieldMixin {
 
   @override
   String? whenValidated(String? value, FieldController fieldController) {
-    final country = fieldController.find<_CountryState>().value;
-    final validationMsg = fieldController.find<_ValidationMessageState>().value;
+    final country = fieldController.find<PhoneCountryState>().value;
+    final validationMsg = fieldController.find<PhoneValidationMessageState>().value;
 
     if (!disableLengthCheck && value != null) {
       final isValid = value.length >= country.min && value.length <= country.max;
@@ -825,7 +825,7 @@ final class PhoneField extends Field with FieldMixin {
   @override
   void whenSaved(String? value, FieldController fieldController) {
     if (value != null) {
-      final country = fieldController.find<_CountryState>().value;
+      final country = fieldController.find<PhoneCountryState>().value;
       final phoneNumber = PhoneNumber(
         countryISOCode: country.code,
         countryCode: '+${country.dialCode}',

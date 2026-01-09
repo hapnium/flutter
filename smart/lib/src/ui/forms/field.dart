@@ -2228,7 +2228,7 @@ base class Field extends StatelessWidget {
       filled: true,
       suffixIconConstraints: suffixIconConstraints,
       prefixIconConstraints: prefixIconConstraints,
-      prefixIcon: prefixIcon,
+      prefixIcon: getPrefixIcon(context, fieldController),
       suffixIcon: getSuffixIcon(context, fieldController),
       fillColor: fillColor ?? Theme.of(context).scaffoldBackgroundColor,
       enabledBorder: getEnabledBorder(context, fieldController),
