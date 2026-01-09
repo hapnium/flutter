@@ -419,6 +419,7 @@ final class PasswordField extends Field with FieldMixin {
     super.clipBehavior,
     super.autoCorrect = false,
     super.maxLengthEnforcement,
+    super.inputDecoration,
     this.visibleIcon,
     this.nonVisibleIcon,
     this.iconSize,
@@ -525,6 +526,7 @@ final class PasswordField extends Field with FieldMixin {
     Color? iconButtonColor,
     Color? iconSplashColor,
     OnPasswordVisibilityTapped? onVisibilityTapped,
+    InputDecoration? inputDecoration
   }) {
     return PasswordField(
       key: key,
@@ -592,6 +594,7 @@ final class PasswordField extends Field with FieldMixin {
       selectionHeightStyle: selectionHeightStyle ?? this.selectionHeightStyle,
       selectionWidthStyle: selectionWidthStyle ?? this.selectionWidthStyle,
       dragStartBehavior: dragStartBehavior ?? this.dragStartBehavior,
+      inputDecoration: inputDecoration ?? this.inputDecoration,
       contentInsertionConfiguration: contentInsertionConfiguration ?? this.contentInsertionConfiguration,
       clipBehavior: clipBehavior ?? this.clipBehavior,
       onSaved: onSaved ?? this.onSaved,

@@ -919,6 +919,8 @@ base class Field extends StatelessWidget {
   /// Controls whether input beyond max length is truncated or rejected.
   final MaxLengthEnforcement? maxLengthEnforcement;
 
+  final InputDecoration? inputDecoration;
+
   /// {@macro field}
   const Field({
     super.key,
@@ -995,6 +997,7 @@ base class Field extends StatelessWidget {
     this.clipBehavior = Clip.hardEdge,
     this.autoCorrect = true,
     this.maxLengthEnforcement,
+    this.inputDecoration
   });
 
   /// Deprecated: Use [PasswordField] instead.
@@ -1236,6 +1239,7 @@ base class Field extends StatelessWidget {
     required this.crossAxisAlignment,
     required this.autoCorrect,
     required this.maxLengthEnforcement,
+    required this.inputDecoration
   });
 
   /// {@template field_copyWith}
@@ -1371,6 +1375,7 @@ base class Field extends StatelessWidget {
     CrossAxisAlignment? crossAxisAlignment,
     bool? autoCorrect,
     MaxLengthEnforcement? maxLengthEnforcement,
+    InputDecoration? inputDecoration
   }) {
     return Field._internal(
       key: key,
@@ -1447,6 +1452,7 @@ base class Field extends StatelessWidget {
       crossAxisAlignment: crossAxisAlignment ?? this.crossAxisAlignment,
       autoCorrect: autoCorrect ?? this.autoCorrect,
       maxLengthEnforcement: maxLengthEnforcement ?? this.maxLengthEnforcement,
+      inputDecoration: inputDecoration ?? this.inputDecoration,
     );
   }
 
@@ -2153,89 +2159,93 @@ base class Field extends StatelessWidget {
   /// - Large configurations may impact rebuild performance
   /// - The method delegates to multiple helper methods for modularity
   @protected
-  Widget buildField(BuildContext context, FieldController fieldController) => TextFormField(
-    style: TextStyle(
-      color: inputConfig.textColor ?? Theme.of(context).primaryColor,
-      fontSize: inputConfig.textSize,
-      fontWeight: inputConfig.textWeight
-    ),
-    textAlign: textAlign ?? (useOtpDesign ? TextAlign.center : TextAlign.start),
-    cursorColor: cursorColor ?? inputConfig.textColor ?? Theme.of(context).primaryColor,
-    cursorHeight: cursorHeight,
-    controller: controller,
-    enabled: enabled,
-    focusNode: focus,
-    maxLines: maxLines ?? (useBigField ? 20 : 1),
-    minLines: minLines ?? (useBigField ? 5 : null),
-    textAlignVertical: textAlignVertical ?? (useBigField ? TextAlignVertical.center : null),
-    textCapitalization: textCapitalization ?? (useBigField ? TextCapitalization.sentences : TextCapitalization.none),
-    autovalidateMode: modeValidator ?? AutovalidateMode.onUserInteraction,
-    textInputAction: inputAction,
-    autocorrect: autoCorrect,
-    keyboardType: keyboard,
-    obscureText: shouldObscureText(context, fieldController),
-    validator: (value) => whenValidated(value, fieldController),
-    onChanged: (value) => whenChanged(value, fieldController),
-    onSaved: (value) => whenSaved(value, fieldController),
-    onTapOutside: onTapOutside,
-    onEditingComplete: onEditingComplete,
-    onFieldSubmitted: onFieldSubmitted,
-    ignorePointers: ignorePointers,
-    textDirection: textDirection,
-    autofocus: autofocus,
-    cursorWidth: cursorWidth,
-    cursorRadius: cursorRadius,
-    keyboardAppearance: keyboardAppearance,
-    scrollPadding: scrollPadding,
-    enableInteractiveSelection: enableInteractiveSelection,
-    selectionControls: selectionControls,
-    buildCounter: buildCounter,
-    scrollPhysics: scrollPhysics,
-    autofillHints: autofillHints,
-    scrollController: scrollController,
-    enableIMEPersonalizedLearning: enableIMEPersonalizedLearning,
-    mouseCursor: mouseCursor,
-    contextMenuBuilder: contextMenuBuilder,
-    spellCheckConfiguration: spellCheckConfiguration,
-    magnifierConfiguration: magnifierConfiguration,
-    undoController: undoController,
-    onAppPrivateCommand: onAppPrivateCommand,
-    cursorOpacityAnimates: cursorOpacityAnimates,
-    selectionHeightStyle: selectionHeightStyle,
-    selectionWidthStyle: selectionWidthStyle,
-    dragStartBehavior: dragStartBehavior,
-    contentInsertionConfiguration: contentInsertionConfiguration,
-    statesController: statesController,
+  Widget buildField(BuildContext context, FieldController fieldController) => ClipRRect(
+    borderRadius: inputBorderRadius,
     clipBehavior: clipBehavior,
-    stylusHandwritingEnabled: stylusHandwritingEnabled,
-    canRequestFocus: canRequestFocus,
-    maxLengthEnforcement: maxLengthEnforcement,
-    inputFormatters: [
-      if(useOtpDesign) ...[
-        LengthLimitingTextInputFormatter(1),
-        FilteringTextInputFormatter.digitsOnly
-      ],
-      ...inputFormatters ?? []
-    ],
-    decoration: InputDecoration(
-      hintText: replaceHintWithLabel ? label : hint,
-      contentPadding: useOtpDesign ? EdgeInsets.zero : padding,
-      hintStyle: TextStyle(
-        color: inputConfig.hintColor ?? CommonColors.instance.hint,
-        fontSize: inputConfig.hintSize ?? inputConfig.textSize,
-        fontWeight: inputConfig.hintWeight
+    child: TextFormField(
+      style: TextStyle(
+        color: inputConfig.textColor ?? Theme.of(context).primaryColor,
+        fontSize: inputConfig.textSize,
+        fontWeight: inputConfig.textWeight
       ),
-      filled: true,
-      suffixIconConstraints: suffixIconConstraints,
-      prefixIconConstraints: prefixIconConstraints,
-      prefixIcon: getPrefixIcon(context, fieldController),
-      suffixIcon: getSuffixIcon(context, fieldController),
-      fillColor: fillColor ?? Theme.of(context).scaffoldBackgroundColor,
-      enabledBorder: getEnabledBorder(context, fieldController),
-      disabledBorder: getDisabledBorder(context, fieldController),
-      focusedBorder: getFocusedBorder(context, fieldController),
-      errorBorder: getErrorBorder(context, fieldController),
-      focusedErrorBorder: getFocusedErrorBorder(context, fieldController),
+      textAlign: textAlign ?? (useOtpDesign ? TextAlign.center : TextAlign.start),
+      cursorColor: cursorColor ?? inputConfig.textColor ?? Theme.of(context).primaryColor,
+      cursorHeight: cursorHeight,
+      controller: controller,
+      enabled: enabled,
+      focusNode: focus,
+      maxLines: maxLines ?? (useBigField ? 20 : 1),
+      minLines: minLines ?? (useBigField ? 5 : null),
+      textAlignVertical: textAlignVertical ?? (useBigField ? TextAlignVertical.center : null),
+      textCapitalization: textCapitalization ?? (useBigField ? TextCapitalization.sentences : TextCapitalization.none),
+      autovalidateMode: modeValidator ?? AutovalidateMode.onUserInteraction,
+      textInputAction: inputAction,
+      autocorrect: autoCorrect,
+      keyboardType: keyboard,
+      obscureText: shouldObscureText(context, fieldController),
+      validator: (value) => whenValidated(value, fieldController),
+      onChanged: (value) => whenChanged(value, fieldController),
+      onSaved: (value) => whenSaved(value, fieldController),
+      onTapOutside: onTapOutside,
+      onEditingComplete: onEditingComplete,
+      onFieldSubmitted: onFieldSubmitted,
+      ignorePointers: ignorePointers,
+      textDirection: textDirection,
+      autofocus: autofocus,
+      cursorWidth: cursorWidth,
+      cursorRadius: cursorRadius,
+      keyboardAppearance: keyboardAppearance,
+      scrollPadding: scrollPadding,
+      enableInteractiveSelection: enableInteractiveSelection,
+      selectionControls: selectionControls,
+      buildCounter: buildCounter,
+      scrollPhysics: scrollPhysics,
+      autofillHints: autofillHints,
+      scrollController: scrollController,
+      enableIMEPersonalizedLearning: enableIMEPersonalizedLearning,
+      mouseCursor: mouseCursor,
+      contextMenuBuilder: contextMenuBuilder,
+      spellCheckConfiguration: spellCheckConfiguration,
+      magnifierConfiguration: magnifierConfiguration,
+      undoController: undoController,
+      onAppPrivateCommand: onAppPrivateCommand,
+      cursorOpacityAnimates: cursorOpacityAnimates,
+      selectionHeightStyle: selectionHeightStyle,
+      selectionWidthStyle: selectionWidthStyle,
+      dragStartBehavior: dragStartBehavior,
+      contentInsertionConfiguration: contentInsertionConfiguration,
+      statesController: statesController,
+      clipBehavior: clipBehavior,
+      stylusHandwritingEnabled: stylusHandwritingEnabled,
+      canRequestFocus: canRequestFocus,
+      maxLengthEnforcement: maxLengthEnforcement,
+      inputFormatters: [
+        if(useOtpDesign) ...[
+          LengthLimitingTextInputFormatter(1),
+          FilteringTextInputFormatter.digitsOnly
+        ],
+        ...inputFormatters ?? []
+      ],
+      decoration: inputDecoration ?? InputDecoration(
+        hintText: replaceHintWithLabel ? label : hint,
+        contentPadding: useOtpDesign ? EdgeInsets.zero : padding,
+        hintStyle: TextStyle(
+          color: inputConfig.hintColor ?? CommonColors.instance.hint,
+          fontSize: inputConfig.hintSize ?? inputConfig.textSize,
+          fontWeight: inputConfig.hintWeight
+        ),
+        filled: true,
+        suffixIconConstraints: suffixIconConstraints,
+        prefixIconConstraints: prefixIconConstraints,
+        prefixIcon: getPrefixIcon(context, fieldController),
+        suffixIcon: getSuffixIcon(context, fieldController),
+        fillColor: fillColor ?? Theme.of(context).scaffoldBackgroundColor,
+        enabledBorder: getEnabledBorder(context, fieldController),
+        disabledBorder: getDisabledBorder(context, fieldController),
+        focusedBorder: getFocusedBorder(context, fieldController),
+        errorBorder: getErrorBorder(context, fieldController),
+        focusedErrorBorder: getFocusedErrorBorder(context, fieldController),
+      ),
     ),
   );
 }
