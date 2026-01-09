@@ -344,7 +344,15 @@ final class PhoneFieldItem extends FieldItem {
   /// Called whenever the phone number value changes.
   ///
   /// Emits a structured [PhoneNumber] instead of a raw string.
-  final ValueChanged<PhoneNumber>? onPhoneChanged;
+  final PhoneNumberChanged? onPhoneChanged;
+
+  /// Called whenever the phone number changes and is valid.
+  /// 
+  /// Provides a [PhoneNumber] object even while the user is typing.
+  /// Useful for real-time validation or formatting. This works for
+  /// situations where the user wants to get the phone number when it is
+  /// validated.
+  final PhoneNumberChanged? onValidPhoneNumber;
 
   /// The ISO country code to use as the initially selected country.
   ///
@@ -381,6 +389,7 @@ final class PhoneFieldItem extends FieldItem {
     this.initialCountry,
     this.countries,
     this.phoneValidator,
+    this.onValidPhoneNumber
   }) : super(type: TextInputType.phone);
 
   /// Creates a copy of this [PhoneFieldItem] with the given fields replaced.
@@ -398,7 +407,8 @@ final class PhoneFieldItem extends FieldItem {
     bool? obscureText,
     bool? replaceHintWithLabel,
     FormFieldSetter<PhoneNumber>? onPhoneSaved,
-    ValueChanged<PhoneNumber>? onPhoneChanged,
+    PhoneNumberChanged? onPhoneChanged,
+    PhoneNumberChanged? onValidPhoneNumber,
     String? initialCountry,
     List<Country>? countries,
     PhoneNumberValidator? phoneValidator,
@@ -416,6 +426,7 @@ final class PhoneFieldItem extends FieldItem {
       initialCountry: initialCountry ?? this.initialCountry,
       countries: countries ?? this.countries,
       phoneValidator: phoneValidator ?? this.phoneValidator,
+      onValidPhoneNumber: onValidPhoneNumber ?? this.onValidPhoneNumber
     );
   }
 }

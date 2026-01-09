@@ -393,7 +393,8 @@ class SmartField extends StatelessWidget {
         onPhoneChanged: phone.onPhoneChanged,
         initialCountry: phone.initialCountry,
         countries: phone.countries,
-        phoneValidator: phone.phoneValidator
+        phoneValidator: phone.phoneValidator,
+        onValidPhoneNumber: phone.onValidPhoneNumber,
       );
     }
 
