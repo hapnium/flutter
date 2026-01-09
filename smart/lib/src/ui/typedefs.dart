@@ -235,7 +235,7 @@ typedef CountrySearchFormFieldBuilder = Widget Function(Consumer<String> onChang
 /// - [CountryPicker]
 /// - [PhoneField]
 typedef CountrySearchFieldBuilder = Field Function(
-  Supplier<Field> currentField,
+  Field currentField,
   Consumer<String> onChanged,
 );
 

@@ -94,7 +94,7 @@ class _CountryPickerState extends State<CountryPicker> {
     );
 
     if(widget.searchFieldBuilder case final searchFieldBuilder?) {
-      return searchFieldBuilder(() => field, _search);
+      return searchFieldBuilder(field, _search);
     }
 
     return field;
