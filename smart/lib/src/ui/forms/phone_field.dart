@@ -185,7 +185,15 @@ final class PhoneField extends Field with FieldMixin {
   /// 
   /// Provides a [PhoneNumber] object even while the user is typing.
   /// Useful for real-time validation or formatting.
-  final ValueChanged<PhoneNumber>? onPhoneChanged;
+  final PhoneNumberChanged? onPhoneChanged;
+
+  /// Called whenever the phone number changes and is valid.
+  /// 
+  /// Provides a [PhoneNumber] object even while the user is typing.
+  /// Useful for real-time validation or formatting. This works for
+  /// situations where the user wants to get the phone number when it is
+  /// validated.
+  final PhoneNumberChanged? onValidPhoneNumber;
 
   /// Called when the user selects a different country.
   /// 
@@ -212,7 +220,7 @@ final class PhoneField extends Field with FieldMixin {
   ///   },
   /// )
   /// ```
-  final Function(SelectedCountryChanged onChanged)? onChangeCountryClicked;
+  final WhenSelectedCountryChanged? onChangeCountryClicked;
 
   /// Custom builder for the flag/country code display.
   /// 
@@ -448,7 +456,8 @@ final class PhoneField extends Field with FieldMixin {
     this.flagMainAxisAlignment,
     this.flagMainAxisSize,
     this.flagCrossAxisAlignment,
-    this.phoneBuilder
+    this.phoneBuilder,
+    this.onValidPhoneNumber
   }) : super(
     keyboard: TextInputType.phone,
     onInit: (controller) {
@@ -549,9 +558,10 @@ final class PhoneField extends Field with FieldMixin {
     bool? autoCorrect,
     MaxLengthEnforcement? maxLengthEnforcement,
     FormFieldSetter<PhoneNumber>? onPhoneSaved,
-    ValueChanged<PhoneNumber>? onPhoneChanged,
+    PhoneNumberChanged? onPhoneChanged,
+    PhoneNumberChanged? onValidPhoneNumber,
     SelectedCountryChanged? onCountryChanged,
-    Function(SelectedCountryChanged onChanged)? onChangeCountryClicked,
+    WhenSelectedCountryChanged? onChangeCountryClicked,
     PhoneFlagBuilder? flagBuilder,
     PhoneNumberValidator? phoneValidator,
     bool? disableLengthCheck,
@@ -668,6 +678,7 @@ final class PhoneField extends Field with FieldMixin {
       flagTextColor: flagTextColor ?? this.flagTextColor,
       flagMainAxisAlignment: flagMainAxisAlignment ?? this.flagMainAxisAlignment,
       flagMainAxisSize: flagMainAxisSize ?? this.flagMainAxisSize,
+      onValidPhoneNumber: onValidPhoneNumber ?? this.onValidPhoneNumber,
       flagCrossAxisAlignment: flagCrossAxisAlignment ?? this.flagCrossAxisAlignment,
     );
   }
@@ -800,16 +811,40 @@ final class PhoneField extends Field with FieldMixin {
       number: value,
     );
 
-    if (phoneValidator != null) {
-      final msg = await phoneValidator!(phoneNumber);
+    if (phoneValidator case final phoneValidator?) {
+      final msg = await phoneValidator(phoneNumber);
       fieldController.update<PhoneValidationMessageState, String?>(msg);
     }
 
     if (onPhoneChanged case final onPhoneChanged?) {
       onPhoneChanged(phoneNumber);
     }
+
+    validateAndSend(value, phoneNumber, fieldController);
     
     super.whenChanged(value, fieldController);
+  }
+
+  void validateAndSend(String value, PhoneNumber phoneNumber, FieldController fieldController) async {
+    if (phoneValidator case final phoneValidator?) {
+      final msg = await phoneValidator(phoneNumber);
+      
+      if (msg == null || msg.isEmpty) {
+        if (onValidPhoneNumber case final onValidPhoneNumber?) {
+          onValidPhoneNumber(phoneNumber);
+        }
+      } else {
+        fieldController.update<PhoneValidationMessageState, String?>(msg);
+      }
+    } else if (whenValidated(value, fieldController) case final msg) {
+      if (msg == null || msg.isEmpty) {
+        if (onValidPhoneNumber case final onValidPhoneNumber?) {
+          onValidPhoneNumber(phoneNumber);
+        }
+      } else {
+        fieldController.update<PhoneValidationMessageState, String?>(msg);
+      }
+    }
   }
 
   @override
@@ -827,7 +862,7 @@ final class PhoneField extends Field with FieldMixin {
 
   @override
   void whenSaved(String? value, FieldController fieldController) {
-    if (value != null) {
+    if (value case final value?) {
       final country = fieldController.find<PhoneCountryState>().value;
       final phoneNumber = PhoneNumber(
         countryISOCode: country.code,
@@ -838,6 +873,8 @@ final class PhoneField extends Field with FieldMixin {
       if (onPhoneSaved case final onPhoneSaved?) {
         onPhoneSaved(phoneNumber);
       }
+
+      validateAndSend(value, phoneNumber, fieldController);
     }
 
     super.whenSaved(value, fieldController);

@@ -85,6 +85,47 @@ typedef SelectedCountryChanged = void Function(Country country);
 /// or perform other actions based on the changes made to the phone number.
 typedef PhoneNumberChanged = void Function(PhoneNumber phoneNumber);
 
+/// A higher-order callback that exposes a country selection change handler.
+///
+/// `WhenSelectedCountryChanged` is used to *provide* a [SelectedCountryChanged]
+/// callback to consumers at the appropriate time—typically during widget
+/// construction or configuration—rather than invoking it directly.
+///
+/// This enables deferred wiring of country change logic, allowing parent
+/// widgets or controllers to attach behavior without immediately triggering
+/// a selection change.
+///
+/// ### Parameter
+/// - `onChanged`: A callback that will be invoked whenever the selected
+///   [Country] changes.
+///
+/// ### Typical Usage
+/// This typedef is commonly used in builder-style APIs or widget factories
+/// where the consumer needs access to the internal country-change handler.
+///
+/// ```dart
+/// WhenSelectedCountryChanged(
+///   (onChanged) {
+///     // Store or forward the callback
+///     countryChangedHandler = onChanged;
+///   },
+/// );
+/// ```
+///
+/// Once assigned, `onChanged` can later be called with a [Country] instance
+/// to signal that the selected country has changed.
+///
+/// ### Relationship to Other Callbacks
+/// - [SelectedCountryChanged] represents the *actual* country change event
+/// - [WhenSelectedCountryChanged] provides access to that event handler
+/// - [PhoneNumberChanged] serves a similar role for phone number updates
+///
+/// See also:
+/// - [SelectedCountryChanged]
+/// - [PhoneNumberChanged]
+/// - [Country]
+typedef WhenSelectedCountryChanged = void Function(SelectedCountryChanged onChanged);
+
 /// A typedef for a function that builds a widget for a given country.
 ///
 /// This typedef represents a function that takes three arguments:
