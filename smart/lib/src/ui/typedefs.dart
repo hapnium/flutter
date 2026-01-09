@@ -201,7 +201,7 @@ typedef PhoneFlagBuilder = Widget Function(BuildContext context, Country country
 /// * [onPhoneChanged]: A callback function that is called when the phone number changes.
 /// * [validator]: A function that validates the phone number.
 /// * [onSaved]: A callback function that is called when the form is saved.
-typedef PhoneFieldBuilder = Widget Function(
+typedef PhoneFieldBuilder<T extends Field> = T Function(
   BuildContext context,
   Country country,
   bool hasCountryList,

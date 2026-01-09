@@ -56,7 +56,8 @@ export 'forms/country_picker/country_picker.dart';
 export 'forms/fake_field.dart';
 export 'forms/field.dart';
 export 'forms/otp_field.dart';
-export 'forms/phone_field/phone_field.dart';
+export 'forms/phone_field.dart';
+export 'forms/password_field.dart';
 export 'forms/smart_field.dart';
 
 export 'forms/models/field_decoration_config.dart';
