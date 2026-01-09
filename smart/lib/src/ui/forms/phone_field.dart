@@ -732,7 +732,7 @@ final class PhoneField extends Field with FieldMixin {
     );
 
     return Padding(
-      padding: flagButtonBodyPadding ?? const EdgeInsets.only(left: 2),
+      padding: flagButtonBodyPadding ?? const EdgeInsets.only(left: 6),
       child: Material(
         color: flagButtonColor ?? Theme.of(context).scaffoldBackgroundColor,
         borderRadius: decoration.borderRadius as BorderRadius?,
