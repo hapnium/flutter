@@ -78,6 +78,9 @@ class CountryPicker extends StatefulWidget {
   /// Builder for rendering the search form field.
   final CountrySearchFormFieldBuilder? searchFormFieldBuilder;
 
+  /// Builder for rendering a search field using [Field] widget
+  final CountrySearchFieldBuilder? searchFieldBuilder;
+
   /// Spacing between items in the body.
   final Double? bodySpacing;
 
@@ -152,6 +155,7 @@ class CountryPicker extends StatefulWidget {
     required this.onChanged,
     required this.selected,
     required this.isDialog,
+    required this.searchFieldBuilder,
     required this.showSearchFormField,
     required this.useFlagEmoji,
     required this.dialogPadding,
@@ -244,6 +248,7 @@ class CountryPicker extends StatefulWidget {
     bool useRootNavigator = true,
     Offset? anchorPoint,
     TraversalEdgeBehavior? traversalEdgeBehavior,
+    CountrySearchFieldBuilder? searchFieldBuilder,
   }) async {
     route ??= _defaultRoute;
 
@@ -270,6 +275,7 @@ class CountryPicker extends StatefulWidget {
             setState(() {});
           },
           showSearchFormField: showSearchFormField,
+          searchFieldBuilder: searchFieldBuilder,
           useFlagEmoji: useFlagEmoji,
           dialogPadding: dialogPadding,
           backgroundColor: backgroundColor,
@@ -367,7 +373,8 @@ class CountryPicker extends StatefulWidget {
     double? elevation,
     UiConfig? uiConfig,
     Double? height,
-    Boolean? useDefaultBorderRadius
+    Boolean? useDefaultBorderRadius,
+    CountrySearchFieldBuilder? searchFieldBuilder,
   }) async {
     route ??= _defaultRoute;
     
@@ -393,13 +400,14 @@ class CountryPicker extends StatefulWidget {
           selected: selected,
           isDialog: false,
           onChanged: (Country country) {
-            if(onChanged.isNotNull) {
-              onChanged!(country);
+            if(onChanged case final onChanged?) {
+              onChanged(country);
             }
 
             setState(() {});
           },
           showSearchFormField: showSearchFormField,
+          searchFieldBuilder: searchFieldBuilder,
           useFlagEmoji: useFlagEmoji,
           dialogPadding: dialogPadding,
           backgroundColor: backgroundColor,

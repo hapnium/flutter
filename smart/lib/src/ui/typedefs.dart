@@ -91,9 +91,16 @@ typedef PhoneNumberChanged = void Function(PhoneNumber phoneNumber);
 ///
 /// * [context]: The build context of the widget.
 /// * [metadata]: The [ItemMetadata] of the current [Country] item.
+/// * [onSelect]: The action to perform when an item is selected.
+/// The boolean value tells if the country picker should be removed
+/// or not
 ///
 /// The function is responsible for building a widget to represent the given `Country` object within the UI.
-typedef CountryItemBuilder = Widget Function(BuildContext context, ItemMetadata<Country> metadata);
+typedef CountryItemBuilder = Widget Function(
+  BuildContext context,
+  ItemMetadata<Country> metadata,
+  Consumer<bool> onSelect
+);
 
 /// A function signature for modifying a [SafeAreaConfig] instance.
 ///
@@ -180,6 +187,57 @@ typedef AppDetailsSelector = Consumer<DomainAppLink>;
 /// This allows users to provide a custom widget that can replace the default search field
 /// while still maintaining the country filtering logic from the [CountryPicker] class.
 typedef CountrySearchFormFieldBuilder = Widget Function(Consumer<String> onChanged);
+
+/// A function type definition for building a custom country search input field.
+///
+/// `CountrySearchFieldBuilder` allows consumers to fully replace the default
+/// search field used by a country picker or phone field, while preserving
+/// the underlying country filtering behavior.
+///
+/// Unlike [CountrySearchFormFieldBuilder], this builder operates on a concrete
+/// [Field] widget, enabling advanced customization such as:
+/// - Replacing the field’s decoration
+/// - Wrapping the field with additional UI
+/// - Modifying behavior while reusing the existing field instance
+///
+/// ### Parameters
+/// - `currentField`: A callback that provides access to the currently
+///   constructed [Field] widget. This allows reuse or transformation of
+///   the default search field.
+/// - `onChanged`: A callback that must be invoked with the updated search
+///   query to trigger country filtering.
+///
+/// ### Return Value
+/// The builder must return a [Field] widget that will be used as the
+/// country search input.
+///
+/// ### Common Usage
+/// ```dart
+/// CountrySearchFieldBuilder(
+///   (currentField, onChanged) {
+///     return currentField(
+///       onChanged: (value) {
+///         onChanged(value);
+///       },
+///     );
+///   },
+/// )
+/// ```
+///
+/// ### When to Use
+/// Use this builder when:
+/// - You want full control over the search field widget
+/// - You need to reuse or modify the default [Field] implementation
+/// - You want deeper customization than [CountrySearchFormFieldBuilder] allows
+///
+/// See also:
+/// - [CountrySearchFormFieldBuilder]
+/// - [CountryPicker]
+/// - [PhoneField]
+typedef CountrySearchFieldBuilder = Field Function(
+  Supplier<Field> currentField,
+  Consumer<String> onChanged,
+);
 
 /// A builder function that creates a widget for displaying the country flag.
 ///

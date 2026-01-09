@@ -773,8 +773,8 @@ final class PhoneField extends Field with FieldMixin {
   /// If [onChangeCountryClicked] is provided, calls it with the country
   /// change callback. Otherwise, presumably shows a default country picker.
   void _changeCountry(FieldController controller) {
-    if (onChangeCountryClicked != null) {
-      onChangeCountryClicked!((c) => _handleChangedCountry(controller, c));
+    if (onChangeCountryClicked case final onChangeCountryClicked?) {
+      onChangeCountryClicked((c) => _handleChangedCountry(controller, c));
     }
   }
 

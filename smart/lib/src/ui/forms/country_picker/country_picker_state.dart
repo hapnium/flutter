@@ -79,11 +79,11 @@ class _CountryPickerState extends State<CountryPicker> {
   }
 
   Widget _buildSearchFormField() {
-    if(widget.searchFormFieldBuilder.isNotNull) {
-      return widget.searchFormFieldBuilder!(_search);
+    if(widget.searchFormFieldBuilder case final searchFormFieldBuilder?) {
+      return searchFormFieldBuilder(_search);
     }
 
-    return Field(
+    final field = Field(
       hint: widget.placeholder ?? "Search Country/Region",
       borderRadius: widget.formBorderRadius ?? Sizing.space(20),
       suffixIcon: widget.icon ?? Icon(Icons.search),
@@ -92,6 +92,12 @@ class _CountryPickerState extends State<CountryPicker> {
       onChanged: _search,
       fillColor: widget.formBackgroundColor,
     );
+
+    if(widget.searchFieldBuilder case final searchFieldBuilder?) {
+      return searchFieldBuilder(() => field, _search);
+    }
+
+    return field;
   }
 
   void _search(String value) {
@@ -100,6 +106,17 @@ class _CountryPickerState extends State<CountryPicker> {
         : _countries.where((country) => country.name.containsIgnoreCase(value)).toList();
 
     if(mounted) setState(() { });
+  }
+
+  void handleSelect(Country country, bool shouldPopBack) {
+    setState(() => _selectedCountry = country);
+    
+    if(widget.onChanged case final onChanged?) {
+      onChanged(country);
+    }
+
+    // Only pop if you want the sheet to close immediately
+    if (shouldPopBack) Navigator.of(context).pop(country);
   }
 
   Widget _buildCountryListView(BuildContext context) {
@@ -119,8 +136,8 @@ class _CountryPickerState extends State<CountryPicker> {
             item: country
           );
 
-          if(widget.itemSeparatorBuilder.isNotNull) {
-            return widget.itemSeparatorBuilder!(context, metadata);
+          if(widget.itemSeparatorBuilder case final itemSeparatorBuilder?) {
+            return itemSeparatorBuilder(context, metadata, (value) => handleSelect(country, false));
           }
 
           return Spacing.vertical(widget.itemSeparatorSize ?? 10);
@@ -137,8 +154,8 @@ class _CountryPickerState extends State<CountryPicker> {
             item: country
           );
 
-          if(widget.itemBuilder.isNotNull) {
-            return widget.itemBuilder!(context, metadata);
+          if(widget.itemBuilder case final itemBuilder?) {
+            return itemBuilder(context, metadata, (value) => handleSelect(country, value));
           }
 
           return SmartButton(
@@ -164,22 +181,7 @@ class _CountryPickerState extends State<CountryPicker> {
               weight: widget.itemCodeWeight ?? FontWeight.w700,
               color: widget.itemCodeColor ?? Theme.of(context).primaryColor
             ),
-            onTap: () {
-              _selectedCountry = country;
-
-              setState(() {});
-
-              if(widget.onChanged.isNotNull) {
-                widget.onChanged!(country);
-              }
-
-              Navigator.of(context).pop(country);
-
-              /// Making an extra onChanged call here for method safety after `Navigator.pop` has been called.
-              if(widget.onChanged.isNotNull) {
-                widget.onChanged!(country);
-              }
-            },
+            onTap: () => handleSelect(country, true),
           );
         }
       ),
@@ -201,8 +203,8 @@ class _CountryPickerState extends State<CountryPicker> {
         mainAxisSize: widget.mainAxisSize ?? MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          if(widget.indicator.isNotNull) ...[
-            widget.indicator!
+          if(widget.indicator case final indicator?) ...[
+            indicator
           ],
           if(widget.showSearchFormField) ...[
             _buildSearchFormField(),
