@@ -170,9 +170,6 @@ class SmartAvatar extends BaseAvatar {
       return null;
     }
 
-    final backgroundColor = (fullName.isNotNull || firstName.isNotNull || lastName.isNotNull)
-        ? SmartUtils.generateColorFromName(fullName ?? firstName ?? lastName ?? "")
-        : const Color(0xFFEEEEEE);
     final Widget child = _buildInitialsOrFallback(fullName: fullName, firstName: firstName, lastName: lastName);
 
     Widget buildAvatar() {
@@ -181,8 +178,8 @@ class SmartAvatar extends BaseAvatar {
           radius: radius,
           minRadius: minRadius,
           maxRadius: maxRadius,
-          foregroundColor: foregroundColorBuilder?.call(context),
-          backgroundColor: backgroundColor,
+          foregroundColor: getForegroundColor(context),
+          backgroundColor: getBackgroundColor(context),
           child: child,
         );
       } else {
@@ -193,7 +190,7 @@ class SmartAvatar extends BaseAvatar {
           width: size,
           alignment: alignment ?? Alignment.center,
           decoration: rectangleDecoration ?? BoxDecoration(
-            color: backgroundColor,
+            color: getBackgroundColor(context),
             borderRadius: rectangleBorderRadius ?? BorderRadius.circular(6),
           ),
           child: child,
@@ -226,5 +223,14 @@ class SmartAvatar extends BaseAvatar {
     } else {
       return child;
     }
+  }
+
+  @override
+  Color getBackgroundColor(BuildContext context) {
+    if ((fullName ?? firstName ?? lastName) case final name?) {
+      return SmartUtils.generateColorFromName(name);
+    }
+
+    return super.getBackgroundColor(context);
   }
 }

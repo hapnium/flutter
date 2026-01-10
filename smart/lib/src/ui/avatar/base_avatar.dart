@@ -1,7 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:smart/assets.dart';
-import 'package:hapnium/hapnium.dart';
 import 'package:smart/utilities.dart';
 import 'package:tracing/tracing.dart';
 
@@ -181,72 +180,154 @@ abstract class BaseAvatar extends StatelessWidget {
   @override
   @protected
   @nonVirtual
-  Widget build(BuildContext context) {
-    return avatar(context) ?? _default(context);
+  Widget build(BuildContext context) => avatar(context) ?? _default(context);
+
+  @protected
+  BorderRadiusGeometry get borderRadius => rectangleBorderRadius ?? BorderRadius.circular(6);
+
+  @protected
+  String getFallback() {
+    if (image case final image?) return image;
+    if (isLightTheme) return SmartAnimAssets.darkWallpaper;
+    return SmartAnimAssets.lightWallpaper;
+  }
+
+  @protected
+  Color? getForegroundColor(BuildContext context) {
+    if (foregroundColorBuilder case final foregroundColorBuilder?) {
+      return foregroundColorBuilder(context);
+    }
+
+    return null;
+  }
+
+  @protected
+  ImageProvider? getForegroundImage(BuildContext context) {
+    if (foregroundImageBuilder case final foregroundImageBuilder?) {
+      return foregroundImageBuilder(context, getFallback());
+    }
+
+    return null;
+  }
+
+  @protected
+  ImageErrorListener getForegroundErrorListener() => onForegroundImageError ?? (Object exception, StackTrace? stackTrace) {
+    if (showLogs) {
+      console.log("$exception || $stackTrace", tag: "[BASE AVATAR - onForegroundImageError]");
+    }
+  };
+
+  @protected
+  DecorationImage? getForegroundDecorationImage(BuildContext context) {
+    if (getForegroundImage(context) case final image?) {
+      return DecorationImage(
+        image: image,
+        onError: getForegroundErrorListener(),
+        fit: BoxFit.cover
+      );
+    }
+
+    return null;
+  }
+
+  @protected
+  Decoration getForegroundDecoration(BuildContext context) {
+    if (foregroundImageDecorationBuilder case final foregroundImageDecorationBuilder?) {
+      return foregroundImageDecorationBuilder(
+        context,
+        getForegroundImage(context),
+        getFallback(),
+        getForegroundColor(context),
+        getForegroundErrorListener()
+      );
+    }
+
+    return BoxDecoration(
+      color: getForegroundColor(context),
+      borderRadius: borderRadius,
+      image: getForegroundDecorationImage(context),
+    );
+  }
+
+  @protected
+  Color getBackgroundColor(BuildContext context) {
+    if (backgroundColorBuilder case final backgroundColorBuilder?) {
+      return backgroundColorBuilder(context);
+    }
+
+    return const Color(0xFFEEEEEE);
+  }
+
+  @protected
+  ImageProvider? getBackgroundImage(BuildContext context) {
+    if (backgroundImageBuilder case final backgroundImageBuilder?) {
+      return backgroundImageBuilder(context, getFallback());
+    }
+
+    return null;
+  }
+
+  @protected
+  ImageErrorListener getBackgroundErrorListener() => onBackgroundImageError ?? (Object exception, StackTrace? stackTrace) {
+    if (showLogs) {
+      console.log("$exception || $stackTrace", tag: "[BASE AVATAR - onBackgroundImageError]");
+    }
+  };
+
+  @protected
+  DecorationImage? getBackgroundDecorationImage(BuildContext context) {
+    if (getBackgroundImage(context) case final image?) {
+      return DecorationImage(
+        image: image,
+        onError: getBackgroundErrorListener(),
+        fit: BoxFit.cover
+      );
+    }
+
+    return null;
+  }
+
+  @protected
+  Decoration getBackgroundDecoration(BuildContext context) {
+    if (imageDecorationBuilder case final imageDecorationBuilder?) {
+      return imageDecorationBuilder(
+        context,
+        getBackgroundImage(context),
+        getFallback(),
+        getBackgroundColor(context),
+        getBackgroundErrorListener()
+      );
+    }
+
+    return BoxDecoration(
+      color: getBackgroundColor(context),
+      borderRadius: borderRadius,
+      image: getBackgroundDecorationImage(context),
+    );
   }
 
   Widget _default(BuildContext context) {
-    String fallback = image.isNotNull ? image! : isLightTheme ? SmartAnimAssets.darkWallpaper : SmartAnimAssets.lightWallpaper;
-
-    final Color? foregroundColor = foregroundColorBuilder.isNotNull ? foregroundColorBuilder!(context) : null;
-    final ImageProvider? foreground = foregroundImageBuilder.isNotNull ? foregroundImageBuilder!(context, fallback) : null;
-    final ImageErrorListener foregroundError = onForegroundImageError ?? (Object exception, StackTrace? stackTrace) {
-      if (showLogs) {
-        console.log("$exception || $stackTrace", tag: "[BASE AVATAR - onForegroundImageError]");
-      }
-    };
-
-    final Color backgroundColor = backgroundColorBuilder.isNotNull ? backgroundColorBuilder!(context) : Theme.of(context).unselectedWidgetColor;
-    final ImageProvider? background = backgroundImageBuilder.isNotNull ? backgroundImageBuilder!(context, fallback) : null;
-    final ImageErrorListener? backgroundError = background.isNotNull ? onBackgroundImageError ?? (Object exception, StackTrace? stackTrace) {
-      if (showLogs) {
-        console.log("$exception || $stackTrace", tag: "[BASE AVATAR - onBackgroundImageError]");
-      }
-    } : null;
-
     Widget buildAvatar() {
       if(isCircular) {
         return CircleAvatar(
           radius: radius,
           minRadius: minRadius,
           maxRadius: maxRadius,
-          foregroundColor: foregroundColor,
-          backgroundColor: backgroundColor,
-          foregroundImage: foreground,
-          backgroundImage: background,
-          onForegroundImageError: foregroundError,
-          onBackgroundImageError: backgroundError,
+          foregroundColor: getForegroundColor(context),
+          backgroundColor: getBackgroundColor(context),
+          foregroundImage: getForegroundImage(context),
+          backgroundImage: getBackgroundImage(context),
+          onForegroundImageError: getForegroundErrorListener(),
+          onBackgroundImageError: getBackgroundErrorListener(),
           child: child,
         );
       } else {
-        BorderRadiusGeometry borderRadius = rectangleBorderRadius ?? BorderRadius.circular(6);
-
-        Decoration backgroundDecoration = imageDecorationBuilder.isNotNull ? imageDecorationBuilder!(context, background, fallback, backgroundColor, backgroundError) : BoxDecoration(
-          color: backgroundColor,
-          borderRadius: borderRadius,
-          image: background != null ? DecorationImage(
-            image: background,
-            onError: backgroundError,
-            fit: BoxFit.cover
-          ) : null,
-        );
-
-        Decoration foregroundDecoration = foregroundImageDecorationBuilder.isNotNull ? foregroundImageDecorationBuilder!(context, foreground, fallback, foregroundColor, foregroundError) : BoxDecoration(
-          color: foregroundColor,
-          borderRadius: borderRadius,
-          image: foreground != null ? DecorationImage(
-            image: foreground,
-            onError: foregroundError,
-            fit: BoxFit.cover
-          ) : null,
-        );
-
         return Container(
           height: radius,
           width: radius,
           alignment: alignment ?? Alignment.center,
-          decoration: rectangleDecoration ?? backgroundDecoration,
-          foregroundDecoration: foregroundDecoration,
+          decoration: rectangleDecoration ?? getBackgroundDecoration(context),
+          foregroundDecoration: getForegroundDecoration(context),
           child: child,
         );
       }
