@@ -94,6 +94,5 @@ export 'src/base_repository.dart';
 export 'src/repository.dart';
 export 'src/repository_service.dart';
 export 'src/repository_mixin.dart' hide RepositoryContext;
-export 'src/paging.dart';
 export 'src/repository_configuration.dart';
 export 'src/streamable_repository.dart';

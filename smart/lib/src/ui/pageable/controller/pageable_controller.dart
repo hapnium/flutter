@@ -53,7 +53,7 @@ typedef NextPageKeyGenerator<PageKey, Item> = PageKey? Function(
 /// ```
 /// 
 /// {@endtemplate}
-class PageableController<PageKey, Item> extends ValueNotifier<Pageable<PageKey, Item>> {
+class PageableController<PageKey, Item> extends ValueNotifier<PageableView<PageKey, Item>> {
   /// The callback function that fetches a page of items based on a [PageKey].
   ///
   /// Returns a [Future] or synchronous [List<Item>] for the specified page key.
@@ -114,7 +114,7 @@ class PageableController<PageKey, Item> extends ValueNotifier<Pageable<PageKey, 
         _nextPageKeyGenerator = getNextPageKey,
         _pageSize = pageSize,
         _logger = logger ?? (showLog ? ConsolePageableLogger() : null),
-        super(Pageable.initial(showLog: showLog, pageSize: pageSize))
+        super(PageableView.initial(showLog: showLog, pageSize: pageSize))
   {
     
     _log('Initialized (firstPageKey: $_firstPageKey, pageSize: $pageSize, status: ${value.status})');
@@ -155,7 +155,7 @@ class PageableController<PageKey, Item> extends ValueNotifier<Pageable<PageKey, 
       logger: logger,
     );
     
-    controller.value = Pageable.fromPages(
+    controller.value = PageableView.fromPages(
       pages: pages,
       nextPageKey: nextPageKey,
       showLog: showLog,
@@ -167,7 +167,7 @@ class PageableController<PageKey, Item> extends ValueNotifier<Pageable<PageKey, 
   }
   
   /// Current pageable data, including all loaded pages and status.
-  Pageable<PageKey, Item> get pageable => value;
+  PageableView<PageKey, Item> get pageable => value;
 
   /// Flattened list of all items loaded so far.
   List<Item> get itemList => value.items;
@@ -478,7 +478,7 @@ class PageableController<PageKey, Item> extends ValueNotifier<Pageable<PageKey, 
         }
       }
       
-      value = Pageable<PageKey, Item>(
+      value = PageableView<PageKey, Item>(
         pages: [pageResult],
         status: newStatus,
         nextPageKey: nextPageKey,
@@ -528,7 +528,7 @@ class PageableController<PageKey, Item> extends ValueNotifier<Pageable<PageKey, 
     _currentFetchCompleter?.complete();
     _currentFetchCompleter = null;
     
-    value = Pageable.initial(showLog: value.showLog, pageSize: value.pageSize);
+    value = PageableView.initial(showLog: value.showLog, pageSize: value.pageSize);
   }
   
   /// Logs a message if logging is enabled

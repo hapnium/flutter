@@ -90,6 +90,7 @@ export 'src/extensions/primitives/map.dart';
 export 'src/extensions/primitives/double.dart';
 export 'src/extensions/primitives/num.dart';
 export 'src/extensions/primitives/iterable.dart';
+export 'src/extensions/primitives/pageable.dart';
 
 // ▸ Others
 export 'src/extensions/others/dynamic.dart';
@@ -114,3 +115,7 @@ export 'src/io/base_stream/generic/_generic_stream.dart';
 export 'src/io/base_stream/int/_int_stream.dart';
 export 'src/io/base_stream/int/int_stream.dart';
 export 'src/io/stream_support.dart';
+
+export 'src/collectors/collector.dart';
+export 'src/collectors/collectors.dart';
+export 'src/collectors/paging.dart';

@@ -14,7 +14,7 @@ import '../models/pageable.dart';
 ///
 /// Parameters:
 /// - [context]: The current [BuildContext].
-/// - [pageable]: The current [Pageable] state containing loaded pages, next page key,
+/// - [pageable]: The current [PageableView] state containing loaded pages, next page key,
 ///   loading and error flags, etc.
 /// - [fetchFirstPage]: Callback to trigger fetching the first page of data.
 /// - [fetchNextPage]: Callback to trigger fetching the next page of data.
@@ -44,7 +44,7 @@ import '../models/pageable.dart';
 /// ```
 typedef PageableLayoutWidgetBuilder<PageKey, Item> = Widget Function(
   BuildContext context,
-  Pageable<PageKey, Item> pageable,
+  PageableView<PageKey, Item> pageable,
   VoidCallback fetchFirstPage,
   VoidCallback fetchNextPage,
   VoidCallback retry,
@@ -105,7 +105,7 @@ class PageableListener<PageKey, Item> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ValueListenableBuilder<Pageable<PageKey, Item>>(
+    return ValueListenableBuilder<PageableView<PageKey, Item>>(
       valueListenable: controller,
       builder: (context, state, _) => builder(context, state, controller.fetchFirstPage, controller.fetchNextPage, controller.retry),
     );

@@ -43,7 +43,7 @@ typedef PageableStatusWidgetBuilder<Item> = Widget Function(
 );
 
 /// {@template pageable_builder}
-/// Widget that builds UI based on the current [Pageable] state using
+/// Widget that builds UI based on the current [PageableView] state using
 /// delegate and layout builder patterns.
 ///
 /// It handles rendering items, loading indicators, error indicators,
@@ -83,7 +83,7 @@ class PageableBuilder<PageKey, Item> extends StatefulWidget {
   ///
   /// This includes the list of loaded items, current page key, and status flags
   /// such as whether more pages are available or if an error occurred.
-  final Pageable<PageKey, Item> pageable;
+  final PageableView<PageKey, Item> pageable;
 
   /// Callback to trigger fetching the first page of items.
   ///
@@ -142,7 +142,7 @@ class PageableBuilder<PageKey, Item> extends StatefulWidget {
 
   @override
   void debugFillProperties(DiagnosticPropertiesBuilder properties) {
-    properties.add(DiagnosticsProperty<Pageable<PageKey, Item>>('pageable', pageable));
+    properties.add(DiagnosticsProperty<PageableView<PageKey, Item>>('pageable', pageable));
     properties.add(DiagnosticsProperty<PageableBuilderDelegate<Item>>('builderDelegate', builderDelegate));
     properties.add(DiagnosticsProperty<PageableStatusWidgetBuilder<Item>>('loadingBuilder', loadingBuilder));
     properties.add(DiagnosticsProperty<PageableStatusWidgetBuilder<Item>>('errorBuilder', errorBuilder));
@@ -157,7 +157,7 @@ class _PageableBuilderState<PageKey, Item> extends State<PageableBuilder<PageKey
   bool _hasRequestedNextPage = false;
 
   @protected
-  Pageable<PageKey, Item> get value => widget.pageable;
+  PageableView<PageKey, Item> get value => widget.pageable;
 
   @protected
   PageableBuilderDelegate<Item> get delegate => widget.builderDelegate;

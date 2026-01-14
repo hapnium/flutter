@@ -16,12 +16,10 @@ import 'dart:collection';
 
 import 'package:hapnium/hapnium.dart';
 
-import 'secure_database_exception.dart';
-
 /// {@template page}
 /// Represents a **full page of data** in a paginated dataset.
 ///
-/// A [Page] extends [SlicedChunk] and provides additional metadata such as:
+/// A [Page] extends [PageSlicedChunk] and provides additional metadata such as:
 /// - the total number of pages
 /// - the total number of elements in the dataset
 ///
@@ -46,10 +44,10 @@ import 'secure_database_exception.dart';
 ///
 /// ### Design Notes
 /// - [Page] instances are **immutable** and fully describe a page in the dataset.
-/// - Navigation helpers (from [SlicedChunk]) work seamlessly with `Pageable`.
+/// - Navigation helpers (from [PageSlicedChunk]) work seamlessly with `Pageable`.
 /// - Use [empty] to create an empty page for default or placeholder responses.
 /// {@endtemplate}
-abstract class Page<T> extends SlicedChunk<T> {
+abstract class Page<T> extends PageSlicedChunk<T> {
   /// Constructs a [Page] with the given stream of [source] elements
   /// and the associated [Pageable] for pagination metadata.
   /// 
@@ -161,15 +159,15 @@ class _SimplePage<T> extends Page<T> {
 /// Represents a **slice of a paginated dataset**, containing a subset of items
 /// along with metadata about pagination and sorting.
 ///
-/// A [Slice] differs from a full page in that it focuses primarily on the **current
+/// A [PageSlice] differs from a full page in that it focuses primarily on the **current
 /// subset of data**, rather than the entire collection. It provides:
 /// - the current **slice number** and **size**
 /// - the actual content as a `List<T>`
 /// - **sorting information**
 /// - navigational helpers (`hasNext`, `hasPrevious`, `nextPageable`, etc.)
 ///
-/// [Slice] is generic over [T], the type of items contained, and integrates
-/// seamlessly with [PageRequest], [Pageable], and [Sort].
+/// [PageSlice] is generic over [T], the type of items contained, and integrates
+/// seamlessly with [PageRequest], [Pageable], and [PageSort].
 ///
 /// ### Usage Example
 /// ```dart
@@ -188,14 +186,14 @@ class _SimplePage<T> extends Page<T> {
 /// ```
 ///
 /// ### Design Notes
-/// - [Slice] is intended for service or repository layers returning paginated results.
+/// - [PageSlice] is intended for service or repository layers returning paginated results.
 /// - Supports **element transformation** via [slice].  
 /// - Navigation methods return new [Pageable] instances pointing to appropriate slices.
 /// - Equality and hash code are typically implemented in concrete subclasses.
 /// {@endtemplate}
-abstract class Slice<T> extends StandardGenericStream<T> implements GenericStream<T>, EqualsAndHashCode {
+abstract class PageSlice<T> extends StandardGenericStream<T> implements GenericStream<T>, EqualsAndHashCode {
   /// {@macro slice}
-  Slice(super.source);
+  PageSlice(super.source);
 
   /// Returns the **zero-based number** of this slice in the dataset.
   ///
@@ -256,7 +254,7 @@ abstract class Slice<T> extends StandardGenericStream<T> implements GenericStrea
   /// ```
   bool hasContent();
 
-  /// Returns the [Sort] configuration applied to this slice.
+  /// Returns the [PageSort] configuration applied to this slice.
   ///
   /// This can be used to generate subsequent queries or maintain consistent ordering.
   ///
@@ -265,7 +263,7 @@ abstract class Slice<T> extends StandardGenericStream<T> implements GenericStrea
   /// final sort = slice.getSort();
   /// print("Sorting applied: $sort");
   /// ```
-  Sort getSort();
+  PageSort getSort();
 
   /// Returns `true` if this slice is the first slice in the dataset.
   ///
@@ -368,7 +366,7 @@ abstract class Slice<T> extends StandardGenericStream<T> implements GenericStrea
   /// print(idSlice.getContent()); // List<int> of user IDs
   /// ```
   @override
-  Slice<U> map<U>(U Function(T item) mapper);
+  PageSlice<U> map<U>(U Function(T item) mapper);
 }
 
 // SLICED CHUNK
@@ -376,11 +374,11 @@ abstract class Slice<T> extends StandardGenericStream<T> implements GenericStrea
 /// {@template sliced_chunk}
 /// Concrete implementation of [Slice<T>] backed by a [Pageable] and a stream of elements.
 ///
-/// [SlicedChunk] represents a **chunk of data** corresponding to a single slice/page.
+/// [PageSlicedChunk] represents a **chunk of data** corresponding to a single slice/page.
 /// It decorates a [GenericStream] of elements with pagination metadata and sorting
 /// information from a [Pageable].
 ///
-/// Unlike [Slice], which is purely abstract, [SlicedChunk] provides default
+/// Unlike [PageSlice], which is purely abstract, [PageSlicedChunk] provides default
 /// implementations for most navigation and content-related methods.
 ///
 /// ### Usage Example
@@ -396,7 +394,7 @@ abstract class Slice<T> extends StandardGenericStream<T> implements GenericStrea
 /// print(chunk.getSort());             // Sort applied to this chunk
 /// ```
 /// {@endtemplate}
-abstract class SlicedChunk<T> extends Slice<T> {
+abstract class PageSlicedChunk<T> extends PageSlice<T> {
   /// The underlying pageable object containing page number, size, and sort.
   final Pageable _pageable;
 
@@ -404,7 +402,7 @@ abstract class SlicedChunk<T> extends Slice<T> {
   ///
   /// [source] is the stream of elements representing the chunk content.
   /// [_pageable] provides pagination metadata and sorting.
-  SlicedChunk(super.source, this._pageable);
+  PageSlicedChunk(super.source, this._pageable);
 
   @override
   int getNumber() => _pageable.isPaged() ? _pageable.getPageNumber() : 0;
@@ -433,7 +431,7 @@ abstract class SlicedChunk<T> extends Slice<T> {
   }
 
   @override
-  Sort getSort() => _pageable.getSort();
+  PageSort getSort() => _pageable.getSort();
 
   @override
   Pageable getPageable() => _pageable;
@@ -495,7 +493,7 @@ abstract class SlicedChunk<T> extends Slice<T> {
 ///
 /// Commonly used for database queries, API filters, and collection
 /// utilities that require specifying ascending or descending order.
-enum SortDirection {
+enum PageSortDirection {
   /// Sort values from smallest → largest (A → Z, 0 → 9).
   ASC,
 
@@ -512,7 +510,7 @@ enum SortDirection {
   /// Equivalent to checking `this == SortDirection.DESC`.
   bool isDescending() => equals(DESC);
 
-  /// Parses a string into a [SortDirection].
+  /// Parses a string into a [PageSortDirection].
   ///
   /// The comparison is case-insensitive.
   ///
@@ -522,13 +520,13 @@ enum SortDirection {
   /// final dir2 = SortDirection.fromString("DESC"); // SortDirection.DESC
   /// ```
   ///
-  /// Throws an [SecureDatabaseException] if the value does not match `"asc"`
+  /// Throws an [HapniumException] if the value does not match `"asc"`
   /// or `"desc"`.
-  static SortDirection fromString(String value) {
+  static PageSortDirection fromString(String value) {
     return switch (value.toUpperCase()) {
       "ASC" => ASC,
       "DESC" => DESC,
-      _ => throw SecureDatabaseException("Unknown value passed. Value must either be 'desc' or 'asc'."),
+      _ => throw HapniumException("Unknown value passed. Value must either be 'desc' or 'asc'."),
     };
   }
 }
@@ -536,7 +534,7 @@ enum SortDirection {
 /// {@template sort_order}
 /// Represents a **single sorting instruction** consisting of:
 /// - a **property** (field name),
-/// - a **direction** ([SortDirection]),
+/// - a **direction** ([PageSortDirection]),
 /// - and whether the sort should be **case-insensitive**.
 ///
 /// This class is part of the fluent sorting API used to construct declarative,
@@ -565,15 +563,15 @@ enum SortDirection {
 /// - Implements equality through [EqualsAndHashCode].
 ///
 /// ### See Also
-/// - [Sort]
-/// - [SortDirection]
+/// - [PageSort]
+/// - [PageSortDirection]
 /// {@endtemplate}
-final class SortOrder with EqualsAndHashCode {
+final class PageSortOrder with EqualsAndHashCode {
   /// The default direction used when none is provided: ascending.
-  static final SortDirection DEFAULT_DIRECTION = SortDirection.ASC;
+  static final PageSortDirection DEFAULT_DIRECTION = PageSortDirection.ASC;
 
   /// The sorting direction (ascending or descending).
-  final SortDirection direction;
+  final PageSortDirection direction;
 
   /// The property (field) name to be sorted by.
   final String property;
@@ -582,7 +580,7 @@ final class SortOrder with EqualsAndHashCode {
   final bool ignoreCase;
 
   /// {@macro sort_order}
-  SortOrder(this.property, {SortDirection? direction, bool? ignoreCase})
+  PageSortOrder(this.property, {PageSortDirection? direction, bool? ignoreCase})
     : direction = direction ?? DEFAULT_DIRECTION,
       ignoreCase = ignoreCase ?? false,
       assert(property.isNotEmpty, "Property cannot be empty");
@@ -596,21 +594,21 @@ final class SortOrder with EqualsAndHashCode {
   /// ```dart
   /// final o = SortOrder.by('age');
   /// ```
-  static SortOrder by(String property) => SortOrder(property);
+  static PageSortOrder by(String property) => PageSortOrder(property);
 
   /// Creates an ascending sort order for [property].
   ///
   /// ```dart
   /// final o = SortOrder.asc('name');
   /// ```
-  static SortOrder asc(String property) => SortOrder(property, direction: DEFAULT_DIRECTION);
+  static PageSortOrder asc(String property) => PageSortOrder(property, direction: DEFAULT_DIRECTION);
 
   /// Creates a descending sort order for [property].
   ///
   /// ```dart
   /// final o = SortOrder.desc('createdAt');
   /// ```
-  static SortOrder desc(String property) => SortOrder(property, direction: SortDirection.DESC);
+  static PageSortOrder desc(String property) => PageSortOrder(property, direction: PageSortDirection.DESC);
 
   // ---------------------------------------------------------------------------
   // Transformations (Fluent API)
@@ -621,7 +619,7 @@ final class SortOrder with EqualsAndHashCode {
   /// ```dart
   /// final o = SortOrder('age').withDirection(SortDirection.DESC);
   /// ```
-  SortOrder withDirection(SortDirection direction) => copyWith(direction: direction);
+  PageSortOrder withDirection(PageSortDirection direction) => copyWith(direction: direction);
 
   /// Reverses the sort direction.
   ///
@@ -631,40 +629,40 @@ final class SortOrder with EqualsAndHashCode {
   /// ```dart
   /// final reversed = SortOrder.asc('age').reverse(); // DESC
   /// ```
-  SortOrder reverse() => withDirection(direction.isAscending() ? SortDirection.DESC : DEFAULT_DIRECTION);
+  PageSortOrder reverse() => withDirection(direction.isAscending() ? PageSortDirection.DESC : DEFAULT_DIRECTION);
 
   /// Returns a copy of this order with the given [property].
   ///
   /// ```dart
   /// final o = SortOrder('name').withProperty('email');
   /// ```
-  SortOrder withProperty(String property) => copyWith(property: property);
+  PageSortOrder withProperty(String property) => copyWith(property: property);
 
   /// Returns a copy of this order with case-insensitive sorting enabled.
   ///
   /// ```dart
   /// final o = SortOrder('email').withIgnoreCase();
   /// ```
-  SortOrder withIgnoreCase() => copyWith(ignoreCase: true);
+  PageSortOrder withIgnoreCase() => copyWith(ignoreCase: true);
 
-  /// Creates a new [Sort] using this order’s direction and the given
+  /// Creates a new [PageSort] using this order’s direction and the given
   /// list of [properties].
   ///
   /// ```dart
   /// final sort = SortOrder('name').withProperties(['name', 'email']);
   /// ```
-  Sort withProperties(List<String> properties) => Sort.withDirection(direction, properties);
+  PageSort withProperties(List<String> properties) => PageSort.withDirection(direction, properties);
 
   // ---------------------------------------------------------------------------
   // Copy
   // ---------------------------------------------------------------------------
 
-  /// Creates a new [SortOrder] with the optionally overridden values.
+  /// Creates a new [PageSortOrder] with the optionally overridden values.
   ///
   /// ```dart
   /// final updated = order.copyWith(ignoreCase: true);
   /// ```
-  SortOrder copyWith({SortDirection? direction, String? property, bool? ignoreCase}) => SortOrder(
+  PageSortOrder copyWith({PageSortDirection? direction, String? property, bool? ignoreCase}) => PageSortOrder(
     property ?? this.property,
     direction: direction ?? this.direction,
     ignoreCase: ignoreCase ?? this.ignoreCase,
@@ -679,13 +677,13 @@ final class SortOrder with EqualsAndHashCode {
 
 /// {@template sort}
 /// Represents an **ordered collection of sorting instructions**, each expressed
-/// as a [SortOrder].  
+/// as a [PageSortOrder].  
 ///
-/// A [Sort] instance models a declarative sorting strategy typically used in
+/// A [PageSort] instance models a declarative sorting strategy typically used in
 /// database queries, repository abstractions, or in-memory sorting operations.
 ///
 /// ### Core Characteristics
-/// - Immutable collection of [SortOrder] elements  
+/// - Immutable collection of [PageSortOrder] elements  
 /// - Supports fluent transformations (ascending, descending, reverse, merge)  
 /// - Provides helper methods to inspect sorting state  
 /// - Implements [GenericStream] for iterable-like APIs  
@@ -712,25 +710,25 @@ final class SortOrder with EqualsAndHashCode {
 /// - `Sort.UNSORTED` is a singleton representing no sorting.  
 /// - Empty sorts are always treated as unsorted.  
 /// - Transformations return **new instances**, never modifying the original.  
-/// - A sort is considered *active* when it contains at least one [SortOrder].  
+/// - A sort is considered *active* when it contains at least one [PageSortOrder].  
 ///
 /// ### See Also
-/// - [SortOrder]  
-/// - [SortDirection]  
+/// - [PageSortOrder]  
+/// - [PageSortDirection]  
 /// - [GenericStream]  
 /// {@endtemplate}
-final class Sort extends StandardGenericStream<SortOrder> with EqualsAndHashCode implements GenericStream<SortOrder> {
+final class PageSort extends StandardGenericStream<PageSortOrder> with EqualsAndHashCode implements GenericStream<PageSortOrder> {
   /// A singleton representing the absence of sorting.
   ///
-  /// This is used whenever an empty list of [SortOrder] objects is provided.
-  static final Sort UNSORTED = Sort.by([]);
+  /// This is used whenever an empty list of [PageSortOrder] objects is provided.
+  static final PageSort UNSORTED = PageSort.by([]);
 
   /// {@macro sort}
-  Sort(super.source);
+  PageSort(super.source);
 
-  /// Creates a [Sort] using a list of property names and a shared [direction].
+  /// Creates a [PageSort] using a list of property names and a shared [direction].
   ///
-  /// Each property is converted into a corresponding [SortOrder] instance.
+  /// Each property is converted into a corresponding [PageSortOrder] instance.
   ///
   /// ```dart
   /// final sort = Sort.withDirection(
@@ -740,11 +738,11 @@ final class Sort extends StandardGenericStream<SortOrder> with EqualsAndHashCode
   /// ```
   ///
   /// Throws an assertion error if [properties] is empty.
-  Sort.withDirection(SortDirection direction, List<String> properties)
+  PageSort.withDirection(PageSortDirection direction, List<String> properties)
     : assert(properties.isNotEmpty, "You must provide atleast, one property"),
-      super(properties.map((property) => SortOrder(property, direction: direction)));
+      super(properties.map((property) => PageSortOrder(property, direction: direction)));
 
-  /// Creates a new [Sort] using the provided list of [orders].
+  /// Creates a new [PageSort] using the provided list of [orders].
   ///
   /// If the list is empty, returns [UNSORTED].
   ///
@@ -754,7 +752,7 @@ final class Sort extends StandardGenericStream<SortOrder> with EqualsAndHashCode
   ///   SortOrder.desc('createdAt'),
   /// ]);
   /// ```
-  static Sort by(List<SortOrder> orders) => orders.isEmpty ? UNSORTED : Sort(orders);
+  static PageSort by(List<PageSortOrder> orders) => orders.isEmpty ? UNSORTED : PageSort(orders);
 
   // ---------------------------------------------------------------------------
   // Internal Helpers
@@ -763,40 +761,40 @@ final class Sort extends StandardGenericStream<SortOrder> with EqualsAndHashCode
   /// Internal method that applies the given [direction] to all existing orders.
   ///
   /// Used by [ascending] and [descending].
-  Sort _withDirection(SortDirection direction) {
+  PageSort _withDirection(PageSortDirection direction) {
     final orders = toList();
-    final newList = <SortOrder>[];
+    final newList = <PageSortOrder>[];
 
     for (final order in orders) {
       newList.add(order.withDirection(direction));
     }
 
-    return Sort.by(orders);
+    return PageSort.by(orders);
   }
 
   // ---------------------------------------------------------------------------
   // Transformations
   // ---------------------------------------------------------------------------
 
-  /// Returns a copy of this [Sort] with all orders set to **descending**.
+  /// Returns a copy of this [PageSort] with all orders set to **descending**.
   ///
   /// ```dart
   /// final desc = sort.descending();
   /// ```
-  Sort descending() => _withDirection(SortDirection.DESC);
+  PageSort descending() => _withDirection(PageSortDirection.DESC);
 
-  /// Returns a copy of this [Sort] with all orders set to **ascending**.
+  /// Returns a copy of this [PageSort] with all orders set to **ascending**.
   ///
   /// ```dart
   /// final asc = sort.ascending();
   /// ```
-  Sort ascending() => _withDirection(SortDirection.ASC);
+  PageSort ascending() => _withDirection(PageSortDirection.ASC);
 
   // ---------------------------------------------------------------------------
   // Introspection
   // ---------------------------------------------------------------------------
 
-  /// Returns `true` if this sort contains at least one [SortOrder].
+  /// Returns `true` if this sort contains at least one [PageSortOrder].
   ///
   /// ```dart
   /// if (sort.isSorted()) {
@@ -816,47 +814,47 @@ final class Sort extends StandardGenericStream<SortOrder> with EqualsAndHashCode
   // Combination & Reversal
   // ---------------------------------------------------------------------------
 
-  /// Combines this sort with another [sort], returning a new [Sort].
+  /// Combines this sort with another [sort], returning a new [PageSort].
   ///
   /// Orders from the provided [sort] are appended.
   ///
   /// ```dart
   /// final combined = sort1.and(sort2);
   /// ```
-  Sort and(Sort sort) {
+  PageSort and(PageSort sort) {
     final current = toList();
     for (final order in sort.toList()) {
       current.add(order);
     }
 
-    return Sort.by(current);
+    return PageSort.by(current);
   }
 
-  /// Produces a new [Sort] where each [SortOrder] has its direction reversed.
+  /// Produces a new [PageSort] where each [PageSortOrder] has its direction reversed.
   ///
   /// ```dart
   /// final reversed = sort.reverse(sort);
   /// ```
-  Sort reverse(Sort sort) {
-    final reversed = <SortOrder>[];
+  PageSort reverse(PageSort sort) {
+    final reversed = <PageSortOrder>[];
     for (final order in toList()) {
       reversed.add(order.reverse());
     }
 
-    return Sort.by(reversed);
+    return PageSort.by(reversed);
   }
 
   // ---------------------------------------------------------------------------
   // Queries
   // ---------------------------------------------------------------------------
 
-  /// Retrieves the [SortOrder] associated with the given [property],
+  /// Retrieves the [PageSortOrder] associated with the given [property],
   /// or returns `null` if no matching order exists.
   ///
   /// ```dart
   /// final order = sort.getFor("username");
   /// ```
-  SortOrder? getFor(String property) => toList().find((order) => order.property.equals(property));
+  PageSortOrder? getFor(String property) => toList().find((order) => order.property.equals(property));
 
   @override
   List<Object?> equalizedProperties() => [toList()];
@@ -872,7 +870,7 @@ final class Sort extends StandardGenericStream<SortOrder> with EqualsAndHashCode
 /// indicating that no pagination boundaries should be applied.
 ///
 /// Unpaged instances are typically returned by [Pageable.unpaged] and can
-/// optionally carry a [Sort] specification. All page-related operations
+/// optionally carry a [PageSort] specification. All page-related operations
 /// (page number, offset, size) are unsupported and will throw exceptions.
 ///
 /// ### Usage Example
@@ -885,13 +883,13 @@ final class Sort extends StandardGenericStream<SortOrder> with EqualsAndHashCode
 ///
 /// ### Design Notes
 /// - Immutable class with singleton-style optimization for unsorted instances.
-/// - Overrides all page-specific methods to throw [SecureDatabaseException].
-/// - `Sort` is the only meaningful property; defaults to [Sort.UNSORTED].
+/// - Overrides all page-specific methods to throw [HapniumException].
+/// - `Sort` is the only meaningful property; defaults to [PageSort.UNSORTED].
 /// - Safe to use as a default when no pagination is required.
 /// {@endtemplate}
 final class Unpaged extends Pageable {
   /// Singleton instance representing an unpaged, unsorted request.
-  static final Pageable UNSORTED = Unpaged(Sort.UNSORTED);
+  static final Pageable UNSORTED = Unpaged(PageSort.UNSORTED);
 
   /// Returns an unpaged instance with the given [sort], or UNSORTED if the
   /// sort is not defined.
@@ -899,10 +897,10 @@ final class Unpaged extends Pageable {
   /// ```dart
   /// final unpagedSorted = Unpaged.sorted(Sort.asc("id"));
   /// ```
-  static Pageable sorted(Sort sort) => sort.isSorted() ? Unpaged(sort) : UNSORTED;
+  static Pageable sorted(PageSort sort) => sort.isSorted() ? Unpaged(sort) : UNSORTED;
 
   /// The sort configuration applied to this unpaged request.
-  final Sort _sort;
+  final PageSort _sort;
 
   /// {@macro unpaged}
   Unpaged(this._sort);
@@ -914,16 +912,16 @@ final class Unpaged extends Pageable {
   Pageable getFirst() => this;
 
   @override
-  int getOffset() => throw SecureDatabaseException("Cannot get offset for an unpaged request. Unpaged instances have no page boundaries.");
+  int getOffset() => throw HapniumException("Cannot get offset for an unpaged request. Unpaged instances have no page boundaries.");
 
   @override
-  int getPageNumber() => throw SecureDatabaseException("Cannot get page number for an unpaged request. This Pageable is not paginated.");
+  int getPageNumber() => throw HapniumException("Cannot get page number for an unpaged request. This Pageable is not paginated.");
 
   @override
-  int getPageSize() => throw SecureDatabaseException("Cannot get page size for an unpaged request. Use a paged Pageable to access page size.");
+  int getPageSize() => throw HapniumException("Cannot get page size for an unpaged request. Use a paged Pageable to access page size.");
 
   @override
-  Sort getSort() => _sort;
+  PageSort getSort() => _sort;
 
   @override
   bool hasPrevious() => false;
@@ -940,7 +938,7 @@ final class Unpaged extends Pageable {
   @override
   Pageable withPage(int pageNumber) => pageNumber.equals(0) 
     ? this
-    : throw SecureDatabaseException("Cannot create a paged instance from an unpaged Pageable. Requested page index: $pageNumber. Valid index for unpaged is only 0.");
+    : throw HapniumException("Cannot create a paged instance from an unpaged Pageable. Requested page index: $pageNumber. Valid index for unpaged is only 0.");
 }
 
 // SCROLL POSITION
@@ -953,8 +951,8 @@ final class Unpaged extends Pageable {
 /// request traversal, and streaming APIs.
 ///
 /// ### Directions
-/// - **[ScrollDirection.FORWARD]** → Moves toward later/next items  
-/// - **[ScrollDirection.BACKWARD]** → Moves toward earlier/previous items  
+/// - **[PageScrollDirection.FORWARD]** → Moves toward later/next items  
+/// - **[PageScrollDirection.BACKWARD]** → Moves toward earlier/previous items  
 ///
 /// ### Usage Example
 /// ```dart
@@ -969,7 +967,7 @@ final class Unpaged extends Pageable {
 /// - [reverse] always swaps to the opposite direction.
 /// - No-op states do not exist; both values always toggle deterministically.
 /// {@endtemplate}
-enum ScrollDirection {
+enum PageScrollDirection {
   /// Scrolls **forward**, usually meaning:
   /// - toward next elements in a list
   /// - advancing a cursor or page
@@ -990,7 +988,7 @@ enum ScrollDirection {
   /// ```dart
   /// final reversed = ScrollDirection.FORWARD.reverse(); // BACKWARD
   /// ```
-  ScrollDirection reverse() => this == FORWARD ? BACKWARD : FORWARD;
+  PageScrollDirection reverse() => this == FORWARD ? BACKWARD : FORWARD;
 }
 
 /// {@template scroll_position}
@@ -1021,11 +1019,11 @@ enum ScrollDirection {
 /// - Suitable for repository queries, API pagination, or UI scroll tracking.
 ///
 /// ### See Also
-/// - [KeysetScrollPosition]
-/// - [OffsetScrollPosition]
-/// - [ScrollDirection]
+/// - [KeysetPageScrollPosition]
+/// - [OffsetPageScrollPosition]
+/// - [PageScrollDirection]
 /// {@endtemplate}
-abstract interface class ScrollPosition with EqualsAndHashCode {
+abstract interface class PageScrollPosition with EqualsAndHashCode {
   /// Returns `true` if this scroll position represents the **initial position**
   /// of the collection or dataset.
   ///
@@ -1042,7 +1040,7 @@ abstract interface class ScrollPosition with EqualsAndHashCode {
   /// ```dart
   /// final initial = ScrollPosition.keySet();
   /// ```
-  static KeysetScrollPosition keySet() => KeysetScrollPosition.initial();
+  static KeysetPageScrollPosition keySet() => KeysetPageScrollPosition.initial();
 
   /// Creates a **key-set scroll position moving forward** from the given [keys].
   ///
@@ -1050,7 +1048,7 @@ abstract interface class ScrollPosition with EqualsAndHashCode {
   /// ```dart
   /// final next = ScrollPosition.forward({"id": 100});
   /// ```
-  static KeysetScrollPosition forward(Map<String, Object> keys) => KeysetScrollPosition.of(ScrollDirection.FORWARD, keys);
+  static KeysetPageScrollPosition forward(Map<String, Object> keys) => KeysetPageScrollPosition.of(PageScrollDirection.FORWARD, keys);
 
   /// Creates a **key-set scroll position moving backward** from the given [keys].
   ///
@@ -1058,7 +1056,7 @@ abstract interface class ScrollPosition with EqualsAndHashCode {
   /// ```dart
   /// final previous = ScrollPosition.backward({"id": 50});
   /// ```
-  static KeysetScrollPosition backward(Map<String, Object> keys) => KeysetScrollPosition.of(ScrollDirection.BACKWARD, keys);
+  static KeysetPageScrollPosition backward(Map<String, Object> keys) => KeysetPageScrollPosition.of(PageScrollDirection.BACKWARD, keys);
 
   /// Creates an **offset-based scroll position** at the given [offset].
   ///
@@ -1069,7 +1067,7 @@ abstract interface class ScrollPosition with EqualsAndHashCode {
   /// final initial = ScrollPosition.offSet();
   /// final offset10 = ScrollPosition.offSet(10);
   /// ```
-  static OffsetScrollPosition offSet([int? offset]) => offset == null ? OffsetScrollPosition.initial() : OffsetScrollPosition.of(offset);
+  static OffsetPageScrollPosition offSet([int? offset]) => offset == null ? OffsetPageScrollPosition.initial() : OffsetPageScrollPosition.of(offset);
 }
 
 /// {@template key_set_scroll_position}
@@ -1101,23 +1099,23 @@ abstract interface class ScrollPosition with EqualsAndHashCode {
 /// - Immutable once created (keys are wrapped in [UnmodifiableMapView])  
 /// - `EMPTY_FORWARD` and `EMPTY_BACKWARD` singletons optimize empty key sets  
 /// - Provides convenient helpers for scrolling and reversing direction  
-/// - Works seamlessly with [ScrollPosition] abstraction
+/// - Works seamlessly with [PageScrollPosition] abstraction
 /// {@endtemplate}
-final class KeysetScrollPosition implements ScrollPosition {
+final class KeysetPageScrollPosition implements PageScrollPosition {
   /// Singleton representing an empty forward scroll position.
-  static final KeysetScrollPosition EMPTY_FORWARD = KeysetScrollPosition(ScrollDirection.FORWARD, {});
+  static final KeysetPageScrollPosition EMPTY_FORWARD = KeysetPageScrollPosition(PageScrollDirection.FORWARD, {});
 
   /// Singleton representing an empty backward scroll position.
-  static final KeysetScrollPosition EMPTY_BACKWARD = KeysetScrollPosition(ScrollDirection.BACKWARD, {});
+  static final KeysetPageScrollPosition EMPTY_BACKWARD = KeysetPageScrollPosition(PageScrollDirection.BACKWARD, {});
 
   /// The cursor keys representing the current scroll position.
   final Map<String, Object> keys;
 
   /// The direction of the scroll.
-  final ScrollDirection direction;
+  final PageScrollDirection direction;
 
   /// {@macro key_set_scroll_position}
-  KeysetScrollPosition(this.direction, this.keys);
+  KeysetPageScrollPosition(this.direction, this.keys);
 
   /// Returns the **initial forward scroll position**.
   ///
@@ -1127,9 +1125,9 @@ final class KeysetScrollPosition implements ScrollPosition {
   /// final initial = KeysetScrollPosition.initial();
   /// print(initial.isInitial()); // true
   /// ```
-  static KeysetScrollPosition initial() => EMPTY_FORWARD;
+  static KeysetPageScrollPosition initial() => EMPTY_FORWARD;
 
-  /// Creates a [KeysetScrollPosition] from the given [direction] and [keys].
+  /// Creates a [KeysetPageScrollPosition] from the given [direction] and [keys].
   ///
   /// If [keys] is empty, returns the corresponding singleton ([EMPTY_FORWARD] or
   /// [EMPTY_BACKWARD]) to optimize memory usage.
@@ -1141,12 +1139,12 @@ final class KeysetScrollPosition implements ScrollPosition {
   ///   {"id": 42},
   /// );
   /// ```
-  static KeysetScrollPosition of(ScrollDirection direction, Map<String, Object> keys) {
+  static KeysetPageScrollPosition of(PageScrollDirection direction, Map<String, Object> keys) {
     if (keys.isEmpty) {
-      return direction == ScrollDirection.FORWARD ? EMPTY_FORWARD : EMPTY_BACKWARD;
+      return direction == PageScrollDirection.FORWARD ? EMPTY_FORWARD : EMPTY_BACKWARD;
     }
 
-    return KeysetScrollPosition(direction, UnmodifiableMapView(keys));
+    return KeysetPageScrollPosition(direction, UnmodifiableMapView(keys));
   }
 
   /// Returns `true` if this position scrolls **forward**.
@@ -1154,35 +1152,35 @@ final class KeysetScrollPosition implements ScrollPosition {
   /// ```dart
   /// print(position.scrollsForward()); // true or false
   /// ```
-  bool scrollsForward() => direction == ScrollDirection.FORWARD;
+  bool scrollsForward() => direction == PageScrollDirection.FORWARD;
 
   /// Returns `true` if this position scrolls **backward**.
   ///
   /// ```dart
   /// print(position.scrollsBackward()); // true or false
   /// ```
-  bool scrollsBackward() => direction == ScrollDirection.BACKWARD;
+  bool scrollsBackward() => direction == PageScrollDirection.BACKWARD;
 
   /// Returns a new scroll position moving **forward**.
   ///
   /// If already forward, returns `this`.
-  KeysetScrollPosition scrollForward() => direction == ScrollDirection.FORWARD 
+  KeysetPageScrollPosition scrollForward() => direction == PageScrollDirection.FORWARD 
     ? this
-    : KeysetScrollPosition(ScrollDirection.FORWARD, keys);
+    : KeysetPageScrollPosition(PageScrollDirection.FORWARD, keys);
 
   /// Returns a new scroll position moving **backward**.
   ///
   /// If already backward, returns `this`.
-  KeysetScrollPosition scrollBackward() => direction == ScrollDirection.BACKWARD 
+  KeysetPageScrollPosition scrollBackward() => direction == PageScrollDirection.BACKWARD 
     ? this
-    : KeysetScrollPosition(ScrollDirection.BACKWARD, keys);
+    : KeysetPageScrollPosition(PageScrollDirection.BACKWARD, keys);
 
-  /// Returns a new [KeysetScrollPosition] with **reversed direction**.
+  /// Returns a new [KeysetPageScrollPosition] with **reversed direction**.
   ///
   /// ```dart
   /// final reversed = position.reverse();
   /// ```
-  KeysetScrollPosition reverse() => KeysetScrollPosition(direction.reverse(), keys);
+  KeysetPageScrollPosition reverse() => KeysetPageScrollPosition(direction.reverse(), keys);
 
   @override
   bool isInitial() => keys.isEmpty;
@@ -1221,18 +1219,18 @@ final class KeysetScrollPosition implements ScrollPosition {
 /// - Offsets must always be non-negative when created via [of].  
 /// - The initial offset is internally represented as -1.  
 /// - Increasing the offset is done via [advanceBy], which returns a new instance.  
-/// - Implements [ScrollPosition] for interoperability with keyset pagination.  
+/// - Implements [PageScrollPosition] for interoperability with keyset pagination.  
 ///
 /// ### See Also
-/// - [ScrollPosition]  
-/// - [KeysetScrollPosition]  
-/// - [ScrollDirection]  
+/// - [PageScrollPosition]  
+/// - [KeysetPageScrollPosition]  
+/// - [PageScrollDirection]  
 /// {@endtemplate}
-final class OffsetScrollPosition implements ScrollPosition {
+final class OffsetPageScrollPosition implements PageScrollPosition {
   /// The singleton instance representing the **initial** offset.
   ///
   /// Internal value: -1
-  static final OffsetScrollPosition INITIAL = OffsetScrollPosition(-1);
+  static final OffsetPageScrollPosition INITIAL = OffsetPageScrollPosition(-1);
 
   /// Internal raw offset value.
   ///
@@ -1241,26 +1239,26 @@ final class OffsetScrollPosition implements ScrollPosition {
   final int _offset;
 
   /// {@macro offset_scroll_position}
-  OffsetScrollPosition(this._offset);
+  OffsetPageScrollPosition(this._offset);
 
-  /// Returns the **initial** [OffsetScrollPosition].
+  /// Returns the **initial** [OffsetPageScrollPosition].
   ///
   /// ```dart
   /// final pos = OffsetScrollPosition.initial();
   /// print(pos.isInitial()); // true
   /// ```
-  static OffsetScrollPosition initial() => INITIAL;
+  static OffsetPageScrollPosition initial() => INITIAL;
 
-  /// Creates a new [OffsetScrollPosition] with the given positive [offset].
+  /// Creates a new [OffsetPageScrollPosition] with the given positive [offset].
   ///
   /// Throws an assertion error if [offset] is negative.
   ///
   /// ```dart
   /// final pos = OffsetScrollPosition.of(30);
   /// ```
-  static OffsetScrollPosition of(int offset) {
+  static OffsetPageScrollPosition of(int offset) {
     assert(offset >= 0, "Offset cannot be negative");
-    return OffsetScrollPosition(offset);
+    return OffsetPageScrollPosition(offset);
   }
 
   /// Returns the current offset value.
@@ -1288,9 +1286,9 @@ final class OffsetScrollPosition implements ScrollPosition {
   /// final pos = OffsetScrollPosition.of(10);
   /// final next = pos.advanceBy(15); // offset = 25
   /// ```
-  OffsetScrollPosition advanceBy(int advance) {
+  OffsetPageScrollPosition advanceBy(int advance) {
     final value = isInitial() ? advance : _offset.plus(advance);
-    return OffsetScrollPosition(value.isLessThan(0) ? 0 : value);
+    return OffsetPageScrollPosition(value.isLessThan(0) ? 0 : value);
   }
 
   @override
@@ -1309,7 +1307,7 @@ final class OffsetScrollPosition implements ScrollPosition {
 /// A [Pageable] defines:
 /// - the **page number** (zero-based),
 /// - the **page size** (number of items per page),
-/// - an associated [Sort] definition,
+/// - an associated [PageSort] definition,
 /// - navigation capabilities such as [getNext], [getPreviousOrFirst], and [getFirst].
 ///
 /// Two concrete implementations typically exist:
@@ -1353,10 +1351,10 @@ final class OffsetScrollPosition implements ScrollPosition {
 /// | paged → `toLimit`    | `Limit.of(pageSize)`|
 ///
 /// ### See Also
-/// - [Sort]
-/// - [SortOrder]
+/// - [PageSort]
+/// - [PageSortOrder]
 /// - [Limit]
-/// - [OffsetScrollPosition]
+/// - [OffsetPageScrollPosition]
 /// - [PageRequest]
 /// - [Unpaged]
 /// {@endtemplate}
@@ -1368,7 +1366,7 @@ abstract class Pageable with EqualsAndHashCode {
   /// final pageable = Pageable.unpaged();
   /// final sortedUnpaged = Pageable.unpaged(Sort.asc("name"));
   /// ```
-  static Pageable unpaged([Sort? sort]) => Unpaged.sorted(sort ?? Sort.UNSORTED);
+  static Pageable unpaged([PageSort? sort]) => Unpaged.sorted(sort ?? PageSort.UNSORTED);
 
   /// Creates a paged request with the given [pageSize], starting at page `0`.
   ///
@@ -1403,7 +1401,7 @@ abstract class Pageable with EqualsAndHashCode {
   int getOffset();
 
   /// Returns the sort configuration applied to this pagination request.
-  Sort getSort();
+  PageSort getSort();
 
   /// Returns the sort defined on this instance, or falls back to the
   /// provided [sort] if this one is unsorted.
@@ -1413,7 +1411,7 @@ abstract class Pageable with EqualsAndHashCode {
   /// final fallback = Sort.asc("id");
   /// final actual = pageable.getSortOr(fallback);
   /// ```
-  Sort getSortOr(Sort sort) => getSort().isSorted() ? getSort() : sort;
+  PageSort getSortOr(PageSort sort) => getSort().isSorted() ? getSort() : sort;
 
   /// Returns a new [Pageable] pointing to the next page in the sequence.
   ///
@@ -1482,22 +1480,22 @@ abstract class Pageable with EqualsAndHashCode {
   /// ```
   Limit toLimit() => isUnpaged() ? Limit.unlimited() : Limit.of(getPageSize());
 
-  /// Converts this pagination request into an [OffsetScrollPosition].
+  /// Converts this pagination request into an [OffsetPageScrollPosition].
   ///
-  /// - Unpaged → throws [SecureDatabaseException]  
+  /// - Unpaged → throws [HapniumException]  
   /// - Paged → creates an exclusive offset (`offset - 1`)  
   ///
   /// ### Example
   /// ```dart
   /// final pos = pageable.toScrollPosition();
   /// ```
-  OffsetScrollPosition toScrollPosition() {
+  OffsetPageScrollPosition toScrollPosition() {
     if (isUnpaged()) {
-			throw SecureDatabaseException("Cannot create OffsetScrollPosition from an unpaged instance");
+			throw HapniumException("Cannot create OffsetScrollPosition from an unpaged instance");
 		}
 
     // scrolling is exclusive → subtract one when offset > 0
-		return getOffset() > 0 ? ScrollPosition.offSet(getOffset() - 1) : ScrollPosition.offSet();
+		return getOffset() > 0 ? PageScrollPosition.offSet(getOffset() - 1) : PageScrollPosition.offSet();
   }
 }
 
@@ -1672,7 +1670,7 @@ final class _Limited extends Limit {
 /// print(limit.isLimited());   // false
 ///
 /// // Calling max() is invalid:
-/// // limit.max(); // ❌ throws SecureDatabaseException
+/// // limit.max(); // ❌ throws HapniumException
 /// ```
 ///
 /// ### Design Notes
@@ -1692,13 +1690,13 @@ final class _Unlimited extends Limit {
   bool isLimited() => false;
 
   @override
-  int max() => throw SecureDatabaseException("Always check isLimited() because unlimited limits do not define a max value");
+  int max() => throw HapniumException("Always check isLimited() because unlimited limits do not define a max value");
 }
 
 // PAGE REQUEST
 
 /// {@template page_request}
-/// Represents a concrete, paged request with page number, page size, and optional [Sort].
+/// Represents a concrete, paged request with page number, page size, and optional [PageSort].
 ///
 /// [PageRequest] is a standard implementation of [Pageable] for zero-based
 /// pagination in repositories or query builders. It supports:
@@ -1733,14 +1731,14 @@ final class _Unlimited extends Limit {
 /// {@endtemplate}
 final class PageRequest extends AbstractPageRequest {
   /// Sort configuration for this page request.
-  final Sort _sort;
+  final PageSort _sort;
 
   /// Constructs a [PageRequest] with a page number, page size, and optional [sort].
   ///
-  /// If [sort] is not provided, defaults to [Sort.UNSORTED].
+  /// If [sort] is not provided, defaults to [PageSort.UNSORTED].
   /// 
   /// {@macro page_request}
-  PageRequest(super.pageNumber, super.pageSize, [Sort? sort]) : _sort = sort ?? Sort.UNSORTED;
+  PageRequest(super.pageNumber, super.pageSize, [PageSort? sort]) : _sort = sort ?? PageSort.UNSORTED;
 
   /// Factory constructor creating a page request with explicit direction and properties.
   ///
@@ -1748,8 +1746,8 @@ final class PageRequest extends AbstractPageRequest {
   /// ```dart
   /// final page = PageRequest.of(0, 10, SortDirection.asc, ['name']);
   /// ```
-  static PageRequest of(int pageNumber, int pageSize, SortDirection direction, List<String> properties) {
-    return PageRequest(pageNumber, pageSize, Sort.withDirection(direction, properties));
+  static PageRequest of(int pageNumber, int pageSize, PageSortDirection direction, List<String> properties) {
+    return PageRequest(pageNumber, pageSize, PageSort.withDirection(direction, properties));
   }
 
   /// Factory constructor for a page request starting at page 0 with the given size.
@@ -1761,7 +1759,7 @@ final class PageRequest extends AbstractPageRequest {
   static PageRequest ofSize(int pageSize) => PageRequest(0, pageSize);
 
   @override
-  Sort getSort() => _sort;
+  PageSort getSort() => _sort;
 
   @override
   Pageable getNext() => PageRequest(getPageNumber() + 1, getPageSize(), getSort());
@@ -1783,10 +1781,10 @@ final class PageRequest extends AbstractPageRequest {
   /// final newPage = page.withDirection(SortDirection.desc, ['date']);
   /// print(newPage.getSort()); // sort by date descending
   /// ```
-  Pageable withDirection(SortDirection direction, List<String> properties) => PageRequest(
+  Pageable withDirection(PageSortDirection direction, List<String> properties) => PageRequest(
     getPageNumber(),
     getPageSize(),
-    Sort.withDirection(direction, properties)
+    PageSort.withDirection(direction, properties)
   );
  
   /// Returns a new [PageRequest] with a different [sort].
@@ -1796,7 +1794,7 @@ final class PageRequest extends AbstractPageRequest {
   /// final page = PageRequest.ofSize(20);
   /// final sortedPage = page.withSorting(Sort.by(['name'], SortDirection.asc));
   /// ```
-  Pageable withSorting(Sort sort) => PageRequest(getPageNumber(), getPageSize(), sort);
+  Pageable withSorting(PageSort sort) => PageRequest(getPageNumber(), getPageSize(), sort);
 
   @override
   List<Object?> equalizedProperties() => [super.equalizedProperties(), _sort];

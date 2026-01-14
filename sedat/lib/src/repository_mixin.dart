@@ -2,7 +2,6 @@ import 'package:hapnium/hapnium.dart';
 import 'package:meta/meta.dart';
 
 import 'base_repository.dart';
-import 'paging.dart';
 import 'repository.dart';
 import 'secure_database_exception.dart';
 
@@ -166,14 +165,14 @@ mixin PageableRepository<Entity, Insert, Repository extends BaseRepository<Entit
   /// Default implementation delegates to [findAllSortedIterable] and
   /// materializes the result into a `List<Entity>`. Override this method
   /// when your backend can efficiently return a fully-sorted list.
-  Future<List<Entity>> findAllSorted(Sort sort) async => List<Entity>.from(await findAllSortedIterable(sort));
+  Future<List<Entity>> findAllSorted(PageSort sort) async => List<Entity>.from(await findAllSortedIterable(sort));
 
   /// Return all elements sorted according to [sort] as an `Iterable<Entity>`.
   ///
   /// Prefer overriding this method when your data source can produce a
   /// sorted stream/iterator without materializing everything in memory.
   /// The default implementation returns an empty iterable.
-  Future<Iterable<Entity>> findAllSortedIterable(Sort sort) async => <Entity>[];
+  Future<Iterable<Entity>> findAllSortedIterable(PageSort sort) async => <Entity>[];
 } 
 
 /// Convenience mixin for `JsonRepository<T>` implementations that want to

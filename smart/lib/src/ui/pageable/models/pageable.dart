@@ -23,7 +23,7 @@ import 'page_result.dart';
 /// ``` 
 /// 
 /// {@endtemplate}
-class Pageable<PageKey, Item> {
+class PageableView<PageKey, Item> {
   /// List of page results, in the order they were fetched.
   final List<PageResult<PageKey, Item>> pages;
   
@@ -45,10 +45,10 @@ class Pageable<PageKey, Item> {
   /// Page size used for calculating pagination boundaries (optional).
   final int? pageSize;
   
-  /// Creates a [Pageable] with the given parameters.
+  /// Creates a [PageableView] with the given parameters.
   /// 
   /// {@macro pageable}
-  const Pageable({
+  const PageableView({
     required this.pages,
     required this.status,
     this.error,
@@ -58,17 +58,17 @@ class Pageable<PageKey, Item> {
     this.pageSize,
   });
   
-  /// Creates an initial empty [Pageable] with no loaded pages.
+  /// Creates an initial empty [PageableView] with no loaded pages.
   ///
   /// [showLog] enables debug logging.
   /// [pageSize] optionally defines the page size for pagination logic.
   /// 
   /// {@macro pageable}
-  factory Pageable.initial({
+  factory PageableView.initial({
     bool showLog = false,
     int? pageSize,
   }) {
-    return Pageable<PageKey, Item>(
+    return PageableView<PageKey, Item>(
       pages: [],
       status: PageableStatus.LOADING_FIRST_PAGE,
       showLog: showLog,
@@ -76,13 +76,13 @@ class Pageable<PageKey, Item> {
     );
   }
   
-  /// Creates a [Pageable] from an existing list of [PageResult]s.
+  /// Creates a [PageableView] from an existing list of [PageResult]s.
   ///
   /// Automatically sets the status to [PageableStatus.NO_ITEMS_FOUND]
   /// if no items are found, otherwise [PageableStatus.LOADED_PAGE].
   /// 
   /// {@macro pageable}
-  factory Pageable.fromPages({
+  factory PageableView.fromPages({
     required List<PageResult<PageKey, Item>> pages,
     PageKey? nextPageKey,
     bool showLog = false,
@@ -91,7 +91,7 @@ class Pageable<PageKey, Item> {
     final allItems = pages.expand((result) => result.items).toList();
     final status = allItems.isEmpty ? PageableStatus.NO_ITEMS_FOUND : PageableStatus.LOADED_PAGE;
     
-    return Pageable<PageKey, Item>(
+    return PageableView<PageKey, Item>(
       pages: List.from(pages),
       status: status,
       nextPageKey: nextPageKey,
@@ -164,12 +164,12 @@ class Pageable<PageKey, Item> {
     return null;
   }
   
-  /// Creates a copy of this [Pageable] with updated properties.
+  /// Creates a copy of this [PageableView] with updated properties.
   ///
   /// Set [clearError] to true to clear error and stack trace.
   /// 
   /// {@macro pageable}
-  Pageable<PageKey, Item> copyWith({
+  PageableView<PageKey, Item> copyWith({
     List<PageResult<PageKey, Item>>? pages,
     PageableStatus? status,
     dynamic error,
@@ -179,7 +179,7 @@ class Pageable<PageKey, Item> {
     int? pageSize,
     bool clearError = false,
   }) {
-    return Pageable<PageKey, Item>(
+    return PageableView<PageKey, Item>(
       pages: pages ?? List.from(this.pages),
       status: status ?? this.status,
       error: clearError ? null : (error ?? this.error),
@@ -193,8 +193,8 @@ class Pageable<PageKey, Item> {
   /// Resets the pageable to its initial empty state.
   /// 
   /// {@macro pageable}
-  Pageable<PageKey, Item> reset() {
-    return Pageable<PageKey, Item>(
+  PageableView<PageKey, Item> reset() {
+    return PageableView<PageKey, Item>(
       pages: [],
       status: PageableStatus.LOADING_FIRST_PAGE,
       showLog: showLog,
@@ -214,7 +214,7 @@ class Pageable<PageKey, Item> {
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
     
-    return other is Pageable<PageKey, Item> &&
+    return other is PageableView<PageKey, Item> &&
         other.pages.length == pages.length &&
         other.status == status &&
         other.nextPageKey == nextPageKey &&
