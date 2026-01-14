@@ -104,7 +104,7 @@ abstract class BaseRepository<Entity, Insert> extends AbstractStreamableReposito
 
     @Deprecated("The use of `canDestroy` is no more effective.")
     bool canDestroy = true,
-    RepositoryConfiguration? config
+    SecureRepositoryConfiguration? config
   }) async {
     _showLogs = showLogs;
     _device = device ?? "";
@@ -128,7 +128,7 @@ abstract class BaseRepository<Entity, Insert> extends AbstractStreamableReposito
       console.log("Opening $_name local storage box", tag: _from);
     }
 
-    final configuration = config ?? RepositoryConfiguration();
+    final configuration = config ?? SecureRepositoryConfiguration();
 
     _box = await Hive.openBox<dynamic>(
       _name,
