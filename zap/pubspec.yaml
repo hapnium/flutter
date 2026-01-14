@@ -3,7 +3,7 @@ description: "HTTP and Socket client handling requests with error and session ma
 
 publish_to: none
 
-version: 0.2.9
+version: 0.3.0
 homepage: https://github.com/Hapnium/flutter/tree/main/zap
 repository: https://github.com/Hapnium/flutter/tree/main/zap
 

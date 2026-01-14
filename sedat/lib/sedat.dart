@@ -88,16 +88,12 @@
 library;
 
 /// CORE
-export 'src/core/abstract_secure_database_configurer.dart';
-
-/// EXCEPTIONS
-export 'src/exceptions/secure_database_exception.dart';
-
-/// REPOSITORY
-export 'src/repository/base_repository.dart';
-export 'src/repository/repository.dart';
-export 'src/repository/types.dart';
-export 'src/repository/repository_service.dart';
-
-/// TYPEDEFS
-export 'src/typedefs.dart';
+export 'src/abstract_secure_database_configurer.dart';
+export 'src/secure_database_exception.dart';
+export 'src/base_repository.dart';
+export 'src/repository.dart';
+export 'src/repository_service.dart';
+export 'src/repository_mixin.dart' hide RepositoryContext;
+export 'src/paging.dart';
+export 'src/repository_configuration.dart';
+export 'src/streamable_repository.dart';

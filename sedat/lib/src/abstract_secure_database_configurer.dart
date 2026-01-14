@@ -1,7 +1,10 @@
+// ignore_for_file: deprecated_member_use_from_same_package
+
 import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:meta/meta.dart';
 
-import '../repository/base_repository.dart';
+import 'base_repository.dart';
+import 'repository_mixin.dart';
 
 /// An abstract class for configuring secure local database access using Hive.
 ///
@@ -29,7 +32,7 @@ abstract class AbstractSecureDatabaseConfigurer {
       await Hive.initFlutter();
 
       if (repositories().isNotEmpty) {
-        for (BaseRepository<dynamic, dynamic> repository in repositories()) {
+        for (final repository in repositories()) {
           await repository.open(
             prefix: prefix,
             device: deviceName,
@@ -38,6 +41,8 @@ abstract class AbstractSecureDatabaseConfigurer {
             canDestroy: canDestroySavedData
           );
         }
+
+        RepositoryContext.INSTANCE.register(repositories());
       }
 
       await setup();
@@ -80,9 +85,7 @@ abstract class AbstractSecureDatabaseConfigurer {
   /// This method *must* be overridden by subclasses to provide the repositories
   /// that should be used by the application.
   @mustBeOverridden
-  List<BaseRepository> repositories() {
-    return [];
-  }
+  List<BaseRepository> repositories() => [];
 
   /// Performs any additional setup logic after the repositories are opened.
   ///
@@ -111,10 +114,12 @@ abstract class AbstractSecureDatabaseConfigurer {
   @mustCallSuper
   Future<void> clearAll() {
     return Future.sync(() async {
-      for (var repository in repositories()) {
+      for (final repository in repositories()) {
         await repository.delete(); // Await the delete operation
       }
+
       await clear();
+      RepositoryContext.INSTANCE.clear();
     }); // Await the clear operation
   }
 
@@ -129,7 +134,7 @@ abstract class AbstractSecureDatabaseConfigurer {
   @mustCallSuper
   Future<void> closeAll() {
     return Future.sync(() async {
-      for (var repository in repositories()) {
+      for (final repository in repositories()) {
         await repository.close(); // Await the close operation
       }
     }); // Await the close operation

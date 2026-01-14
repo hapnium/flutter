@@ -105,3 +105,12 @@ export 'src/utils/typedefs.dart';
 
 export 'src/helpers/equals_and_hash_code.dart';
 export 'src/helpers/to_string.dart';
+
+export 'src/io/base_stream/base_stream.dart';
+export 'src/io/base_stream/double/double_stream.dart';
+export 'src/io/base_stream/generic/generic_stream.dart';
+export 'src/io/base_stream/double/_double_stream.dart';
+export 'src/io/base_stream/generic/_generic_stream.dart';
+export 'src/io/base_stream/int/_int_stream.dart';
+export 'src/io/base_stream/int/int_stream.dart';
+export 'src/io/stream_support.dart';
