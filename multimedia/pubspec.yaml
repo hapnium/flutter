@@ -19,10 +19,10 @@ dependencies:
 
   gallery:
     path: ../gallery
-  smart:
-    path: ../smart
 
 dev_dependencies:
   tracing:
     path: ../tracing
+  smart:
+    path: ../smart
   lints: ^6.0.0
