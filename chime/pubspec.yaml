@@ -1,0 +1,29 @@
+name: chime
+description: "Notification (In-App and Device) management for Hapnium mobile platforms."
+
+publish_to: none
+
+version: 0.0.1
+homepage: https://github.com/Hapnium/flutter/tree/main/chime
+repository: https://github.com/Hapnium/flutter/tree/main/chime
+
+environment:
+  sdk: ^3.0.0
+  flutter: ">=1.17.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_local_notifications: ^19.5.0
+  fluttertoast: ^9.0.0
+  timezone: ^0.10.1
+  toastification: ^3.0.3
+
+  tracing:
+    path: ../tracing
+
+  hapnium:
+    path: ../hapnium
+
+dev_dependencies:
+  lints: ^6.0.0

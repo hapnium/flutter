@@ -1,8 +1,8 @@
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
-import 'config/definitions.dart';
-import 'enums/tappy_type.dart';
-import 'models/notifier.dart';
+import '../config/definitions.dart';
+import '../enums/tappy_type.dart';
+import '../models/notifier.dart';
 import 'tappy_interface.dart';
 
 /// {@template tappy}

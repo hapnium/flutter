@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 
-import 'models/notifier.dart';
-import 'controller/tappy_mixin.dart';
+import '../models/notifier.dart';
+import 'tappy_mixin.dart';
 
 /// An abstract class defining a service for updating notification-related streams.
 ///

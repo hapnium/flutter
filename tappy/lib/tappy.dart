@@ -120,13 +120,13 @@ export 'src/extensions/tappy_type_extension.dart';
 export 'src/exception/tappy_exception.dart';
 
 /// CORE
-export 'src/tappy_application.dart';
-export 'src/controller/tappy_mixin.dart';
-export 'src/tappy_lifecycle.dart';
-export 'src/tappy.dart';
-export 'src/controller/tappy_controller.dart';
+export 'src/core/tappy_application.dart';
+export 'src/core/tappy_mixin.dart';
+export 'src/core/tappy_lifecycle.dart';
+export 'src/core/tappy.dart';
+export 'src/core/tappy_controller.dart';
 export 'src/device_notification.dart';
 export 'src/device_notification_builder.dart';
 export 'src/device_notification_manager.dart';
 export 'src/in_app_notification.dart';
-export 'src/tappy_interface.dart';
+export 'src/core/tappy_interface.dart';

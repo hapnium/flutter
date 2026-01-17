@@ -24,7 +24,7 @@ import 'config/definitions.dart';
 /// This service can be used to process push notifications received through Firebase,
 /// APNs, or other push delivery mechanisms before passing them to app-level handlers.
 /// {@endtemplate}
-abstract class DeviceNotificationInterface {
+abstract interface class DeviceNotificationInterface {
   /// Requests permission for notifications.
   ///
   /// This method should be implemented to request necessary permissions for

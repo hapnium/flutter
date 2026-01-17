@@ -1,4 +1,4 @@
-import '../tappy_lifecycle.dart';
+import '../core/tappy_lifecycle.dart';
 
 /// {@template tappy_controller}
 /// A singleton controller for managing notification events in the application.

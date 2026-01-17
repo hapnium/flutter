@@ -1,4 +1,4 @@
-part of '../tappy_application.dart';
+part of 'tappy_application.dart';
 
 class _TappyApplicationState extends State<TappyApplication> {
   InAppConfiguration _config = InAppConfiguration();
@@ -94,8 +94,8 @@ class _TappyApplicationState extends State<TappyApplication> {
   Widget build(BuildContext context) {
     ToastificationConfig c = ToastificationConfigProvider.maybeOf(context)?.config ?? const ToastificationConfig();
 
-    if(widget.inAppConfigurer != null) {
-      InAppConfiguration built = widget.inAppConfigurer!(_config);
+    if(widget.inAppConfigurer case final configurer?) {
+      InAppConfiguration built = configurer(_config);
 
       c = c.copyWith(
         alignment: built.alignment,

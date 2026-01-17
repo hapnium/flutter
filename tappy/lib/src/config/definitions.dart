@@ -40,10 +40,10 @@ typedef InAppNotificationIconBuilder = Widget Function(TappyInAppState state);
 /// The [child] parameter is the actual notification widget that you should
 /// wrap with your animation.
 typedef InAppNotificationAnimationBuilder = Widget Function(
-    BuildContext context,
-    Animation<double> animation,
-    Alignment alignment,
-    Widget child,
+  BuildContext context,
+  Animation<double> animation,
+  Alignment alignment,
+  Widget child,
 );
 
 /// A builder function for creating custom margins for the in-app notification overlay.
@@ -54,8 +54,7 @@ typedef InAppNotificationAnimationBuilder = Widget Function(
 ///
 /// The [context] parameter provides the build context.
 /// The [alignment] parameter is the [Alignment] of the notification.
-typedef InAppNotificationMarginBuilder = EdgeInsetsGeometry Function(BuildContext context, AlignmentGeometry alignment, );
-
+typedef InAppNotificationMarginBuilder = EdgeInsetsGeometry Function(BuildContext context, AlignmentGeometry alignment);
 
 /// A typedef for a function that configures an [InAppConfiguration] object.
 ///

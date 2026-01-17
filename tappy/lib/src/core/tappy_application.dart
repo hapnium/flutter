@@ -2,25 +2,25 @@ import 'package:flutter/cupertino.dart' hide TargetPlatform;
 import 'package:flutter/foundation.dart';
 import 'package:toastification/toastification.dart';
 
-import 'config/definitions.dart';
-import 'config/platform_engine.dart';
-import 'device_notification.dart';
-import 'device_notification_builder.dart';
-import 'device_notification_manager.dart';
-import 'enums/app.dart';
-import 'enums/tappy_platform.dart';
-import 'in_app_notification.dart';
-import 'internal/default_tappy_lifecycle.dart';
-import 'internal/device_notification.dart';
-import 'internal/device_notification_builder.dart';
-import 'internal/device_notification_manager.dart';
-import 'internal/in_app_notification.dart';
-import 'models/in_app_config.dart';
-import 'models/tappy_information.dart';
+import '../config/definitions.dart';
+import '../config/platform_engine.dart';
+import '../device_notification.dart';
+import '../device_notification_builder.dart';
+import '../device_notification_manager.dart';
+import '../enums/app.dart';
+import '../enums/tappy_platform.dart';
+import '../in_app_notification.dart';
+import '../internal/default_tappy_lifecycle.dart';
+import '../internal/device_notification.dart';
+import '../internal/device_notification_builder.dart';
+import '../internal/device_notification_manager.dart';
+import '../internal/in_app_notification.dart';
+import '../models/in_app_config.dart';
+import '../models/tappy_information.dart';
 import 'tappy.dart';
 import 'tappy_lifecycle.dart';
 
-part 'application/tappy_application_state.dart';
+part 'tappy_application_state.dart';
 
 /// {@template tappy_application}
 /// A widget that wraps your root app and manages all Tappy notification functionality.
@@ -55,7 +55,7 @@ part 'application/tappy_application_state.dart';
 /// }
 /// ```
 /// {@endtemplate}
-class TappyApplication extends StatefulWidget {
+final class TappyApplication extends StatefulWidget {
   /// The child widget (typically a [MaterialApp] or [CupertinoApp]) that this widget wraps.
   final Widget child;
 

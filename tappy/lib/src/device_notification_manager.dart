@@ -22,7 +22,7 @@
 /// device notifications from your app logic.
 ///
 /// {@endtemplate}
-abstract class DeviceNotificationManagerInterface<T> {
+abstract interface class DeviceNotificationManagerInterface<T> {
   /// Dismisses a notification by its unique identifier.
   ///
   /// Throws a `TappyException` if the method is not implemented.

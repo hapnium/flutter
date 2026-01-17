@@ -22,8 +22,8 @@ import '../models/types/nearby_notification.dart';
 import '../models/types/schedule_notification.dart';
 import '../models/types/transaction_notification.dart';
 import '../models/types/trip_notification.dart';
-import '../tappy.dart';
-import '../controller/tappy_mixin.dart';
+import '../core/tappy.dart';
+import '../core/tappy_mixin.dart';
 import 'device_notification.dart';
 
 class DefaultDeviceNotificationBuilder<T> with TappyMixin implements DeviceNotificationBuilderInterface<T> {

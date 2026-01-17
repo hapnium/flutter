@@ -1,5 +1,5 @@
 import '../enums/tappy_platform.dart';
-import '../tappy.dart';
+import '../core/tappy.dart';
 
 /// Provides platform identification utilities.
 class PlatformEngine {

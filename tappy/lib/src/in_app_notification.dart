@@ -25,7 +25,7 @@ import 'config/definitions.dart';
 /// This abstraction is useful for implementing modular notification pipelines
 /// and decoupling platform-specific delivery logic from UI-level handling.
 /// {@endtemplate}
-abstract class InAppNotificationInterface<T> {
+abstract interface class InAppNotificationInterface<T> {
   /// Displays a success notification with the given message and optional callbacks.
   ///
   /// @param title The title of the notification. Defaults to "Success notification".

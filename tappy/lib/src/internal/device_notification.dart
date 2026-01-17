@@ -6,7 +6,7 @@ import '../config/platform_engine.dart';
 import '../device_notification.dart';
 import '../models/notifier.dart';
 import '../models/tappy_information.dart';
-import '../tappy.dart';
+import '../core/tappy.dart';
 
 final FlutterLocalNotificationsPlugin plugin = FlutterLocalNotificationsPlugin();
 

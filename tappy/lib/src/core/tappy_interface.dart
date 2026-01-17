@@ -1,12 +1,12 @@
-import 'device_notification_builder.dart';
-import 'enums/tappy_platform.dart';
-import 'exception/tappy_exception.dart';
-import 'device_notification.dart';
-import 'in_app_notification.dart';
-import 'models/tappy_information.dart';
-import 'device_notification_manager.dart';
+import '../device_notification_builder.dart';
+import '../enums/tappy_platform.dart';
+import '../exception/tappy_exception.dart';
+import '../device_notification.dart';
+import '../in_app_notification.dart';
+import '../models/tappy_information.dart';
+import '../device_notification_manager.dart';
 import 'tappy_lifecycle.dart';
-import 'controller/tappy_controller.dart';
+import 'tappy_controller.dart';
 
 /// {@template tappy_interface}
 /// An abstract base class that holds all core dependencies and configuration

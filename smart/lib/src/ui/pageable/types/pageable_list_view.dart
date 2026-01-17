@@ -3,7 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart' hide Page;
 import 'package:flutter/rendering.dart';
-import 'package:hapnium/hapnium.dart';
+import 'package:hapnium/hapnium.dart' hide Page;
 import 'package:smart/utilities.dart';
 
 import '../builders/pageable_layout_builder.dart';

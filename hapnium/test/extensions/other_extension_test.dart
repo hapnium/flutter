@@ -1,4 +1,5 @@
-import 'package:test/test.dart';
+import 'package:test/expect.dart';
+import 'package:test/scaffolding.dart';
 import 'package:hapnium/hapnium.dart';
 
 import '../models/test_data.dart';

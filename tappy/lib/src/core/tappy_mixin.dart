@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:tappy/src/models/notifier.dart';
 
-import '../tappy.dart';
+import 'tappy.dart';
 import 'tappy_controller.dart';
 
 /// {@template tappy_mixin}

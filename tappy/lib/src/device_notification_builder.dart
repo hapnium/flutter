@@ -26,7 +26,7 @@ import 'models/remote_notification_config.dart';
 /// }
 /// ```
 /// {@endtemplate}
-abstract class DeviceNotificationBuilderInterface<T> {
+abstract interface class DeviceNotificationBuilderInterface<T> {
   /// {@macro device_notification_builder_service}
   const DeviceNotificationBuilderInterface();
 
