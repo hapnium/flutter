@@ -14,14 +14,27 @@ int _generateSecureRandomId() {
 }
 
 /// {@template chime_notification}
-/// A data model representing a notification within the Chime notification system.
+/// Core Chime notification payload.
 ///
-/// This immutable class encapsulates all the data needed to display, process,
-/// and respond to a notification, whether it originates from a push notification,
-/// local alert, or in-app event.
+/// [ChimeNotification] is the base data model for all notification flows in
+/// Chime: device-level push/local notifications, scheduled reminders, and
+/// in-app overlays. It captures a unique identifier, user-visible intent, and
+/// an optional payload for richer context.
 ///
-/// The name "Chime" suggests a notification system that creates attention
-/// (like a bell chime) while maintaining elegance and clarity.
+/// This class is intentionally simple and immutable so it can be passed across
+/// layers (UI, background handlers, analytics) without side effects.
+///
+/// Typical usage includes:
+/// - interpreting the `action` field to route navigation
+/// - reading `payload` for deep link data
+/// - using `identifier` to deduplicate or dismiss notifications
+/// - storing lightweight metadata in `data`
+///
+/// Data model conventions:
+/// - [id] is the platform notification id (for display/cancel).
+/// - [identifier] is your stable domain key (for dedupe/lookup).
+/// - [payload] holds JSON-encoded data for external systems.
+/// - [data] holds in-memory metadata that does not need encoding.
 ///
 /// ### Usage Example
 /// ```dart
@@ -30,6 +43,7 @@ int _generateSecureRandomId() {
 ///   action: 'navigate_to_chat',
 ///   input: 'user_reply',
 ///   payload: '{"chat_id": "abc123", "sender": "John"}',
+///   identifier: 'chat:abc123',
 /// );
 ///
 /// final data = notification.getPayloadAsJson();
@@ -39,47 +53,52 @@ int _generateSecureRandomId() {
 /// ```
 /// {@endtemplate}
 final class ChimeNotification with EqualsAndHashCode, ToString {
-  /// Unique identifier for the notification.
+  /// Unique identifier for the notification instance.
   ///
-  /// This is often used to track or update specific notifications in local
-  /// databases or UI lists. Typically assigned a real value on creation.
+  /// This is commonly used by the platform notification system to update,
+  /// replace, or cancel a displayed notification.
   final int id;
 
-  /// Represents the action to take in response to the notification.
+  /// Action to take when the notification is handled.
   ///
-  /// This string maps to UI behaviors or domain actions. Common examples:
-  /// - `"navigate_to_chat"`: Opens a chat screen
-  /// - `"show_alert"`: Displays an alert dialog
-  /// - `"update_badge"`: Updates app badge count
-  /// - `"open_url"`: Opens a web URL
+  /// This string is application-defined and typically maps to navigation or
+  /// domain behavior. Common examples:
+  /// - `"navigate_to_chat"`: open a chat screen
+  /// - `"show_alert"`: display an alert dialog
+  /// - `"update_badge"`: update app badge count
+  /// - `"open_url"`: open a web URL
   final String? action;
 
-  /// Represents any user input or command associated with the notification.
+  /// User input or command associated with the notification.
   ///
-  /// This may be a response in a reply notification or a form value.
-  /// Examples:
-  /// - `"user_reply"`: For reply-style notifications
-  /// - `"yes"`/`"no"`: For confirmation notifications
-  /// - `""`: When no specific input is provided
+  /// For example, a quick-reply string or a confirmation selection. This is
+  /// often empty for passive notifications.
   final String? input;
 
-  /// Optional JSON-encoded string containing additional notification data.
+  /// Optional JSON-encoded string with additional data.
   ///
-  /// This field can contain any structured data needed to process the
-  /// notification, such as:
-  /// - Chat or message IDs
-  /// - User information
-  /// - Deep link parameters
-  /// - Custom metadata
+  /// Store structured data here when you need more context than `action` and
+  /// `input` provide. Use [getPayloadAsJson] to parse it safely.
   ///
-  /// Use [getPayloadAsJson()] to safely parse this field.
+  /// If you already have a map, consider serializing it with `jsonEncode`.
   final String? payload;
 
+  /// Stable identifier for deduplication and lookup.
+  ///
+  /// This is typically a string key meaningful to your domain, such as a
+  /// message ID or composite key. It should remain stable across app launches
+  /// so that repeated notifications can be detected.
   final String identifier;
 
+  /// Additional data attached to the notification.
+  ///
+  /// This is separate from [payload] and useful for in-memory metadata that
+  /// does not need JSON encoding. Avoid large objects here.
   final Map<String, dynamic> data;
 
   /// {@macro chime_notification}
+  ///
+  /// Use this when you already have a platform id for the notification.
   const ChimeNotification({
     required this.id,
     required this.action,
@@ -90,6 +109,8 @@ final class ChimeNotification with EqualsAndHashCode, ToString {
   });
 
   /// {@macro chime_notification}
+  ///
+  /// Use this when the platform id should be generated automatically.
   ChimeNotification.withGeneratedId({
     required this.action,
     required this.input,
@@ -136,15 +157,59 @@ final class ChimeNotification with EqualsAndHashCode, ToString {
     return null;
   }
 
+  /// Serializes this notification into a JSON-ready map.
+  ///
+  /// Subclasses append their own fields when possible and omit platform
+  /// objects that cannot be serialized.
+  ///
+  /// This output is suitable for analytics, logging, or persistence.
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'action': action,
+    'input': input,
+    'payload': payload,
+    'identifier': identifier,
+    'data': data,
+  };
+
   @override
   List<Object?> equalizedProperties() => [action, input, payload, id];
 }
 
+/// {@template chime_created_notification}
+/// A Chime notification that has been created for device delivery.
+///
+/// This extends [ChimeNotification] with display-specific data such as title,
+/// body, and platform notification details. It represents a notification that
+/// is ready to be shown or scheduled through the local notification system.
+///
+/// ### Example
+/// ```dart
+/// final created = ChimeCreatedNotification(
+///   id: 10,
+///   identifier: 'welcome:1',
+///   title: 'Welcome',
+///   body: 'Thanks for joining',
+///   notificationDetails: NotificationDetails(
+///     android: AndroidNotificationDetails('default', 'Default'),
+///   ),
+/// );
+/// ```
+/// {@endtemplate}
 final class ChimeCreatedNotification extends ChimeNotification {
+  /// The visible title of the notification.
   final String? title;
+
+  /// The visible body message of the notification.
   final String? body;
+
+  /// Platform-specific notification details (not JSON-serializable).
+  ///
+  /// This is used by the notification plugin when displaying the notification.
+  /// It is intentionally omitted from [toJson].
   final NotificationDetails? notificationDetails;
 
+  /// {@macro chime_created_notification}
   const ChimeCreatedNotification({
     required super.id,
     super.payload,
@@ -156,14 +221,51 @@ final class ChimeCreatedNotification extends ChimeNotification {
   }) : super(action: "", input: "");
 
   @override
+  Map<String, dynamic> toJson() => {
+    ...super.toJson(),
+    'title': title,
+    'body': body,
+  };
+
+  @override
   List<Object?> equalizedProperties() => [...super.equalizedProperties(), title, body];
 }
 
+/// {@template chime_scheduled_notification}
+/// A notification scheduled for future delivery.
+///
+/// This extends [ChimeCreatedNotification] with scheduling metadata used by
+/// the platform notification system to determine when and how it fires.
+///
+/// ### Example
+/// ```dart
+/// final scheduled = ChimeScheduledNotification(
+///   id: 11,
+///   identifier: 'reminder:1',
+///   title: 'Reminder',
+///   body: 'Check back later',
+///   scheduledDate: tz.TZDateTime.now(tz.local).add(const Duration(hours: 1)),
+///   notificationDetails: NotificationDetails(
+///     android: AndroidNotificationDetails('default', 'Default'),
+///   ),
+/// );
+/// ```
+/// {@endtemplate}
 final class ChimeScheduledNotification extends ChimeCreatedNotification {
+  /// The scheduled delivery date/time in the local timezone.
+  ///
+  /// This is serialized to ISO-8601 by [toJson].
   final TZDateTime scheduledDate;
+
+  /// Android scheduling mode used for delivery.
   final AndroidScheduleMode? androidScheduleMode;
+
+  /// The recurrence components used for repeated scheduling.
+  ///
+  /// This is serialized by enum name in [toJson].
   final DateTimeComponents? dateTimeComponents;
   
+  /// {@macro chime_scheduled_notification}
   const ChimeScheduledNotification({
     required super.id,
     super.payload,
@@ -178,15 +280,51 @@ final class ChimeScheduledNotification extends ChimeCreatedNotification {
   }) : super(notificationDetails: notificationDetails);
 
   @override
+  Map<String, dynamic> toJson() => {
+    ...super.toJson(),
+    'scheduledDate': scheduledDate.toIso8601String(),
+    'androidScheduleMode': androidScheduleMode?.name,
+    'dateTimeComponents': dateTimeComponents?.name,
+  };
+
+  @override
   List<Object?> equalizedProperties() => [...super.equalizedProperties(), title, body];
 }
 
+/// {@template chime_app_notification}
+/// In-app notification payload used for UI rendering.
+///
+/// This is created for in-app overlays and toasts, and it includes the
+/// in-app state and display content along with the backing toast item.
+///
+/// ### Example
+/// ```dart
+/// final inApp = ChimeAppNotification(
+///   identifier: 'toast:1',
+///   title: 'Update',
+///   description: 'Your settings were saved',
+///   state: ChimeInAppState.success,
+///   item: toastification.show(title: Text('Update')),
+/// );
+/// ```
+/// {@endtemplate}
 final class ChimeAppNotification extends ChimeNotification {
+  /// The title shown in the in-app notification.
   final String title;
+
+  /// The description shown in the in-app notification.
   final String description;
+
+  /// The in-app visual state (info, warning, success, etc.).
   final ChimeInAppState state;
+
+  /// The toastification item backing the UI (not JSON-serializable).
+  ///
+  /// This is used to dismiss or update the in-app UI and is omitted from
+  /// [toJson].
   final ToastificationItem item;
   
+  /// {@macro chime_app_notification}
   ChimeAppNotification({
     required super.identifier,
     required this.description,
@@ -195,13 +333,45 @@ final class ChimeAppNotification extends ChimeNotification {
     required this.item,
     super.data
   }) : super(id: _generateSecureRandomId(), action: "IN_APP", input: "IN_APP");
+
+  @override
+  Map<String, dynamic> toJson() => {
+    ...super.toJson(),
+    'title': title,
+    'description': description,
+    'state': state.name,
+  };
 }
 
+/// {@template chime_created_app_notification}
+/// Created in-app notification that can be tracked and dismissed.
+///
+/// This extends [ChimeCreatedNotification] with in-app display fields and
+/// state, while still participating in the created-notification pipeline.
+/// It is commonly used to find and dismiss a specific in-app toast later.
+///
+/// ### Example
+/// ```dart
+/// final createdApp = ChimeCreatedAppNotification(
+///   identifier: 'toast:2',
+///   title: 'Warning',
+///   description: 'Please check your input',
+///   state: ChimeInAppState.warning,
+///   item: toastification.show(title: Text('Warning')),
+/// );
+/// ```
+/// {@endtemplate}
 final class ChimeCreatedAppNotification extends ChimeCreatedNotification {
+  /// The description shown in the in-app notification.
   final String description;
+
+  /// The in-app visual state (info, warning, success, etc.).
   final ChimeInAppState state;
+
+  /// The toastification item backing the UI (not JSON-serializable).
   final ToastificationItem item;
 
+  /// {@macro chime_created_app_notification}
   ChimeCreatedAppNotification({
     required super.identifier,
     required String title,
@@ -210,4 +380,11 @@ final class ChimeCreatedAppNotification extends ChimeCreatedNotification {
     required this.item,
     super.data
   }) : super(title: title, id: _generateSecureRandomId());
+
+  @override
+  Map<String, dynamic> toJson() => {
+    ...super.toJson(),
+    'description': description,
+    'state': state.name,
+  };
 }

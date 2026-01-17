@@ -6,7 +6,6 @@ import 'package:toastification/toastification.dart';
 import '../chime.dart';
 import 'chime_controller.dart';
 import 'chime_push_notification.dart';
-import 'enums.dart';
 
 /// Callback type for handling notification permissions.
 ///
@@ -99,7 +98,7 @@ class ChimeApplication extends StatefulWidget {
   const ChimeApplication({
     super.key,
     required this.child,
-    required this.configuration,
+    this.configuration = const ChimeConfiguration(),
     required this.platform,
     this.onPermitted,
     this.onLaunchedByNotification,
