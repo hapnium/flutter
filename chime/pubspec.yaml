@@ -19,11 +19,11 @@ dependencies:
   timezone: ^0.10.1
   toastification: ^3.0.3
 
+dev_dependencies:
+  lints: ^6.0.0
+
   tracing:
     path: ../tracing
 
   hapnium:
     path: ../hapnium
-
-dev_dependencies:
-  lints: ^6.0.0

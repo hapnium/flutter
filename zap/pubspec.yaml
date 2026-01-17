@@ -15,11 +15,11 @@ dependencies:
   flutter:
     sdk: flutter
   web: ^1.1.1
-  
-  tracing:
-    path: ../tracing
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   lints: ^6.0.0
+
+  tracing:
+    path: ../tracing
