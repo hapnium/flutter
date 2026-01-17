@@ -37,6 +37,7 @@ export 'src/chime_notification_manager.dart';
 export 'src/chime_push_notification.dart' hide DefaultChimePushNotification;
 export 'src/chime_sound.dart';
 export 'src/chime_streamable.dart';
+export 'src/enums.dart';
 
 /// {@template chime_registry}
 /// Global registry for Chime services.
