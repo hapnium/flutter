@@ -721,7 +721,7 @@ final class PageSort extends StandardGenericStream<PageSortOrder> with EqualsAnd
   /// A singleton representing the absence of sorting.
   ///
   /// This is used whenever an empty list of [PageSortOrder] objects is provided.
-  static final PageSort UNSORTED = PageSort.by([]);
+  static final PageSort UNSORTED = PageSort([]);
 
   /// {@macro sort}
   PageSort(super.source);
