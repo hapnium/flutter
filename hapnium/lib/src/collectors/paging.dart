@@ -1841,7 +1841,7 @@ abstract class AbstractPageRequest extends Pageable {
   ///
   /// Throws an assertion error if [pageNumber] < 0 or [pageSize] < 1.
   AbstractPageRequest(this._pageNumber, this._pageSize)
-    : assert(_pageNumber > 0, "Page number must not be less than 0"),
+    : assert(_pageNumber >= 0, "Page number must not be less than 0"),
       assert(_pageSize >= 1, "Page size must not be less than 1");
 
   @override
