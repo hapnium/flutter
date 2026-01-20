@@ -283,7 +283,7 @@ abstract class BaseAvatar extends StatelessWidget {
       return onBackgroundImageError;
     }
 
-    if (foregroundImageBuilder != null) {
+    if (backgroundImageBuilder != null) {
       return (Object exception, StackTrace? stackTrace) {
         if (showLogs) {
           console.log("$exception || $stackTrace", tag: "[BASE AVATAR - onBackgroundImageError]");
