@@ -439,7 +439,7 @@ class PageableController<PageKey, Item> extends ValueNotifier<PageableView<PageK
       
       // Update status to REFRESHING
       value = value.copyWith(
-        status: PageableStatus.LOADING_FIRST_PAGE,
+        status: PageableStatus.REFRESHING,
         clearError: true,
       );
       

@@ -264,30 +264,39 @@ class _PageableBuilderState<PageKey, Item> extends State<PageableBuilder<PageKey
       child: PageableBuilderAnimator(
         animateTransitions: delegate.animateTransitions,
         transitionDuration: delegate.transitionDuration,
-        child: switch (value.status) {
-          PageableStatus.LOADING_FIRST_PAGE => firstPageProgressBuilder(context),
-          PageableStatus.FIRST_PAGE_ERROR => firstPageErrorBuilder(context),
-          PageableStatus.NO_ITEMS_FOUND => noItemsFoundBuilder(context),
-          PageableStatus.LOADING_NEW_PAGE => widget.loadingBuilder(
-            context,
-            itemCount,
-            newPageProgressBuilder,
-            (context, index) => _buildItem(context, index, list),
-          ),
-          PageableStatus.NEW_PAGE_ERROR => widget.errorBuilder(
-            context,
-            itemCount,
-            newPageErrorBuilder,
-            (context, index) => _buildItem(context, index, list),
-          ),
-          PageableStatus.COMPLETED || PageableStatus.LOADED_PAGE => widget.completedBuilder(
+        child: () {
+          final status = value.status;
+          
+          if (status == PageableStatus.LOADING_FIRST_PAGE) {
+            return firstPageProgressBuilder(context);
+          } else if (status == PageableStatus.FIRST_PAGE_ERROR) {
+            return firstPageErrorBuilder(context);
+          } else if (status == PageableStatus.NO_ITEMS_FOUND) {
+            return noItemsFoundBuilder(context);
+          } else if (status == PageableStatus.LOADING_NEW_PAGE) {
+            return widget.loadingBuilder(
+              context,
+              itemCount,
+              newPageProgressBuilder,
+              (context, index) => _buildItem(context, index, list),
+            );
+          } else if (status == PageableStatus.NEW_PAGE_ERROR) {
+            return widget.errorBuilder(
+              context,
+              itemCount,
+              newPageErrorBuilder,
+              (context, index) => _buildItem(context, index, list),
+            );
+          } 
+          
+          return widget.completedBuilder(
             context,
             itemCount,
             // Only show "no more items" indicator when actually completed
-            value.status == PageableStatus.COMPLETED ? noMoreItemsBuilder : null,
+            status == PageableStatus.COMPLETED ? noMoreItemsBuilder : null,
             (context, index) => _buildItem(context, index, list),
-          ),
-        },
+          );
+        }(),
       ),
     );
   }

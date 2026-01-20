@@ -48,6 +48,9 @@ enum PageableStatus {
 
   /// All pages loaded - no more data available
   COMPLETED,
+  
+  /// Refreshing - no need to change ui since it will still contain existing data
+  REFRESHING,
 }
 
 /// Extension providing convenient boolean getters for [PageableStatus].
