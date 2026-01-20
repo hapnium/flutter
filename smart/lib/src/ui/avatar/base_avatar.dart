@@ -211,11 +211,21 @@ abstract class BaseAvatar extends StatelessWidget {
   }
 
   @protected
-  ImageErrorListener getForegroundErrorListener() => onForegroundImageError ?? (Object exception, StackTrace? stackTrace) {
-    if (showLogs) {
-      console.log("$exception || $stackTrace", tag: "[BASE AVATAR - onForegroundImageError]");
+  ImageErrorListener? getForegroundErrorListener() {
+    if (onForegroundImageError case final onForegroundImageError?) {
+      return onForegroundImageError;
     }
-  };
+
+    if (foregroundImageBuilder != null) {
+      return (Object exception, StackTrace? stackTrace) {
+        if (showLogs) {
+          console.log("$exception || $stackTrace", tag: "[BASE AVATAR - onForegroundImageError]");
+        }
+      };
+    }
+
+    return null;
+  }
 
   @protected
   DecorationImage? getForegroundDecorationImage(BuildContext context) {
@@ -268,11 +278,21 @@ abstract class BaseAvatar extends StatelessWidget {
   }
 
   @protected
-  ImageErrorListener getBackgroundErrorListener() => onBackgroundImageError ?? (Object exception, StackTrace? stackTrace) {
-    if (showLogs) {
-      console.log("$exception || $stackTrace", tag: "[BASE AVATAR - onBackgroundImageError]");
+  ImageErrorListener? getBackgroundErrorListener() {
+    if (onBackgroundImageError case final onBackgroundImageError?) {
+      return onBackgroundImageError;
     }
-  };
+
+    if (foregroundImageBuilder != null) {
+      return (Object exception, StackTrace? stackTrace) {
+        if (showLogs) {
+          console.log("$exception || $stackTrace", tag: "[BASE AVATAR - onBackgroundImageError]");
+        }
+      };
+    }
+
+    return null;
+  }
 
   @protected
   DecorationImage? getBackgroundDecorationImage(BuildContext context) {
