@@ -148,7 +148,7 @@ enum RuntimePlatform {
     if (Platform.isWindows) return RuntimePlatform.windows;
     if (Platform.isLinux) return RuntimePlatform.linux;
 
-    return RuntimePlatform.unknown;
+    return RuntimePlatform.web;
   }
 }
 
@@ -474,7 +474,10 @@ abstract final class DeviceRuntime {
   }
 
   /// The runtime platform
-  static RuntimePlatform get platform => _runtimePlatform;
+  static RuntimePlatform get platform {
+    _ensureInitialized();
+    return _runtimePlatform;
+  }
 
   /// A simplified platform label string derived from [_runtimePlatform].
   ///
@@ -532,7 +535,7 @@ abstract final class DeviceRuntime {
       }
     }
 
-    if (isWeb) return "";
+    if (_runtimePlatform == RuntimePlatform.web) return "";
 
     try {
       final networks = await NetworkInterface.list();
