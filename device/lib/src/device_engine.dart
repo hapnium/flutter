@@ -28,7 +28,8 @@ typedef IpAddressFetcher = Future<String> Function();
 /// print(DeviceEngine.instance.device.toJson());
 /// ```
 /// {@endtemplate}
-class DeviceEngine {
+@Deprecated("Use `DeviceRuntime` instead of `DeviceEngine`. New versions will remove this class.")
+final class DeviceEngine {
   // Private constructor for singleton pattern
   /// {@macro device_engine}
   DeviceEngine._();
