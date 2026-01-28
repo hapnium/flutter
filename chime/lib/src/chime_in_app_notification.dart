@@ -151,7 +151,7 @@ abstract interface class ChimeInAppNotification {
   /// @param onDismissed Optional callback to be called when the notification is dismissed.
   Future<void> showInAppCustomNotification({
     int duration = 5,
-    required Widget content,
+    required ToastificationBuilder contentBuilder,
     Alignment position = Alignment.topRight,
     InAppNotificationCallback? onTapped,
     InAppNotificationCallback? onClosed,
@@ -473,7 +473,7 @@ class DefaultChimeInAppNotification with ChimeMixin implements ChimeInAppNotific
   @override
   Future<void> showInAppCustomNotification({
     int duration = 5,
-    required Widget content,
+    required ToastificationBuilder contentBuilder,
     Alignment position = Alignment.topRight,
     InAppNotificationCallback? onTapped,
     InAppNotificationCallback? onClosed,
@@ -484,33 +484,12 @@ class DefaultChimeInAppNotification with ChimeMixin implements ChimeInAppNotific
       console.debug("Building `custom` notification", tag: prefix);
     }
 
-    toastification.show(
+    toastification.showCustom(
+      builder: contentBuilder,
       autoCloseDuration: Duration(seconds: duration),
       alignment: Alignment.topRight,
       direction: TextDirection.ltr,
       animationDuration: const Duration(milliseconds: 300),
-      primaryColor: Colors.grey,
-      backgroundColor: Colors.white,
-      foregroundColor: Colors.black,
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
-      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      borderRadius: BorderRadius.circular(12),
-      boxShadow: const [
-        BoxShadow(
-          color: Color(0x07000000),
-          blurRadius: 16,
-          offset: Offset(0, 16),
-          spreadRadius: 0,
-        )
-      ],
-      showProgressBar: true,
-      closeButton: ToastCloseButton(
-        showType: CloseButtonShowType.onHover,
-        // buttonBuilder: (BuildContext context, Future<void> Function() onClicked) {}
-      ),
-      closeOnClick: false,
-      pauseOnHover: true,
-      dragToClose: true,
       callbacks: ToastificationCallbacks(
         onTap: (item) => onTapped?.call(item.id),
         onCloseButtonTap: (item) => onClosed?.call(item.id),
@@ -518,7 +497,7 @@ class DefaultChimeInAppNotification with ChimeMixin implements ChimeInAppNotific
         onDismissed: (item) => onDismissed?.call(item.id),
       ),
     );
-
+    
     if(showLogs) {
       console.info("Notification built successfully", tag: prefix);
     }

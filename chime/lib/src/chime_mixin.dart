@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart' show FlutterLocalNotificationsPlugin, ActiveNotification;
+import 'package:toastification/toastification.dart' show ToastificationBuilder;
 
 import '../chime.dart';
 
@@ -360,7 +361,7 @@ mixin ChimeInAppMixin implements ChimeInAppNotification {
   @override
   Future<void> showInAppCustomNotification({
     int duration = 5,
-    required Widget content,
+    required ToastificationBuilder contentBuilder,
     Alignment position = Alignment.topRight,
     InAppNotificationCallback? onTapped,
     InAppNotificationCallback? onClosed,
@@ -368,7 +369,7 @@ mixin ChimeInAppMixin implements ChimeInAppNotification {
     InAppNotificationCallback? onDismissed,
   }) => _inAppNotifier.showInAppCustomNotification(
     duration: duration,
-    content: content,
+    contentBuilder: contentBuilder,
     position: position,
     onTapped: onTapped,
     onClosed: onClosed,
