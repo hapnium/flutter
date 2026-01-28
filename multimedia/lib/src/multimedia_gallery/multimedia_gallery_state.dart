@@ -4,6 +4,8 @@ class _MultimediaGalleryState extends SmartState<MultimediaGallery> {
   List<Album> _albums = <Album>[];
   bool _isGrid = true;
   bool _hasPermission = false;
+  bool _isInitializing = false;
+  bool _isCheckingPermission = false;
   late MultimediaGalleryConfiguration parent;
 
   @override
@@ -50,12 +52,21 @@ class _MultimediaGalleryState extends SmartState<MultimediaGallery> {
   MultimediaFileManagerConfiguration get fileManagerConfig => parent.fileManagerConfiguration ?? MultimediaFileManagerConfiguration();
 
   void _initializeGallery() async {
+    setState(() => _isCheckingPermission = true);
     bool hasPermission = parent.hasPermission.isNotNull ? await parent.hasPermission!() : false;
-    setState(() => _hasPermission = hasPermission);
+
+    setState(() {
+      _isCheckingPermission = false;
+      _hasPermission = hasPermission;
+    });
 
     if(hasPermission) {
+      setState(() => _isInitializing = true);
       List<Album> list = await _fetchAlbums();
-      setState(() => _albums = list);
+      setState(() {
+        _isInitializing = false;
+        _albums = list;
+      });
     }
   }
 
@@ -228,10 +239,20 @@ class _MultimediaGalleryState extends SmartState<MultimediaGallery> {
   }
 
   Widget _build() {
-    if(_hasPermission.isFalse) {
+    if(_isCheckingPermission) {
+      if (parent.permissionCheckBuilder case WidgetBuilder builder?) {
+        return builder(context);
+      }
+
+      return Center(child: CircularProgressIndicator());
+    } else if(_hasPermission.isFalse) {
       String permissionMessage = "Permission is needed to access your gallery";
 
-      return parent.noPermissionBuilder.isNotNull ? parent.noPermissionBuilder!(context) : NoItemFoundIndicator(
+      if (parent.noPermissionBuilder case WidgetBuilder builder?) {
+        return builder(context);
+      }
+
+      return NoItemFoundIndicator(
         message: noPermitConfig.message ?? permissionMessage,
         icon: noPermitConfig.icon ?? Icons.photo_library_rounded,
         textColor: noPermitConfig.textColor ?? Theme.of(context).primaryColor,
@@ -251,8 +272,18 @@ class _MultimediaGalleryState extends SmartState<MultimediaGallery> {
         buttonBackgroundColor: noPermitConfig.buttonBackgroundColor,
         buttonForegroundColor: noPermitConfig.buttonForegroundColor,
       );
+    } else if(_isInitializing) {
+      if (parent.loadingBuilder case WidgetBuilder builder?) {
+        return builder(context);
+      }
+
+      return Center(child: CircularProgressIndicator());
     } else if(_albums.isEmpty) {
-      return parent.emptyBuilder.isNotNull ? parent.emptyBuilder!(context) : NoItemFoundIndicator(
+      if (parent.emptyBuilder case WidgetBuilder builder?) {
+        return builder(context);
+      }
+
+      return NoItemFoundIndicator(
         message: noItemConfig.message ?? "No gallery asset found in your device",
         icon: noItemConfig.icon ?? Icons.photo_library_rounded,
         textColor: noItemConfig.textColor ?? Theme.of(context).primaryColor,

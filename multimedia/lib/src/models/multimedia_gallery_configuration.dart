@@ -166,6 +166,16 @@ class MultimediaGalleryConfiguration {
   /// Defaults to null.
   final WidgetBuilder? noPermissionBuilder;
 
+  /// Custom builder used when checking permission.
+  ///
+  /// Defaults to null.
+  final WidgetBuilder? permissionCheckBuilder;
+
+  /// Custom builder used when loading assets.
+  ///
+  /// Defaults to null.
+  final WidgetBuilder? loadingBuilder;
+
   /// The spacing between media items in grid or list layout.
   ///
   /// Defaults to null.
@@ -255,6 +265,8 @@ class MultimediaGalleryConfiguration {
     this.hasPermission,
     this.popAllWhileGoingBack = true,
     this.maxSize,
-    this.minSize
+    this.minSize,
+    this.loadingBuilder,
+    this.permissionCheckBuilder
   });
 }
