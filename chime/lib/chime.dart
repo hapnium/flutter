@@ -38,6 +38,7 @@ export 'src/chime_push_notification.dart' hide DefaultChimePushNotification;
 export 'src/chime_sound.dart';
 export 'src/chime_streamable.dart';
 export 'src/enums.dart';
+export 'src/chime_notification_display.dart';
 export 'src/chime_helpers.dart' hide ChimeHelpers;
 
 /// {@template chime_registry}
