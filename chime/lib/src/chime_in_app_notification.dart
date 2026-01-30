@@ -484,7 +484,7 @@ class DefaultChimeInAppNotification with ChimeMixin implements ChimeInAppNotific
       console.debug("Building `custom` notification", tag: prefix);
     }
 
-    toastification.showCustom(
+    final item = toastification.showCustom(
       builder: contentBuilder,
       autoCloseDuration: Duration(seconds: duration),
       alignment: Alignment.topRight,
@@ -501,6 +501,8 @@ class DefaultChimeInAppNotification with ChimeMixin implements ChimeInAppNotific
     if(showLogs) {
       console.info("Notification built successfully", tag: prefix);
     }
+
+    await publishEvent(NotificationCreatedEvent(ChimeCreatedCustomAppNotification(identifier: item.id, item: item)));
   }
 
   @override

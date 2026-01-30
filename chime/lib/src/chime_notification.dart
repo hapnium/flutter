@@ -388,3 +388,37 @@ final class ChimeCreatedAppNotification extends ChimeCreatedNotification {
     'state': state.name,
   };
 }
+
+/// {@template chime_created_custom_app_notification}
+/// A specialized in-app notification for custom UI layouts.
+///
+/// This extends [ChimeCreatedNotification] to provide flexibility for notifications 
+/// that do not conform to standard preset states. It allows for a custom [description] 
+/// and links directly to a [ToastificationItem] for active UI management and 
+/// programmatic dismissal.
+///
+/// ### Example
+/// ```dart
+/// final customNotification = ChimeCreatedCustomAppNotification(
+///   identifier: 'custom:studio:1',
+///   item: toastification.showCustom(
+///     autoCloseDuration: const Duration(seconds: 5),
+///     component: (builder) => MyCustomStudioToast(),
+///   ),
+/// );
+/// ```
+/// {@endtemplate}
+final class ChimeCreatedCustomAppNotification extends ChimeCreatedNotification {
+  /// The toastification item backing the UI (not JSON-serializable).
+  /// 
+  /// This reference is used to track the notification's lifecycle, allowing 
+  /// for programmatic dismissal or updates to the active toast.
+  final ToastificationItem item;
+
+  /// {@macro chime_created_custom_app_notification}
+  ChimeCreatedCustomAppNotification({
+    required super.identifier,
+    required this.item,
+    super.data
+  }) : super(title: "Custom Notificaation", id: _generateSecureRandomId());
+}
