@@ -145,7 +145,10 @@ class _ChimeApplicationState extends State<ChimeApplication> {
   @override
   void initState() {
     _applyInAppConfigurer();
-    _init();
+    
+    WidgetsBinding.instance.addPostFrameCallback((d) async {
+      await _init();
+    });
 
     super.initState();
   }
@@ -201,13 +204,17 @@ class _ChimeApplicationState extends State<ChimeApplication> {
       widget.showLog != oldWidget.showLog;
 
     if (shouldReinit) {
-      _init();
+      WidgetsBinding.instance.addPostFrameCallback((d) async {
+        await _init();
+      });
       setState(() {});
     }
 
     if (widget.inAppConfigurer != oldWidget.inAppConfigurer) {
       _applyInAppConfigurer();
-      _init();
+      WidgetsBinding.instance.addPostFrameCallback((d) async {
+        await _init();
+      });
       setState(() {});
     }
 
