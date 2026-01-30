@@ -64,4 +64,24 @@ extension PageResultBuilderExtension<PageKey, Item> on List<Item> {
     }
     return results;
   }
+
+  /// Returns a [PageResult] for a specific [pageKey] based on [pageSize].
+  /// Returns null or an empty PageResult if the pageKey is out of bounds.
+  PageResult<int, Item> buildPageablePage({required int pageKey, required int pageSize}) {
+    if (pageSize <= 0) {
+      throw ArgumentError('pageSize must be greater than zero');
+    }
+
+    final int start = pageKey * pageSize;
+    
+    // Check if the requested start index is within bounds
+    if (start >= length || start < 0) {
+      return PageResult<int, Item>(pageKey: pageKey, items: []);
+    }
+
+    final int end = (start + pageSize > length) ? length : start + pageSize;
+    final List<Item> items = sublist(start, end);
+
+    return PageResult<int, Item>(pageKey: pageKey, items: items);
+  }
 }
