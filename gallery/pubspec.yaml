@@ -3,7 +3,7 @@ description: A Flutter plugin that retrieves images and videos from mobile nativ
 
 publish_to: none
 
-version: 0.1.2
+version: 0.1.3
 homepage: https://github.com/Hapnium/flutter/tree/main/gallery
 repository: https://github.com/Hapnium/flutter/tree/main/gallery
 

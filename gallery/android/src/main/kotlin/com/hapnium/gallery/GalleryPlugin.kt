@@ -87,7 +87,7 @@ class GalleryPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
     private val executor: ExecutorService = Executors.newSingleThreadExecutor()
 
     override fun onAttachedToEngine(flutterPluginBinding: FlutterPlugin.FlutterPluginBinding) {
-        channel = MethodChannel(flutterPluginBinding.binaryMessenger, "gallery")
+        channel = MethodChannel(flutterPluginBinding.binaryMessenger, "smart_hap_gallery")
         val plugin = this
         plugin.context = flutterPluginBinding.applicationContext
         channel.setMethodCallHandler(plugin)

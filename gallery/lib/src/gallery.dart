@@ -46,7 +46,7 @@ class Gallery {
   const Gallery._();
 
   /// A [MethodChannel] used to communicate with the native gallery platform implementation.
-  static const MethodChannel _channel = MethodChannel('gallery');
+  static const MethodChannel _channel = MethodChannel('smart_hap_gallery');
 
   /// Lists available albums on the device with optional filtering.
   ///

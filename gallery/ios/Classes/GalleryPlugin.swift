@@ -6,7 +6,7 @@ import Photos
 
 public class GalleryPlugin: NSObject, FlutterPlugin {
   public static func register(with registrar: FlutterPluginRegistrar) {
-    let channel = FlutterMethodChannel(name: "gallery", binaryMessenger: registrar.messenger())
+    let channel = FlutterMethodChannel(name: "smart_hap_gallery", binaryMessenger: registrar.messenger())
     let instance = GalleryPlugin()
     registrar.addMethodCallDelegate(instance, channel: channel)
   }
