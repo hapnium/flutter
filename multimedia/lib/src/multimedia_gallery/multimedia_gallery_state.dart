@@ -88,9 +88,9 @@ class _MultimediaGalleryState extends SmartState<MultimediaGallery> {
     }
   }
 
-  void handleSelectedListMedia(List<SelectedMedia> files) {
+  void handleSelectedListMedia(List<SelectedMedia> files, List<Medium> mediums) {
     if(parent.onMediaReceived.isNotNull) {
-      parent.onMediaReceived!(files);
+      parent.onMediaReceived!(files, mediums);
     }
   }
 
@@ -115,7 +115,7 @@ class _MultimediaGalleryState extends SmartState<MultimediaGallery> {
     }
 
     if(parent.onMediaReceived.isNotNull) {
-      parent.onMediaReceived!(files);
+      parent.onMediaReceived!(files, medium);
     } else if(parent.popAllWhileGoingBack) {
       // First pop returns to the album page
       Navigator.pop(context);

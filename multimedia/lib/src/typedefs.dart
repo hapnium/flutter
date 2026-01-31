@@ -8,7 +8,7 @@ import 'models/selected_media.dart';
 typedef SelectedMediaReceived = Function(SelectedMedia media);
 
 /// Callback for receiving a list of selected media items.
-typedef SelectedMediaListReceived = Function(List<SelectedMedia> media);
+typedef SelectedMediaListReceived = Function(List<SelectedMedia> media, List<Medium> mediums);
 
 /// Callback for receiving an informational message.
 typedef OnInformationReceived = Function(String message);

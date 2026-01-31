@@ -86,7 +86,7 @@ class MultimediaUtils {
           }).toList();
 
           if (handleSelected.isNotNull) {
-            handleSelected!(response);
+            handleSelected!(response, []);
           }
 
           return response;
