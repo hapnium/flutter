@@ -363,7 +363,9 @@ class SmartField extends StatelessWidget {
     }
   }
 
-  Field _buildField(FieldItem field) {
+  Field _buildField(FieldItem field, ItemMetadata<FieldItem> metadata) {
+    final inputAction = metadata.isLast ? TextInputAction.done : TextInputAction.next;
+
     if (field case PasswordFieldItem password) {
       return PasswordField(
         label: password.label,
@@ -376,6 +378,7 @@ class SmartField extends StatelessWidget {
         obscureText: password.obscureText,
         replaceHintWithLabel: password.replaceHintWithLabel,
         onVisibilityTapped: password.onVisibilityTapped,
+        inputAction: inputAction,
       );
     }
 
@@ -395,6 +398,7 @@ class SmartField extends StatelessWidget {
         countries: phone.countries,
         phoneValidator: phone.phoneValidator,
         onValidPhoneNumber: phone.onValidPhoneNumber,
+        inputAction: inputAction,
       );
     }
 
@@ -408,6 +412,7 @@ class SmartField extends StatelessWidget {
       focus: field.focus,
       obscureText: field.obscureText,
       replaceHintWithLabel: field.replaceHintWithLabel,
+      inputAction: inputAction,
     );
   }
 
@@ -415,14 +420,15 @@ class SmartField extends StatelessWidget {
     final children = items.asMap().entries.map((entry) {
       final index = entry.key;
       final field = entry.value;
-      
-      return itemBuilder(context, _buildField(field), ItemMetadata(
+      final metadata = ItemMetadata(
         isFirst: index.equals(0),
         isLast: index.equals(items.length - 1),
         index: index,
         totalItems: items.length,
         item: field,
-      ));
+      );
+      
+      return itemBuilder(context, _buildField(field, metadata), metadata);
     }).toList();
 
     return Column(
