@@ -3,9 +3,11 @@ import 'package:hapnium/hapnium.dart';
 
 /// {@template dynamic_button_view}
 /// Represents a dynamic icon button for navigation.
-/// 
 /// {@endtemplate}
-class DynamicButtonView {
+final class DynamicButtonView<ButtonKey extends Object> with EqualsAndHashCode, ToString {
+  /// Unique identifier for the widget/object.
+  final ButtonKey? key;
+
   /// The default icon displayed when inactive.
   final IconData icon;
 
@@ -24,15 +26,36 @@ class DynamicButtonView {
   /// The image associated with the button.
   final String image;
 
-  /// Creates a `DynamicButtonView` instance.
-  /// 
-  /// {@macro dynamic_button_view}
   DynamicButtonView({
+    this.key,
     this.icon = Icons.copy,
     this.index = 0,
     this.active = Icons.copy,
     this.title = "",
     this.path = "",
-    this.image = ""
+    this.image = "",
   });
+
+  DynamicButtonView copyWith({
+    ButtonKey? Function()? key,
+    IconData? icon,
+    IconData? active,
+    Integer? index,
+    String? title,
+    String? path,
+    String? image,
+  }) {
+    return DynamicButtonView(
+      key: key != null ? key() : this.key,
+      icon: icon ?? this.icon,
+      active: active ?? this.active,
+      index: index ?? this.index,
+      title: title ?? this.title,
+      path: path ?? this.path,
+      image: image ?? this.image,
+    );
+  }
+
+  @override
+  List<Object?> equalizedProperties() => [key, icon.codePoint, index, active.codePoint, title, path, image];
 }

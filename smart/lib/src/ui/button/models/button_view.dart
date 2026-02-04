@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:smart/src/ui/typedefs.dart';
 import 'package:smart/utilities.dart';
 import 'package:hapnium/hapnium.dart';
 
-import '../../typedefs.dart';
-
 /// {@template button_view}
 /// Represents a customizable button with an icon and additional properties.
-/// 
 /// {@endtemplate}
-class ButtonView {
+final class ButtonView<ButtonKey extends Object> with EqualsAndHashCode, ToString {
+  /// Unique identifier for the widget/object.
+  final ButtonKey? key;
+
   /// The button icon.
   final IconData icon;
 
@@ -45,10 +46,8 @@ class ButtonView {
   /// An optional image widget that can replace icon and image view
   final Widget? imageWidget;
 
-  /// Creates a `ButtonView` instance.
-  /// 
-  /// {@macro button_view}
   ButtonView({
+    this.key,
     this.icon = Icons.copy,
     this.index = 0,
     this.header = "",
@@ -60,6 +59,52 @@ class ButtonView {
     this.child,
     this.image = "",
     this.colors = const [],
-    this.imageWidget
+    this.imageWidget,
   });
+
+  ButtonView copyWith({
+    ButtonKey? Function()? key,
+    IconData? icon,
+    Integer? index,
+    String? header,
+    String? body,
+    Double? number,
+    Color? color,
+    ColorList? colors,
+    String? path,
+    String? image,
+    OnActionInvoked? Function()? onClick,
+    Widget? Function()? child,
+    Widget? Function()? imageWidget,
+  }) {
+    return ButtonView(
+      key: key != null ? key() : this.key,
+      icon: icon ?? this.icon,
+      index: index ?? this.index,
+      header: header ?? this.header,
+      body: body ?? this.body,
+      number: number ?? this.number,
+      color: color ?? this.color,
+      colors: colors ?? this.colors,
+      path: path ?? this.path,
+      image: image ?? this.image,
+      onClick: onClick != null ? onClick() : this.onClick,
+      child: child != null ? child() : this.child,
+      imageWidget: imageWidget != null ? imageWidget() : this.imageWidget,
+    );
+  }
+
+  @override
+  List<Object?> equalizedProperties() => [
+    key,
+    icon.codePoint,
+    index,
+    header,
+    body,
+    number,
+    path,
+    image,
+    colors,
+    color
+  ];
 }
