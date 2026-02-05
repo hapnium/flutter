@@ -3,7 +3,7 @@ description: A Flutter plugin that is used to display links in a nice ui
 
 publish_to: none
 
-version: 0.0.6
+version: 0.0.7
 homepage: https://github.com/Hapnium/flutter/tree/main/link_preview
 repository: https://github.com/Hapnium/flutter/tree/main/link_preview
 

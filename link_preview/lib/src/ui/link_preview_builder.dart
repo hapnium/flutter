@@ -163,6 +163,8 @@ class _LinkPreviewBuilderState extends State<LinkPreviewBuilder> with SingleTick
 
   /// Fetches preview data for the given link.
   Future<void> _fetchData(String link) async {
+    if (!mounted) return;
+
     setState(() {
       isFetchingPreviewData = true;
     });
@@ -174,6 +176,8 @@ class _LinkPreviewBuilderState extends State<LinkPreviewBuilder> with SingleTick
       requestTimeout: widget.requestTimeout,
       userAgent: widget.userAgent,
     );
+
+    if (!mounted) return;
 
     setState(() {
       shouldAnimate = true;
