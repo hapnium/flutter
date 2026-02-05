@@ -27,14 +27,14 @@ final class UpdateLogView<ButtonKey extends Object> with EqualsAndHashCode, ToSt
     required this.index,
   });
 
-  UpdateLogView copyWith({
+  UpdateLogView<ButtonKey> copyWith({
     ButtonKey? Function()? key,
     String? header,
     StringCollection? content,
     String? date,
     Integer? index,
   }) {
-    return UpdateLogView(
+    return UpdateLogView<ButtonKey>(
       key: key != null ? key() : this.key,
       header: header ?? this.header,
       content: content ?? this.content,

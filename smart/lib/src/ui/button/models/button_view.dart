@@ -62,7 +62,7 @@ final class ButtonView<ButtonKey extends Object> with EqualsAndHashCode, ToStrin
     this.imageWidget,
   });
 
-  ButtonView copyWith({
+  ButtonView<ButtonKey> copyWith({
     ButtonKey? Function()? key,
     IconData? icon,
     Integer? index,
@@ -77,7 +77,7 @@ final class ButtonView<ButtonKey extends Object> with EqualsAndHashCode, ToStrin
     Widget? Function()? child,
     Widget? Function()? imageWidget,
   }) {
-    return ButtonView(
+    return ButtonView<ButtonKey>(
       key: key != null ? key() : this.key,
       icon: icon ?? this.icon,
       index: index ?? this.index,

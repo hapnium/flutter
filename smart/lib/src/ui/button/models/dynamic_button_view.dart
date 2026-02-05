@@ -36,7 +36,7 @@ final class DynamicButtonView<ButtonKey extends Object> with EqualsAndHashCode, 
     this.image = "",
   });
 
-  DynamicButtonView copyWith({
+  DynamicButtonView<ButtonKey> copyWith({
     ButtonKey? Function()? key,
     IconData? icon,
     IconData? active,
@@ -45,7 +45,7 @@ final class DynamicButtonView<ButtonKey extends Object> with EqualsAndHashCode, 
     String? path,
     String? image,
   }) {
-    return DynamicButtonView(
+    return DynamicButtonView<ButtonKey>(
       key: key != null ? key() : this.key,
       icon: icon ?? this.icon,
       active: active ?? this.active,
