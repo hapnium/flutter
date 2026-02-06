@@ -431,7 +431,8 @@ class SmartField extends StatelessWidget {
       return itemBuilder(context, _buildField(field, metadata), metadata);
     }).toList();
 
-    return Column(
+    return Flex(
+      direction: scrollDirection ?? Axis.vertical,
       spacing: spacing ?? 10,
       verticalDirection: verticalDirection ?? VerticalDirection.down,
       textBaseline: textBaseline,
