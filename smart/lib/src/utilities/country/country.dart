@@ -15,7 +15,7 @@ import 'country_data.dart';
 ///  * `image`: An optional image path or URL representing the country's flag.
 /// 
 /// {@endtemplate}
-class Country {
+class Country with EqualsAndHashCode, ToString {
   /// The full name of the country (e.g., "Nigeria").
   final String name;
 
@@ -94,6 +94,9 @@ class Country {
   /// 
   /// {@macro country}
   factory Country.primary() => CountryData.instance.nigeria;
+
+  @override
+  List<Object?> equalizedProperties() => [name, flag, code, dialCode, min, max, image];
 
   /// Finds a country by name (case-insensitive search).
 

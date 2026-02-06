@@ -1,3 +1,5 @@
+import 'package:hapnium/hapnium.dart';
+
 /// A model representing a phone number with country-specific details.
 ///
 /// This class helps manage phone numbers by storing the country ISO code, 
@@ -15,7 +17,7 @@
 /// print(phone.toString()); 
 /// // Output: PhoneNumber(countryISOCode: US, countryCode: +1, number: 1234567890)
 /// ```
-class PhoneNumber {
+class PhoneNumber with EqualsAndHashCode, ToString {
   /// The **ISO country code** (e.g., "US" for United States, "IN" for India).
   ///
   /// This is a **two-letter** country code representing the country 
@@ -62,6 +64,9 @@ class PhoneNumber {
   /// print(phone.completeNumber); // Output: +19876543210
   /// ```
   String get completeNumber => countryCode + number;
+
+  @override
+  List<Object?> equalizedProperties() => [countryCode, countryISOCode, number];
 
   /// Returns a string representation of the phone number.
   ///
