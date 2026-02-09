@@ -209,7 +209,7 @@ class _LinkPreviewBuilderState extends State<LinkPreviewBuilder> with SingleTick
   );
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => KeepAlive(child: () {
     if (isFetchingPreviewData) {
       return widget.loadingBuilder != null ? widget.loadingBuilder!(context) : const SizedBox.shrink();
     }
@@ -221,5 +221,24 @@ class _LinkPreviewBuilderState extends State<LinkPreviewBuilder> with SingleTick
     } else {
       return child;
     }
+  }());
+}
+
+class KeepAlive extends StatefulWidget {
+  final Widget child;
+  const KeepAlive({required this.child, super.key});
+
+  @override
+  State<KeepAlive> createState() => _KeepAliveWrapperState();
+}
+
+class _KeepAliveWrapperState extends State<KeepAlive> with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
+  Widget build(BuildContext context) {
+    super.build(context);
+    return widget.child;
   }
 }
