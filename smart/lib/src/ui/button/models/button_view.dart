@@ -46,6 +46,9 @@ final class ButtonView<ButtonKey extends Object> with EqualsAndHashCode, ToStrin
   /// An optional image widget that can replace icon and image view
   final Widget? imageWidget;
 
+  final bool isEnabled;
+
+  /// Children
   final List<ButtonView<ButtonKey>> children;
 
   ButtonView({
@@ -62,7 +65,8 @@ final class ButtonView<ButtonKey extends Object> with EqualsAndHashCode, ToStrin
     this.image = "",
     this.colors = const [],
     this.imageWidget,
-    this.children = const []
+    this.children = const [],
+    this.isEnabled = true,
   });
 
   ButtonView<ButtonKey> copyWith({
@@ -79,7 +83,8 @@ final class ButtonView<ButtonKey extends Object> with EqualsAndHashCode, ToStrin
     OnActionInvoked? Function()? onClick,
     Widget? Function()? child,
     Widget? Function()? imageWidget,
-    List<ButtonView<ButtonKey>>? children
+    List<ButtonView<ButtonKey>>? children,
+    bool? isEnabled
   }) {
     return ButtonView<ButtonKey>(
       key: key != null ? key() : this.key,
@@ -95,7 +100,8 @@ final class ButtonView<ButtonKey extends Object> with EqualsAndHashCode, ToStrin
       onClick: onClick != null ? onClick() : this.onClick,
       child: child != null ? child() : this.child,
       imageWidget: imageWidget != null ? imageWidget() : this.imageWidget,
-      children: children ?? this.children
+      children: children ?? this.children,
+      isEnabled: isEnabled ?? this.isEnabled
     );
   }
 
@@ -108,6 +114,7 @@ final class ButtonView<ButtonKey extends Object> with EqualsAndHashCode, ToStrin
     body,
     number,
     path,
+    isEnabled,
     image,
     colors,
     color,

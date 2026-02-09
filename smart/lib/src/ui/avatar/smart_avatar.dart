@@ -54,6 +54,18 @@ class SmartAvatar extends BaseAvatar {
   /// Optional padding for the initials text.
   final EdgeInsetsGeometry? padding;
 
+  /// An image to paint above the background [color] or [gradient].
+  ///
+  /// If [shape] is [BoxShape.circle] then the image is clipped to the circle's
+  /// boundary; if [borderRadius] is non-null then the image is clipped to the
+  /// given radii.
+  final DecorationImage? decorationalImage;
+
+  /// Whether to ignore the child - mostly used when building squared images
+  final Boolean ignoreChild;
+
+  final WidgetBuilder? childBuilder;
+
   /// Creates a [SmartAvatar] widget that displays a user profile image, initials, or fallback icon.
   /// 
   /// {@macro smart_avatar}
@@ -88,7 +100,10 @@ class SmartAvatar extends BaseAvatar {
     super.imageDecorationBuilder,
     this.applyPadding = true,
     this.padding,
-    super.fit
+    super.fit,
+    this.decorationalImage,
+    this.ignoreChild = false,
+    this.childBuilder
   });
 
   /// Creates a [SmartAvatar] widget that displays a user profile image, initials, or fallback icon.
@@ -118,8 +133,9 @@ class SmartAvatar extends BaseAvatar {
     super.image,
     this.applyPadding = true,
     this.padding,
-    super.fit
-  }) : super(
+    super.fit,
+    this.childBuilder
+  }) : decorationalImage = null, ignoreChild = false, super(
     isCircular: true,
     rectangleBorderRadius: null,
     rectangleDecoration: null,
@@ -158,8 +174,10 @@ class SmartAvatar extends BaseAvatar {
     super.imageDecorationBuilder,
     this.applyPadding = true,
     this.padding,
-    super.fit
-  }) : super(
+    super.fit,
+    this.decorationalImage,
+    this.childBuilder
+  }) : ignoreChild = decorationalImage != null, super(
     isCircular: false,
     minRadius: null,
     maxRadius: null,
@@ -173,7 +191,7 @@ class SmartAvatar extends BaseAvatar {
       return null;
     }
 
-    final Widget child = _buildInitialsOrFallback(fullName: fullName, firstName: firstName, lastName: lastName);
+    final Widget child = _buildInitialsOrFallback(context, fullName: fullName, firstName: firstName, lastName: lastName);
 
     Widget buildAvatar() {
       if(isCircular) {
@@ -194,9 +212,10 @@ class SmartAvatar extends BaseAvatar {
           alignment: alignment ?? Alignment.center,
           decoration: rectangleDecoration ?? BoxDecoration(
             color: getBackgroundColor(context),
+            image: decorationalImage,
             borderRadius: rectangleBorderRadius ?? BorderRadius.circular(6),
           ),
-          child: child,
+          child: ignoreChild ? null : child,
         );
       }
     }
@@ -205,8 +224,12 @@ class SmartAvatar extends BaseAvatar {
   }
 
   /// Builds either the initials text or a fallback icon if no name is provided.
-  Widget _buildInitialsOrFallback({String? fullName, String? firstName, String? lastName}) {
+  Widget _buildInitialsOrFallback(BuildContext context, {String? fullName, String? firstName, String? lastName}) {
     final String initials = SmartUtils.getInitials(fullName: fullName, firstName: firstName, lastName: lastName);
+
+    if (childBuilder case WidgetBuilder builder?) {
+      return builder(context);
+    }
 
     if (initials.isEmpty) {
       return Icon(defaultIcon ?? Icons.person, color: textColor ?? Colors.white54, size: textSize);
