@@ -148,6 +148,14 @@ abstract class BaseAvatar extends StatelessWidget {
   /// The foreground decoration for the rectangular avatar.
   final ImageDecorationBuilder? foregroundImageDecorationBuilder;
 
+  /// How the image should be inscribed into the box.
+  ///
+  /// The default is [BoxFit.scaleDown] if [centerSlice] is null, and
+  /// [BoxFit.fill] if [centerSlice] is not null.
+  ///
+  /// See the discussion at [paintImage] for more details.
+  final BoxFit? fit;
+
   /// Constructor for `BaseAvatar`. The `foregroundImageBuilder` is required for extensions.
   /// 
   /// {@macro base_avatar}
@@ -174,6 +182,7 @@ abstract class BaseAvatar extends StatelessWidget {
     this.rectangleForegroundDecoration,
     this.imageDecorationBuilder,
     this.foregroundImageDecorationBuilder,
+    this.fit
   });
 
   /// Builds the CircleAvatar with customizable behavior.
@@ -228,12 +237,15 @@ abstract class BaseAvatar extends StatelessWidget {
   }
 
   @protected
+  BoxFit getBoxFit() => fit ?? BoxFit.cover;
+
+  @protected
   DecorationImage? getForegroundDecorationImage(BuildContext context) {
     if (getForegroundImage(context) case final image?) {
       return DecorationImage(
         image: image,
         onError: getForegroundErrorListener(),
-        fit: BoxFit.cover
+        fit: getBoxFit()
       );
     }
 
@@ -300,7 +312,7 @@ abstract class BaseAvatar extends StatelessWidget {
       return DecorationImage(
         image: image,
         onError: getBackgroundErrorListener(),
-        fit: BoxFit.cover
+        fit: getBoxFit()
       );
     }
 

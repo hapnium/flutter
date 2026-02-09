@@ -87,7 +87,8 @@ class SmartAvatar extends BaseAvatar {
     super.foregroundImageDecorationBuilder,
     super.imageDecorationBuilder,
     this.applyPadding = true,
-    this.padding
+    this.padding,
+    super.fit
   });
 
   /// Creates a [SmartAvatar] widget that displays a user profile image, initials, or fallback icon.
@@ -116,7 +117,8 @@ class SmartAvatar extends BaseAvatar {
     super.showLogs,
     super.image,
     this.applyPadding = true,
-    this.padding
+    this.padding,
+    super.fit
   }) : super(
     isCircular: true,
     rectangleBorderRadius: null,
@@ -155,7 +157,8 @@ class SmartAvatar extends BaseAvatar {
     super.foregroundImageDecorationBuilder,
     super.imageDecorationBuilder,
     this.applyPadding = true,
-    this.padding
+    this.padding,
+    super.fit
   }) : super(
     isCircular: false,
     minRadius: null,
