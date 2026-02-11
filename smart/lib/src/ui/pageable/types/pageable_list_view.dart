@@ -266,7 +266,8 @@ class PageableListView<Page, Item> extends StatelessWidget {
 
     Widget child(BuildContext context, int index, IndexedWidgetBuilder builder) {
       if(WidgetUtils.hasContent(spacing)) {
-        return Column(
+        return Flex(
+          direction: scrollDirection,
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

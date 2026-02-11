@@ -50,16 +50,21 @@ class WidgetUtils {
 
   /// Determines if a given widget has valid content with defined dimensions.
   ///
-  /// This method checks if the widget is a [SizedBox] or [Container] and verifies
-  /// that it has a non-null and positive width and height.
+  /// This method measures the widget and verifies that at least one dimension
+  /// is finite and greater than zero.
   ///
   /// - [widget]: The widget to validate.
   ///
   /// Returns `true` if the widget has valid dimensions, otherwise `false`.
   static bool hasContent(Widget widget) {
-    Size size = measure(widget);
-
-    return size.width.isGt(0) && size.height.isGt(0);
+    try {
+      Size size = measure(widget);
+      bool hasWidth = size.width.isFinite && size.width.isGt(0);
+      bool hasHeight = size.height.isFinite && size.height.isGt(0);
+      return hasWidth || hasHeight;
+    } catch (_) {
+      return false;
+    }
   }
 }
 
