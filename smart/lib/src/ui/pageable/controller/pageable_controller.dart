@@ -287,8 +287,11 @@ class PageableController<PageKey, Item> extends ValueNotifier<PageableView<PageK
       );
     } finally {
       _fetchingPages.remove(_firstPageKey);
-      _currentFetchCompleter?.complete();
-      _currentFetchCompleter = null;
+      
+      try {
+        _currentFetchCompleter?.complete();
+        _currentFetchCompleter = null;
+      } catch (_) {}
     }
   }
   
