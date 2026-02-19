@@ -256,8 +256,8 @@ mixin ChimeMixin implements ChimeNotificationManager, ChimeStreamable, ChimeEven
   /// dismissById(notificationId);
   /// ```
   /// {@endtemplate}
-  void dismissById(int id) async {
-    await plugin.cancel(id);
+  void dismissById(int id, {String? tag}) async {
+    await plugin.cancel(id: id, tag: tag);
   }
 
   /// {@template chime_mixin_dismiss_all}
@@ -298,8 +298,8 @@ mixin ChimeMixin implements ChimeNotificationManager, ChimeStreamable, ChimeEven
 
     if(notifications.isNotEmpty) {
       for (final n in notifications) {
-        if(n.id != null) {
-          await plugin.cancel(n.id!);
+        if(n.id case int id?) {
+          await plugin.cancel(id: id);
         }
       }
     }
@@ -321,8 +321,8 @@ mixin ChimeMixin implements ChimeNotificationManager, ChimeStreamable, ChimeEven
 
     if(notifications.isNotEmpty) {
       for (final n in notifications) {
-        if(n.id != null) {
-          await plugin.cancel(n.id!);
+        if(n.id case int id?) {
+          await plugin.cancel(id: id);
         }
       }
     }

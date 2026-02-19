@@ -126,7 +126,7 @@ class PageableListView<Page, Item> extends StatelessWidget {
   final IndexedWidgetBuilder? separatorBuilder;
 
   /// Creates a scrollable, linear array of widgets that are created on demand.
-  final ChildIndexGetter? findChildIndexCallback;
+  final ChildIndexGetter? findItemIndexCallback;
 
   /// Creates a [ScrollView] uses a single child layout model.
   final HitTestBehavior hitTestBehavior;
@@ -178,7 +178,7 @@ class PageableListView<Page, Item> extends StatelessWidget {
     this.keyboardDismissBehavior = ScrollViewKeyboardDismissBehavior.manual,
     this.restorationId,
     this.clipBehavior = Clip.hardEdge,
-    this.findChildIndexCallback,
+    this.findItemIndexCallback,
     this.hitTestBehavior = HitTestBehavior.opaque,
     this.itemExtentBuilder,
     this.prototypeItem,
@@ -209,7 +209,7 @@ class PageableListView<Page, Item> extends StatelessWidget {
     this.keyboardDismissBehavior = ScrollViewKeyboardDismissBehavior.manual,
     this.restorationId,
     this.clipBehavior = Clip.hardEdge,
-    this.findChildIndexCallback,
+    this.findItemIndexCallback,
     this.hitTestBehavior = HitTestBehavior.opaque,
     this.separatorStrategy,
     this.applySeparatorToLastItem = false,
@@ -242,7 +242,7 @@ class PageableListView<Page, Item> extends StatelessWidget {
     properties.add(StringProperty('restorationId', restorationId));
     properties.add(EnumProperty<Clip>('clipBehavior', clipBehavior));
     properties.add(DiagnosticsProperty<IndexedWidgetBuilder?>('separatorBuilder', separatorBuilder));
-    properties.add(DiagnosticsProperty<ChildIndexGetter?>('findChildIndexCallback', findChildIndexCallback));
+    properties.add(DiagnosticsProperty<ChildIndexGetter?>('findItemIndexCallback', findItemIndexCallback));
     properties.add(EnumProperty<HitTestBehavior>('hitTestBehavior', hitTestBehavior));
     properties.add(DiagnosticsProperty<ItemExtentBuilder?>('itemExtentBuilder', itemExtentBuilder));
     properties.add(DiagnosticsProperty<Widget?>('prototypeItem', prototypeItem));
@@ -294,7 +294,7 @@ class PageableListView<Page, Item> extends StatelessWidget {
         addSemanticIndexes: addSemanticIndexes,
         cacheExtent: cacheExtent,
         hitTestBehavior: hitTestBehavior,
-        findChildIndexCallback: findChildIndexCallback,
+        findChildIndexCallback: findItemIndexCallback,
         dragStartBehavior: dragStartBehavior,
         keyboardDismissBehavior: keyboardDismissBehavior,
         restorationId: restorationId,
@@ -321,7 +321,7 @@ class PageableListView<Page, Item> extends StatelessWidget {
         addSemanticIndexes: addSemanticIndexes,
         cacheExtent: cacheExtent,
         hitTestBehavior: hitTestBehavior,
-        findChildIndexCallback: findChildIndexCallback,
+        findItemIndexCallback: findItemIndexCallback,
         dragStartBehavior: dragStartBehavior,
         keyboardDismissBehavior: keyboardDismissBehavior,
         restorationId: restorationId,

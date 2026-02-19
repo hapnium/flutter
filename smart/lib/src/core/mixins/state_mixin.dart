@@ -119,7 +119,6 @@
 //       StreamController<T>.broadcast(onCancel: addListener(_streamListener));
 //       _controller?.add(_value);
 //
-//       ///TODO: report to controller dispose
 //     }
 //     return _controller!;
 //   }

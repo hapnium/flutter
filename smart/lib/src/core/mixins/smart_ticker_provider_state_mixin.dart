@@ -50,7 +50,7 @@ mixin SmartTickerProviderStateMixin on SmartController implements TickerProvider
   }
 
   void didChangeDependencies(BuildContext context) {
-    final muted = !TickerMode.of(context);
+    final muted = !TickerMode.valuesOf(context).enabled;
     if (_tickers != null) {
       for (final ticker in _tickers!) {
         ticker.muted = muted;

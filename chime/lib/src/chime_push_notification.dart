@@ -167,10 +167,10 @@ abstract class ChimePushNotificationBuilder with ChimeMixin {
 
     try {
       await plugin.show(
-        notification.id,
-        notification.title,
-        notification.body,
-        notification.notificationDetails,
+        id: notification.id,
+        title: notification.title,
+        body: notification.body,
+        notificationDetails: notification.notificationDetails,
         payload: notification.toString()
       );
 
@@ -207,27 +207,31 @@ abstract class ChimePushNotificationBuilder with ChimeMixin {
       return;
     }
 
-    try {
-      await plugin.zonedSchedule(
-        notification.id,
-        notification.title,
-        notification.body,
-        notification.scheduledDate,
-        notification.notificationDetails!,
-        androidScheduleMode: notification.androidScheduleMode ?? AndroidScheduleMode.exactAllowWhileIdle,
-        matchDateTimeComponents: notification.dateTimeComponents ?? DateTimeComponents.dateAndTime,
-        payload: notification.payload
-      );
+    if (notification.notificationDetails case NotificationDetails details?) {
+      try {
+        await plugin.zonedSchedule(
+          id: notification.id,
+          title: notification.title,
+          body: notification.body,
+          notificationDetails: details,
+          scheduledDate: notification.scheduledDate,
+          androidScheduleMode: notification.androidScheduleMode ?? AndroidScheduleMode.exactAllowWhileIdle,
+          matchDateTimeComponents: notification.dateTimeComponents ?? DateTimeComponents.dateAndTime,
+          payload: notification.payload
+        );
 
-      if(showChimeLogs) {
-        console.info("Notification built successfully. Sending it to `createdNotification` controller", tag: getChimeLogPrefix());
+        if(showChimeLogs) {
+          console.info("Notification built successfully. Sending it to `createdNotification` controller", tag: getChimeLogPrefix());
+        }
+        await publishEvent(NotificationScheduledEvent(notification));
+      } catch (error, st) {
+        if(showChimeLogs) {
+          console.info("Notification failed to build. Sending it to `failedNotification` controller", tag: getChimeLogPrefix());
+        }
+        await publishEvent(NotificationFailedEvent(notification, error, st));
       }
-      await publishEvent(NotificationScheduledEvent(notification));
-    } catch (error, st) {
-      if(showChimeLogs) {
-        console.info("Notification failed to build. Sending it to `failedNotification` controller", tag: getChimeLogPrefix());
-      }
-      await publishEvent(NotificationFailedEvent(notification, error, st));
+    } else {
+      console.warn("Notification could not be built since it is lacking `notificationDetails`", tag: getChimeLogPrefix());
     }
   }
 }
@@ -396,7 +400,7 @@ class DefaultChimePushNotification with ChimeMixin implements ChimePushNotificat
     }
 
     await plugin.initialize(
-      initializationSettings,
+      settings: initializationSettings,
       onDidReceiveNotificationResponse: (response) async {
         if(showChimeLogs) {
           console.info("Remote notification for ${getApplicationName()}", tag: prefix);
