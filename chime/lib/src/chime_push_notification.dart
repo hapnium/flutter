@@ -10,6 +10,22 @@ import 'chime_sound.dart';
 import 'chime_notification.dart';
 import 'enums.dart';
 
+NotificationResponseCallback? _chimeBackgroundForwarder;
+Future<void> Function(NotificationResponse details)? _chimeBackgroundPublisher;
+
+@pragma('vm:entry-point')
+void chimeBackgroundNotificationDispatcher(NotificationResponse details) async {
+  // Keep Chime event publishing
+  if (_chimeBackgroundPublisher case final publisher?) {
+    await publisher(details);
+  }
+
+  // Keep user-provided background callback
+  if (_chimeBackgroundForwarder case final forwarder?) {
+    forwarder(details);
+  }
+}
+
 /// {@template chime_push_notification_builder}
 /// Base builder for constructing and publishing Chime notifications.
 ///
@@ -399,6 +415,31 @@ class DefaultChimePushNotification with ChimeMixin implements ChimePushNotificat
       console.debug("Initializing remote notification for ${getApplicationName()}", tag: prefix);
     }
 
+    _chimeBackgroundForwarder = onBackgroundNotificationReceived;
+    _chimeBackgroundPublisher = (details) async {
+      final notification = ChimeNotification(
+        action: details.actionId,
+        input: details.input,
+        id: details.id ?? 0,
+        data: details.data,
+        identifier: details.toString(),
+      );
+
+      if (showChimeLogs) {
+        console.info("Background notification for ${getApplicationName()} details: $notification", tag: prefix);
+      }
+
+      try {
+        await publishEvent(
+          NotificationReceivedEvent(
+            notification,
+            response: details,
+            isBackgroundNotification: true,
+          ),
+        );
+      } catch (_) {}
+    };
+
     await plugin.initialize(
       settings: initializationSettings,
       onDidReceiveNotificationResponse: (response) async {
@@ -427,27 +468,7 @@ class DefaultChimePushNotification with ChimeMixin implements ChimePushNotificat
           await publishEvent(NotificationReceivedEvent(notification, response: response));
         } catch (_) {}
       },
-      onDidReceiveBackgroundNotificationResponse: (details) async {
-        if (onBackgroundNotificationReceived case final onReceived?) {
-          onReceived(details);
-        }
-
-        final notification = ChimeNotification(
-          action: details.actionId,
-          input: details.input,
-          id: details.id ?? 0,
-          data: details.data,
-          identifier: details.toString()
-        );
-
-        if(showChimeLogs) {
-          console.info("Background notification for ${getApplicationName()} details: $notification", tag: prefix);
-        }
-
-        try {
-          await publishEvent(NotificationReceivedEvent(notification, response: details, isBackgroundNotification: true));
-        } catch (_) {}
-      },
+      onDidReceiveBackgroundNotificationResponse: chimeBackgroundNotificationDispatcher,
     ).then((v) {
       if(v ?? false) {
         if(showChimeLogs) {
