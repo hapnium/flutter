@@ -25,6 +25,9 @@ library;
 
 import 'src/chime_controller.dart';
 import 'src/chime_in_app_notification.dart';
+import 'src/chime_mixin.dart';
+import 'src/chime_push_notification.dart';
+import 'src/enums.dart';
 
 export 'src/chime_application.dart';
 export 'src/chime_configuration.dart';
@@ -71,7 +74,7 @@ export 'src/chime_helpers.dart' hide ChimeHelpers;
 /// inApp.showInAppInfoNotification(message: 'Welcome back');
 /// ```
 /// {@endtemplate}
-final class Chime {
+final class Chime with ChimeMixin {
   /// {@macro chime_registry}
   Chime._();
 
@@ -81,11 +84,24 @@ final class Chime {
   /// itself does not log directly.
   static bool showLogs = false;
 
+  /// The application name for the current project.
+  /// 
+  /// This is set by [ChimeApplication]
+  static String _applicationName = "";
+
+  /// The application platform for the current project.
+  /// 
+  /// This is set by [ChimeApplication]
+  static ChimePlatform _platform = ChimePlatform.ANDROID;
+
   /// The active controller instance.
   static ChimeController? _controller;
 
   /// The active in-app notification handler.
   static ChimeInAppNotification? _appNotification;
+
+  /// The active push notification handler.
+  static ChimePushNotification? _pushNotification;
 
   /// Returns the active controller or a default instance.
   ///
@@ -104,6 +120,19 @@ final class Chime {
   /// Call this once during app startup to ensure a shared controller instance.
   static void setController(ChimeController controller) {
     _controller = controller;
+  }
+
+  /// The mixable chime access for advanced control to the chime package.
+  static ChimeMixin mixable = Chime._();
+
+  /// Sets the active application name of the chime project
+  static void setApplicationName(String applicationName) {
+    _applicationName = applicationName;
+  }
+
+  /// Sets the active platform of the chime project
+  static void setPlatform(ChimePlatform platform) {
+    _platform = platform;
   }
 
   /// Enables or disables Chime debug logging.
@@ -128,5 +157,24 @@ final class Chime {
   /// Call this once during app startup to ensure consistent in-app behavior.
   static void setChimeInAppNotification(ChimeInAppNotification notification) {
     _appNotification = notification;
+  }
+
+  /// Returns the active push notification handler or a default instance.
+  ///
+  /// If no handler is set, a new [DefaultChimePushNotification] is created
+  /// each time this getter is called.
+  static ChimePushNotification getPushNotification() {
+    if (_pushNotification case final notification?) {
+      return notification;
+    }
+
+    return DefaultChimePushNotification(_applicationName, _platform);
+  }
+
+  /// Sets the active push notification handler.
+  ///
+  /// Call this once during app startup to ensure consistent push behavior.
+  static void setChimePushNotification(ChimePushNotification notification) {
+    _pushNotification = notification;
   }
 }

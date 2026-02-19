@@ -154,6 +154,9 @@ class _ChimeApplicationState extends State<ChimeApplication> {
   }
 
   Future<void> _init() async {
+    Chime.setApplicationName(widget.applicationName);
+    Chime.setPlatform(widget.platform);
+
     final controller = widget.configuration.controller ?? DefaultChimeController();
 
     for (final listener in widget.configuration.eventListeners) {
@@ -163,6 +166,7 @@ class _ChimeApplicationState extends State<ChimeApplication> {
     final skipOnWeb = widget.platform == ChimePlatform.WEB && widget.skipDeviceNotificationInitializationOnWeb;
     if (!skipOnWeb) {
       final pusher = widget.configuration.pushNotification ?? DefaultChimePushNotification(widget.applicationName, widget.platform);
+      Chime.setChimePushNotification(pusher);
       
       if (widget.initializationSettings case final initializationSettings?) {
         await pusher.initialize(
@@ -175,6 +179,8 @@ class _ChimeApplicationState extends State<ChimeApplication> {
       if (widget.onLaunchedByNotification case final onAppLaunchedByNotification?) {
         await pusher.onAppLaunchedByNotification(onAppLaunchedByNotification);
       }
+
+      Chime.setChimePushNotification(pusher);
     }
 
     Chime.setShowLogs(widget.showLog);
