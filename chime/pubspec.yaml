@@ -3,7 +3,7 @@ description: "Notification (In-App and Device) management for Hapnium mobile pla
 
 publish_to: none
 
-version: 0.0.6
+version: 0.0.7
 homepage: https://github.com/Hapnium/flutter/tree/main/chime
 repository: https://github.com/Hapnium/flutter/tree/main/chime
 

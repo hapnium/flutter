@@ -163,9 +163,17 @@ final class Chime with ChimeMixin {
   ///
   /// If no handler is set, a new [DefaultChimePushNotification] is created
   /// each time this getter is called.
-  static ChimePushNotification getPushNotification() {
+  static ChimePushNotification getPushNotification({String? applicationName, ChimePlatform? platform}) {
     if (_pushNotification case final notification?) {
       return notification;
+    }
+
+    if (applicationName case String applicationName?) {
+      setApplicationName(applicationName);
+    }
+
+    if (platform case ChimePlatform platform?) {
+      setPlatform(platform);
     }
 
     return DefaultChimePushNotification(_applicationName, _platform);
