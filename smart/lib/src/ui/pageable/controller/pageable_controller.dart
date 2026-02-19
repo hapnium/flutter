@@ -278,11 +278,18 @@ class PageableController<PageKey, Item> extends ValueNotifier<PageableView<PageK
       
     } catch (error, stackTrace) {
       _debugAssertNotDisposed();
+
+      dynamic errorDescription;
+      if (error case SmartException exception) {
+        errorDescription = exception.message;
+      } else {
+        errorDescription = error;
+      }
       
       _log('Error fetching first page: $error');
       value = value.copyWith(
         status: PageableStatus.FIRST_PAGE_ERROR,
-        error: error,
+        error: errorDescription,
         stackTrace: stackTrace,
       );
     } finally {
