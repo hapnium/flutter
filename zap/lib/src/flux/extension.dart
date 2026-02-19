@@ -49,17 +49,17 @@ extension FluxConfigExtension on FluxConfig {
       // Use custom auth header builder if provided
       if (authHeaderBuilder != null) {
         headers = authHeaderBuilder!(session);
+      } else {
+        // Use configurable header name and token prefix
+        final token = session.accessToken;
+        if (token.isEmpty) {
+          headers = {};
+        }
+
+        final headerValue = tokenPrefix.isEmpty ? token : '$tokenPrefix $token';
+
+        headers = {authHeaderName: headerValue};
       }
-
-      // Use configurable header name and token prefix
-      final token = session.accessToken;
-      if (token.isEmpty) {
-        headers = {};
-      }
-
-      final headerValue = tokenPrefix.isEmpty ? token : '$tokenPrefix $token';
-
-      headers = {authHeaderName: headerValue};
     }
 
     ___log(headers);

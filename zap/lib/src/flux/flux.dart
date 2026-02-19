@@ -119,9 +119,7 @@ final class Flux implements FluxInterface {
 
   /// Cancels all active requests using Zap's cancellation mechanism.
   static void cancelAllRequests([String reason = 'All requests cancelled']) {
-    if (_instance != null) {
-      _instance!._client().cancelAllRequests(reason);
-    }
+    _instance?._client().cancelAllRequests(reason);
   }
 
   /// Gets the underlying Zap HTTP client
