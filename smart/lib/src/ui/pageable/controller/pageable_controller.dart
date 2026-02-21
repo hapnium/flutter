@@ -141,7 +141,7 @@ class PageableController<PageKey, Item> extends ValueNotifier<PageableView<PageK
     required PageKey getFirstPageKey,
     NextPageKeyGenerator<PageKey, Item>? getNextPageKey,
     required int pageSize,
-    this.useSafeMode = false,
+    this.useSafeMode = true,
     this.maxRetries = 0,
     this.retryDelay = Duration.zero,
     this.retryIf,
