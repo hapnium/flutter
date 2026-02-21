@@ -5,6 +5,8 @@ import 'package:flutter/widgets.dart' show WidgetsBinding;
 import 'package:smart/exceptions.dart';
 
 import '../helpers/pageable_logger.dart';
+import 'pageable_controller_lifecycle.dart';
+import 'pageable_controller_lifecycle_mixin.dart';
 import '../models/pageable.dart';
 import '../models/pageable_status.dart';
 import '../models/page_result.dart';
@@ -30,6 +32,10 @@ typedef NextPageKeyGenerator<PageKey, Item> = PageKey? Function(
   int totalLoadedItems,
 );
 
+typedef PageableRetryIf = bool Function(Object error, StackTrace stackTrace, int attempt);
+typedef PageableRetryDelayBuilder = Duration Function(int attempt);
+typedef PageableRetryCallback = void Function(int attempt, Object error, StackTrace stackTrace, Duration delay);
+
 /// {@template pageable_controller}
 /// Controller that manages pagination state and data fetching logic.
 ///
@@ -53,7 +59,7 @@ typedef NextPageKeyGenerator<PageKey, Item> = PageKey? Function(
 /// ```
 /// 
 /// {@endtemplate}
-class PageableController<PageKey, Item> extends ValueNotifier<PageableView<PageKey, Item>> {
+class PageableController<PageKey, Item> extends ValueNotifier<PageableView<PageKey, Item>> with PageableControllerLifecycleMixin<PageKey, Item>, PageableControllerLifecycle {
   /// The callback function that fetches a page of items based on a [PageKey].
   ///
   /// Returns a [Future] or synchronous [List<Item>] for the specified page key.
@@ -75,15 +81,44 @@ class PageableController<PageKey, Item> extends ValueNotifier<PageableView<PageK
   ///
   /// If not provided, a default console logger is used when [showLog] is true.
   final PageableLogger? _logger;
+
+  /// Enables mounted/disposed guards after async awaits.
+  ///
+  /// When false, the controller keeps its original behavior and throws if used
+  /// after disposal.
+  final bool useSafeMode;
+
+  /// Maximum number of retry attempts for a single page fetch.
+  ///
+  /// `0` means no retries.
+  final int maxRetries;
+
+  /// Fallback delay used between retry attempts when [retryDelayBuilder] is null.
+  final Duration retryDelay;
+
+  /// Optional callback to control whether a specific error should be retried.
+  final PageableRetryIf? retryIf;
+
+  /// Optional callback to compute retry delay per attempt.
+  final PageableRetryDelayBuilder? retryDelayBuilder;
+
+  /// Optional callback invoked whenever a retry is scheduled.
+  final PageableRetryCallback? onRetryAttempt;
+
+  /// Lifecycle callback invoked once after controller initialization.
+  final VoidCallback? onPageableInitCallback;
+
+  /// Lifecycle callback invoked once when controller is ready.
+  final VoidCallback? onPageableReadyCallback;
+
+  /// Lifecycle callback invoked once during disposal.
+  final VoidCallback? onPageableDisposeCallback;
   
   /// Tracks the set of page keys currently being fetched to prevent duplicate fetches.
   final Set<PageKey> _fetchingPages = {};
   
   /// Completer that represents the ongoing fetch operation.
   Completer<void>? _currentFetchCompleter;
-  
-  /// Flag indicating whether the controller has been disposed.
-  bool _isDisposed = false;
   
   /// Timer used to debounce successive fetchNextPage calls.
   Timer? _debounceTimer;
@@ -97,7 +132,6 @@ class PageableController<PageKey, Item> extends ValueNotifier<PageableView<PageK
   /// - [getFirstPageKey]: required callback to obtain the first page key.
   /// - [getNextPageKey]: optional callback to generate next page keys.
   /// - [pageSize]: optional expected page size to detect last page.
-  /// - [autoFetchFirstPage]: whether to auto-fetch first page on init.
   /// - [showLog]: enable or disable default console logging.
   /// - [logger]: custom logger instance; overrides [showLog] setting.
   /// 
@@ -107,6 +141,15 @@ class PageableController<PageKey, Item> extends ValueNotifier<PageableView<PageK
     required PageKey getFirstPageKey,
     NextPageKeyGenerator<PageKey, Item>? getNextPageKey,
     required int pageSize,
+    this.useSafeMode = false,
+    this.maxRetries = 0,
+    this.retryDelay = Duration.zero,
+    this.retryIf,
+    this.retryDelayBuilder,
+    this.onRetryAttempt,
+    this.onPageableInitCallback,
+    this.onPageableReadyCallback,
+    this.onPageableDisposeCallback,
     bool showLog = true,
     PageableLogger? logger,
   })  : _pageFetcher = fetchPage,
@@ -116,6 +159,11 @@ class PageableController<PageKey, Item> extends ValueNotifier<PageableView<PageK
         _logger = logger ?? (showLog ? ConsolePageableLogger() : null),
         super(PageableView.initial(showLog: showLog, pageSize: pageSize))
   {
+    if (maxRetries < 0) {
+      throw ArgumentError.value(maxRetries, 'maxRetries', 'must be greater than or equal to 0');
+    }
+
+    triggerPageableInit();
     
     _log('Initialized (firstPageKey: $_firstPageKey, pageSize: $pageSize, status: ${value.status})');
     
@@ -124,7 +172,8 @@ class PageableController<PageKey, Item> extends ValueNotifier<PageableView<PageK
     if (!_hasInitialized) {
       _hasInitialized = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!_isDisposed) {
+        if (mounted) {
+          triggerPageableReady();
           fetchFirstPage();
         }
       });
@@ -143,6 +192,15 @@ class PageableController<PageKey, Item> extends ValueNotifier<PageableView<PageK
     NextPageKeyGenerator<PageKey, Item>? getNextPageKey,
     PageKey? nextPageKey,
     required int pageSize,
+    bool useSafeMode = false,
+    int maxRetries = 0,
+    Duration retryDelay = Duration.zero,
+    PageableRetryIf? retryIf,
+    PageableRetryDelayBuilder? retryDelayBuilder,
+    PageableRetryCallback? onRetryAttempt,
+    VoidCallback? onPageableInitCallback,
+    VoidCallback? onPageableReadyCallback,
+    VoidCallback? onPageableDisposeCallback,
     bool showLog = false,
     PageableLogger? logger,
   }) {
@@ -151,6 +209,15 @@ class PageableController<PageKey, Item> extends ValueNotifier<PageableView<PageK
       getFirstPageKey: getFirstPageKey,
       getNextPageKey: getNextPageKey,
       pageSize: pageSize,
+      useSafeMode: useSafeMode,
+      maxRetries: maxRetries,
+      retryDelay: retryDelay,
+      retryIf: retryIf,
+      retryDelayBuilder: retryDelayBuilder,
+      onRetryAttempt: onRetryAttempt,
+      onPageableInitCallback: onPageableInitCallback,
+      onPageableReadyCallback: onPageableReadyCallback,
+      onPageableDisposeCallback: onPageableDisposeCallback,
       showLog: showLog,
       logger: logger,
     );
@@ -181,26 +248,56 @@ class PageableController<PageKey, Item> extends ValueNotifier<PageableView<PageK
   /// Whether the controller can fetch the next page
   bool get canFetchNextPage => !isFetching && value.canLoadMore;
 
+  @override
   Type getPageKeyType() => PageKey;
 
+  @override
   Type getItemType() => Item;
 
-  bool _debugAssertNotDisposed() {
-    assert(() {
-      if (_isDisposed) {
-        throw SmartException(
-          'The PageableController [$runtimeType] for Item($Item - ${getItemType()}***${getItemType().runtimeType}) '
-            'and PageKey($PageKey - ${getPageKeyType()}***${getPageKeyType().runtimeType}) was used after being '
-            'disposed.\nOnce you have called dispose() on a PageableController, it can no longer be '
-            'used.\nIf you’re using a Future, it probably completed after '
-            'the disposal of the owning widget.\nMake sure dispose() has not '
-            'been called yet before using the PageableController. '
-            'The location of this was caught at ${StackTrace.current}',
+  @override
+  void onPageableInit() {
+    onPageableInitCallback?.call();
+  }
+
+  @override
+  void onPageableReady() {
+    onPageableReadyCallback?.call();
+  }
+
+  @override
+  void onPageableDispose() {
+    onPageableDisposeCallback?.call();
+  }
+
+  @override
+  void onPageableRetry(int attempt, Object error, StackTrace stackTrace, Duration delay) {
+    onRetryAttempt?.call(attempt, error, stackTrace, delay);
+  }
+
+  Future<List<Item>> _fetchPageWithRetry(PageKey pageKey, {required String operation}) async {
+    var attempt = 0;
+    while (true) {
+      try {
+        return await _pageFetcher(pageKey);
+      } catch (error, stackTrace) {
+        if (attempt >= maxRetries) rethrow;
+        final nextAttempt = attempt + 1;
+        final shouldRetry = retryIf?.call(error, stackTrace, nextAttempt) ?? true;
+        if (!shouldRetry) rethrow;
+
+        final delay = retryDelayBuilder?.call(nextAttempt) ?? retryDelay;
+        _log(
+          '[$operation] retrying attempt $nextAttempt/$maxRetries for page $pageKey after '
+          '${delay.inMilliseconds}ms because of $error',
         );
+        triggerPageableRetry(nextAttempt, error, stackTrace, delay);
+
+        if (delay > Duration.zero) {
+          await Future<void>.delayed(delay);
+        }
+        attempt = nextAttempt;
       }
-      return true;
-    }());
-    return true;
+    }
   }
   
   /// Fetches the first page of data.
@@ -208,7 +305,8 @@ class PageableController<PageKey, Item> extends ValueNotifier<PageableView<PageK
   /// If a fetch is already ongoing, waits for it to complete instead of starting a new one.
   /// Updates the controller's state and handles errors accordingly.
   Future<void> fetchFirstPage() async {
-    _debugAssertNotDisposed();
+    trackOperation('fetchFirstPage');
+    debugAssertNotDisposed();
     
     // Prevent multiple simultaneous first page fetches
     if (isFetching) {
@@ -237,9 +335,13 @@ class PageableController<PageKey, Item> extends ValueNotifier<PageableView<PageK
         clearError: true,
       );
       
-      final items = await _pageFetcher(firstPageKey);
+      final items = await _fetchPageWithRetry(firstPageKey, operation: 'fetchFirstPage');
       
-      _debugAssertNotDisposed();
+      if (useSafeMode && !mounted) {
+        _log('fetchFirstPage result ignored because controller is disposed');
+        return;
+      }
+      debugAssertNotDisposed();
       
       _log('First page fetched: ${items.length} items');
       
@@ -283,7 +385,8 @@ class PageableController<PageKey, Item> extends ValueNotifier<PageableView<PageK
       );
       
     } catch (error, stackTrace) {
-      _debugAssertNotDisposed();
+      if (useSafeMode && !mounted) return;
+      debugAssertNotDisposed();
 
       dynamic errorDescription;
       if (error case SmartException exception) {
@@ -312,7 +415,8 @@ class PageableController<PageKey, Item> extends ValueNotifier<PageableView<PageK
   ///
   /// This method debounces rapid successive calls to avoid excessive fetching.
   Future<void> fetchNextPage() async {
-    _debugAssertNotDisposed();
+    trackOperation('fetchNextPage');
+    debugAssertNotDisposed();
     
     // Strict guards against excessive fetching
     if (!canFetchNextPage) {
@@ -328,7 +432,8 @@ class PageableController<PageKey, Item> extends ValueNotifier<PageableView<PageK
   }
   
   Future<void> _performNextPageFetch() async {
-    if (_isDisposed || !canFetchNextPage) return;
+    trackOperation('_performNextPageFetch');
+    if (isDisposed || !canFetchNextPage) return;
     
     PageKey? nextPageKey;
     
@@ -366,9 +471,13 @@ class PageableController<PageKey, Item> extends ValueNotifier<PageableView<PageK
         clearError: true,
       );
       
-      final items = await _pageFetcher(nextPageKey);
+      final items = await _fetchPageWithRetry(nextPageKey, operation: '_performNextPageFetch');
       
-      _debugAssertNotDisposed();
+      if (useSafeMode && !mounted) {
+        _log('_performNextPageFetch result ignored because controller is disposed');
+        return;
+      }
+      debugAssertNotDisposed();
       
       _log('Next page fetched: ${items.length} items');
       
@@ -408,7 +517,8 @@ class PageableController<PageKey, Item> extends ValueNotifier<PageableView<PageK
       );
       
     } catch (error, stackTrace) {
-      _debugAssertNotDisposed();
+      if (useSafeMode && !mounted) return;
+      debugAssertNotDisposed();
       
       _log('Error fetching next page: $error');
       value = value.copyWith(
@@ -431,7 +541,8 @@ class PageableController<PageKey, Item> extends ValueNotifier<PageableView<PageK
   ///
   /// Cancels ongoing fetches and resets the controller state.
   Future<void> refresh() async {
-    _debugAssertNotDisposed();
+    trackOperation('refresh');
+    debugAssertNotDisposed();
 
     // Prevent multiple simultaneous refresh operations
     if (isFetching) {
@@ -459,9 +570,13 @@ class PageableController<PageKey, Item> extends ValueNotifier<PageableView<PageK
         clearError: true,
       );
       
-      final items = await _pageFetcher(firstPageKey);
+      final items = await _fetchPageWithRetry(firstPageKey, operation: 'refresh');
       
-      _debugAssertNotDisposed();
+      if (useSafeMode && !mounted) {
+        _log('refresh result ignored because controller is disposed');
+        return;
+      }
+      debugAssertNotDisposed();
       
       _log('Data refreshed: ${items.length} items');
       
@@ -503,7 +618,8 @@ class PageableController<PageKey, Item> extends ValueNotifier<PageableView<PageK
       );
       
     } catch (error, stackTrace) {
-      _debugAssertNotDisposed();
+      if (useSafeMode && !mounted) return;
+      debugAssertNotDisposed();
       
       _log('Error REFRESHING data: $error');
       value = value.copyWith(
@@ -523,7 +639,8 @@ class PageableController<PageKey, Item> extends ValueNotifier<PageableView<PageK
   /// If last failure was fetching the first page, retries first page fetch.
   /// If last failure was fetching next page, retries next page fetch.
   Future<void> retry() async {
-    _debugAssertNotDisposed();
+    trackOperation('retry');
+    debugAssertNotDisposed();
     
     _log('Retrying last operation (status: ${value.status})');
     
@@ -536,7 +653,8 @@ class PageableController<PageKey, Item> extends ValueNotifier<PageableView<PageK
   
   /// Clears all data and resets to initial state
   void clear() {
-    _debugAssertNotDisposed();
+    trackOperation('clear');
+    debugAssertNotDisposed();
     
     _log('Clearing all data');
     _debounceTimer?.cancel();
@@ -554,7 +672,9 @@ class PageableController<PageKey, Item> extends ValueNotifier<PageableView<PageK
   
   @override
   void dispose() {
-    _isDisposed = true;
+    trackOperation('dispose');
+    markDisposed();
+    triggerPageableDispose();
     _debounceTimer?.cancel();
     _fetchingPages.clear();
     _currentFetchCompleter?.complete();
