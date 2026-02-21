@@ -181,15 +181,21 @@ class PageableController<PageKey, Item> extends ValueNotifier<PageableView<PageK
   /// Whether the controller can fetch the next page
   bool get canFetchNextPage => !isFetching && value.canLoadMore;
 
+  Type getPageKeyType() => PageKey;
+
+  Type getItemType() => Item;
+
   bool _debugAssertNotDisposed() {
     assert(() {
       if (_isDisposed) {
         throw SmartException(
-          'A PageableController was used after being disposed.\nOnce you have '
-              'called dispose() on a PageableController, it can no longer be '
-              'used.\nIf you’re using a Future, it probably completed after '
-              'the disposal of the owning widget.\nMake sure dispose() has not '
-              'been called yet before using the PageableController.',
+          'The PageableController [$runtimeType] for Item($Item - ${getItemType()}***${getItemType().runtimeType}) '
+            'and PageKey($PageKey - ${getPageKeyType()}***${getPageKeyType().runtimeType}) was used after being '
+            'disposed.\nOnce you have called dispose() on a PageableController, it can no longer be '
+            'used.\nIf you’re using a Future, it probably completed after '
+            'the disposal of the owning widget.\nMake sure dispose() has not '
+            'been called yet before using the PageableController. '
+            'The location of this was caught at ${StackTrace.current}',
         );
       }
       return true;
