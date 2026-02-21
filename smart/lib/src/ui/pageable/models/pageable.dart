@@ -1,3 +1,5 @@
+import 'package:hapnium/hapnium.dart';
+
 import 'pageable_status.dart';
 import 'page_result.dart';
 
@@ -23,7 +25,7 @@ import 'page_result.dart';
 /// ``` 
 /// 
 /// {@endtemplate}
-class PageableView<PageKey, Item> {
+class PageableView<PageKey, Item> with EqualsAndHashCode {
   /// List of page results, in the order they were fetched.
   final List<PageResult<PageKey, Item>> pages;
   
@@ -209,29 +211,7 @@ class PageableView<PageKey, Item> {
   String toString() {
     return 'Pageable(pages: ${pages.length}, status: $status, itemCount: $itemCount, hasNextPage: $hasNextPage)';
   }
-  
+
   @override
-  bool operator ==(Object other) {
-    if (identical(this, other)) return true;
-    
-    return other is PageableView<PageKey, Item> &&
-        other.pages.length == pages.length &&
-        other.status == status &&
-        other.nextPageKey == nextPageKey &&
-        other.error == error &&
-        other.showLog == showLog &&
-        other.pageSize == pageSize;
-  }
-  
-  @override
-  int get hashCode {
-    return Object.hash(
-      pages.length,
-      status,
-      nextPageKey,
-      error,
-      showLog,
-      pageSize,
-    );
-  }
+  List<Object?> equalizedProperties() => [pages, status, nextPageKey, error, showLog, pageSize];
 }
