@@ -1,7 +1,5 @@
 import '../http/request/request.dart';
 import '../core/zap_interface.dart';
-import '../http/response/response.dart';
-import '../http/utils/http_status.dart';
 import '../models/flux_config.dart';
 import '../core/zap.dart';
 import 'extension.dart';
@@ -53,22 +51,6 @@ class _Connect extends Zap {
         }
         
         return request;
-      });
-
-      client.addResponseModifier<void>((Request request, Response response) async {
-        if (response.status == HttpStatus.UNAUTHORIZED) {
-          final session = await fx.handleSessionRefresh();
-          if (session != null) {
-            request.headers.addAll(fx.buildHeadersWithAuth(session: session));
-            return await client.request(request.method, request.url.toString());
-          } else {
-            // If unable to refresh token, redirect user to login or handle it accordingly
-            // Example: Redirect to login page
-            fx.whenUnauthorized?.call();
-          }
-        }
-
-        return response;
       });
     }
 

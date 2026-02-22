@@ -318,13 +318,16 @@ extension FluxConfigExtension on FluxConfig {
   }
 
   /// Retries a request after session refresh.
-  Future<Response<ApiResponse>> _retryRequest(RequestExecutor execute, CancelToken? cancelToken) async {
+  Future<Response<ApiResponse>> _retryRequest(RequestExecutor execute, CancelToken? cancelToken, {bool useAuth = true}) async {
     final newSession = await handleSessionRefresh();
     Response<ApiResponse> response;
 
     if (newSession != null) {
       // Retry the request with new session
       final headers = buildHeaders();
+      if (useAuth) {
+        headers.addAll(buildHeadersWithAuth(session: newSession));
+      }
       response = await execute(headers, cancelToken);
     } else {
       response = unauthorized();
@@ -366,7 +369,7 @@ extension FluxConfigExtension on FluxConfig {
         
         // Handle HttpStatus.UNAUTHORIZED Unauthorized - attempt session refresh
         if (response.status == HttpStatus.UNAUTHORIZED && useAuth) {
-          response = await _retryRequest(execute, cancelToken);
+          response = await _retryRequest(execute, cancelToken, useAuth: useAuth);
         }
       } on ZapException catch (e) {
         response = handleException(e);
@@ -374,7 +377,17 @@ extension FluxConfigExtension on FluxConfig {
         response = handleException(e);
       }
     } else {
-      response = await execute(null, cancelToken);
+      try {
+        response = await execute(null, cancelToken);
+
+        if (response.status == HttpStatus.UNAUTHORIZED && useAuth) {
+          response = await _retryRequest(execute, cancelToken, useAuth: useAuth);
+        }
+      } on ZapException catch (e) {
+        response = handleException(e);
+      } on Exception catch (e) {
+        response = handleException(e);
+      }
     }
 
     _log(response);
