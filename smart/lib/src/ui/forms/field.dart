@@ -919,7 +919,11 @@ base class Field extends StatelessWidget {
   /// Controls whether input beyond max length is truncated or rejected.
   final MaxLengthEnforcement? maxLengthEnforcement;
 
+  /// For customized decoration
   final InputDecoration? inputDecoration;
+
+  /// Determine the fill design
+  final bool filled;
 
   /// {@macro field}
   const Field({
@@ -930,7 +934,7 @@ base class Field extends StatelessWidget {
     this.onBind,
     this.enabled,
     this.focus,
-    this.inputAction = TextInputAction.next,
+    this.inputAction = TextInputAction.done,
     this.keyboard,
     this.obscureText = false,
     this.validator,
@@ -997,7 +1001,8 @@ base class Field extends StatelessWidget {
     this.clipBehavior = Clip.hardEdge,
     this.autoCorrect = true,
     this.maxLengthEnforcement,
-    this.inputDecoration
+    this.inputDecoration,
+    this.filled = true
   });
 
   /// Deprecated: Use [PasswordField] instead.
@@ -1239,7 +1244,8 @@ base class Field extends StatelessWidget {
     required this.crossAxisAlignment,
     required this.autoCorrect,
     required this.maxLengthEnforcement,
-    required this.inputDecoration
+    required this.inputDecoration,
+    required this.filled
   });
 
   /// {@template field_copyWith}
@@ -1375,7 +1381,8 @@ base class Field extends StatelessWidget {
     CrossAxisAlignment? crossAxisAlignment,
     bool? autoCorrect,
     MaxLengthEnforcement? maxLengthEnforcement,
-    InputDecoration? inputDecoration
+    InputDecoration? inputDecoration,
+    bool? filled
   }) {
     return Field._internal(
       key: key,
@@ -1453,6 +1460,7 @@ base class Field extends StatelessWidget {
       autoCorrect: autoCorrect ?? this.autoCorrect,
       maxLengthEnforcement: maxLengthEnforcement ?? this.maxLengthEnforcement,
       inputDecoration: inputDecoration ?? this.inputDecoration,
+      filled: filled ?? this.filled
     );
   }
 
@@ -2231,7 +2239,7 @@ base class Field extends StatelessWidget {
         fontSize: inputConfig.hintSize ?? inputConfig.textSize,
         fontWeight: inputConfig.hintWeight
       ),
-      filled: true,
+      filled: filled,
       suffixIconConstraints: suffixIconConstraints,
       prefixIconConstraints: prefixIconConstraints,
       prefixIcon: getPrefixIcon(context, fieldController),
