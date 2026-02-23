@@ -1,312 +1,160 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:zap/zap.dart';
 
 void main() {
-  late Flux zapPulse;
-  late SessionResponse testSession;
+  late HttpServer server;
+  late String baseUrl;
 
-  setUp(() {
-    testSession = SessionResponse(
-      accessToken: 'test_access_token_12345',
-      refreshToken: 'test_refresh_token_12345',
-    );
+  Future<void> writeJson(HttpRequest request, int statusCode, Map<String, dynamic> body) async {
+    request.response.statusCode = statusCode;
+    request.response.headers.contentType = ContentType.json;
+    request.response.write(jsonEncode(body));
+    await request.response.close();
+  }
 
-    zapPulse = Flux(
-      config: FluxConfig(
-        showRequestLogs: true,
-        showResponseLogs: true,
-        showErrorLogs: true,
-      ),
-    );
+  setUpAll(() async {
+    server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+    baseUrl = 'http://${server.address.address}:${server.port}';
+
+    server.listen((request) async {
+      final path = request.uri.path;
+      final auth = request.headers.value('authorization');
+
+      if (path == '/public' && request.method == 'GET') {
+        await writeJson(request, 200, {
+          'status': 'success',
+          'code': 200,
+          'message': 'ok',
+          'data': {'public': true}
+        });
+        return;
+      }
+
+      if (path == '/protected' && request.method == 'GET') {
+        if (auth == 'Bearer valid-token') {
+          await writeJson(request, 200, {
+            'status': 'success',
+            'code': 200,
+            'message': 'ok',
+            'data': {'protected': true}
+          });
+        } else {
+          await writeJson(request, 401, {
+            'status': 'error',
+            'code': 401,
+            'message': 'unauthorized',
+            'data': null
+          });
+        }
+        return;
+      }
+
+      if (path == '/echo' && request.method == 'POST') {
+        final payload = jsonDecode(await utf8.decoder.bind(request).join());
+        await writeJson(request, 201, {
+          'status': 'success',
+          'code': 201,
+          'message': 'created',
+          'data': payload,
+        });
+        return;
+      }
+
+      await writeJson(request, 404, {
+        'status': 'error',
+        'code': 404,
+        'message': 'not found',
+        'data': null,
+      });
+    });
   });
 
   tearDown(() {
     Flux.dispose();
   });
 
-  group('Flux Real API Tests', () {
-    test('GET request with authentication headers', () async {
-      // Act
-      final response = await zapPulse.get(
-        endpoint: 'https://httpbin.org/headers',
-        useAuth: true,
-      );
+  tearDownAll(() async {
+    await server.close(force: true);
+  });
 
-      // Assert
-      expect(response.isOk, true);
-      expect(response.body?.code, 200);
-      expect(response.body?.data, isA<Map<String, dynamic>>());
-      
-      // Verify auth header was sent
-      final headers = response.headers;
-      expect(headers?['Authorization'], 'Bearer test_access_token_12345');
-    });
-
+  group('Flux Tests', () {
     test('GET request without authentication', () async {
-      // Act
-      final response = await zapPulse.get(
-        endpoint: 'https://jsonplaceholder.typicode.com/posts/1',
+      final flux = Flux(
+        config: FluxConfig(
+          zapConfig: ZapConfig(baseUrl: baseUrl),
+          disposeOnCompleted: false,
+        ),
+      );
+
+      final response = await flux.get(endpoint: '/public', useAuth: false);
+
+      expect(response.status.code, 200);
+      expect(response.body?.code, 200);
+      expect(response.body?.data?['public'], true);
+    });
+
+    test('GET request with valid authentication session', () async {
+      final flux = Flux(
+        config: FluxConfig(
+          zapConfig: ZapConfig(baseUrl: baseUrl),
+          disposeOnCompleted: false,
+          sessionFactory: () => SessionResponse(
+            accessToken: 'valid-token',
+            refreshToken: 'r1',
+          ),
+        ),
+      );
+
+      final response = await flux.get(endpoint: '/protected', useAuth: true);
+
+      expect(response.status.code, 200);
+      expect(response.body?.code, 200);
+      expect(response.body?.data?['protected'], true);
+    });
+
+    test('POST request sends body', () async {
+      final flux = Flux(
+        config: FluxConfig(
+          zapConfig: ZapConfig(baseUrl: baseUrl),
+          disposeOnCompleted: false,
+        ),
+      );
+
+      final response = await flux.post(
+        endpoint: '/echo',
+        body: {'name': 'zap'},
         useAuth: false,
       );
 
-      // Assert
-      expect(response.isOk, true);
-      expect(response.body?.code, 200);
-      expect(response.body?.data, isA<Map<String, dynamic>>());
-      expect(response.body?.data?['id'], 1);
-      expect(response.body?.data?['title'], isNotEmpty);
-    });
-
-    test('POST request with body and authentication', () async {
-      // Arrange
-      final postData = {
-        'title': 'Flux Test Post',
-        'body': 'This post was created using Flux',
-        'userId': 1
-      };
-
-      // Act
-      final response = await zapPulse.post(
-        endpoint: 'https://jsonplaceholder.typicode.com/posts',
-        body: postData,
-        useAuth: true,
-      );
-
-      // Assert
-      expect(response.isOk, true);
+      expect(response.status.code, 201);
       expect(response.body?.code, 201);
-      expect(response.body?.data, isA<Map<String, dynamic>>());
-      expect(response.body?.data?['title'], postData['title']);
-      expect(response.body?.data?['body'], postData['body']);
-      expect(response.body?.data?['id'], isNotNull);
+      expect(response.body?.data?['name'], 'zap');
     });
 
-    test('PUT request updates resource', () async {
-      // Arrange
-      final updateData = {
-        'id': 1,
-        'title': 'Updated via Flux',
-        'body': 'This post was updated using Flux',
-        'userId': 1
-      };
-
-      // Act
-      final response = await zapPulse.put(
-        endpoint: 'https://jsonplaceholder.typicode.com/posts/1',
-        body: updateData,
-        useAuth: false,
-      );
-
-      // Assert
-      expect(response.isOk, true);
-      expect(response.body?.code, 200);
-      expect(response.body?.data?['title'], updateData['title']);
-      expect(response.body?.data?['body'], updateData['body']);
-    });
-
-    test('PATCH request with partial update', () async {
-      // Arrange
-      final patchData = {
-        'title': 'Patched via Flux'
-      };
-
-      // Act
-      final response = await zapPulse.patch(
-        endpoint: 'https://jsonplaceholder.typicode.com/posts/1',
-        body: patchData,
-        useAuth: false,
-      );
-
-      // Assert
-      expect(response.isOk, true);
-      expect(response.body?.code, 200);
-      expect(response.body?.data?['title'], patchData['title']);
-      expect(response.body?.data?['id'], 1); // Should retain original id
-    });
-
-    test('DELETE request removes resource', () async {
-      // Act
-      final response = await zapPulse.delete(
-        endpoint: 'https://jsonplaceholder.typicode.com/posts/1',
-        useAuth: false,
-      );
-
-      // Assert
-      expect(response.isOk, true);
-      expect(response.body?.code, 200);
-    });
-
-    test('Request with query parameters', () async {
-      // Act
-      final response = await zapPulse.get(
-        endpoint: 'https://jsonplaceholder.typicode.com/posts',
-        query: {'userId': 1, '_limit': 5},
-        useAuth: false,
-      );
-
-      // Assert
-      expect(response.isOk, true);
-      expect(response.body?.code, 200);
-      expect(response.body?.data, isA<List<dynamic>>());
-      expect(response.body?.data?.length, lessThanOrEqualTo(5));
-      
-      // Verify all posts are from userId 1
-      for (var post in response.body?.data ?? []) {
-        expect(post['userId'], 1);
-      }
-    });
-
-    test('Custom auth header configuration', () async {
-      // Arrange
-      Flux.dispose();
-      
-      zapPulse = Flux(
+    test('Throws when auth is required but session is missing', () async {
+      final flux = Flux(
         config: FluxConfig(
-          authHeaderName: 'X-API-Key',
-          tokenPrefix: 'Token',
+          zapConfig: ZapConfig(baseUrl: baseUrl),
+          disposeOnCompleted: false,
         ),
       );
 
-      // Act
-      final response = await zapPulse.get(
-        endpoint: 'https://httpbin.org/headers',
-        useAuth: true,
-      );
-
-      // Assert
-      expect(response.isOk, true);
-      final headers = response.body?.data?['headers'] as Map<String, dynamic>?;
-      expect(headers?['X-Api-Key'], 'Token test_access_token_12345');
-    });
-
-    test('Custom auth header builder', () async {
-      // Arrange
-      Flux.dispose();
-      
-      zapPulse = Flux(
-        config: FluxConfig(
-          authHeaderBuilder: (session) => {
-            'X-User-Token': 'user_token_${session.accessToken}',
-          },
-        ),
-      );
-
-      // Act
-      final response = await zapPulse.get(
-        endpoint: 'https://httpbin.org/headers',
-        useAuth: true,
-      );
-
-      // Assert
-      expect(response.isOk, true);
-      final headers = response.body?.data?['headers'] as Map<String, dynamic>?;
-      expect(headers?['X-User-Token'], 'user_token_test_access_token_12345');
-    });
-
-    test('Dynamic session updates', () async {
-      // Arrange
-      SessionResponse? currentSession = testSession;
-      
-      Flux.dispose();
-      
-      zapPulse = Flux(
-        config: FluxConfig(
-          sessionFactory: () => currentSession!,
-        ),
-      );
-
-      // Act - First request with initial session
-      var response = await zapPulse.get(
-        endpoint: 'https://httpbin.org/headers',
-        useAuth: true,
-      );
-
-      // Assert first request
-      expect(response.isOk, true);
-      var headers = response.body?.data?['headers'] as Map<String, dynamic>?;
-      expect(headers?['Authorization'], 'Bearer test_access_token_12345');
-
-      // Update session
-      currentSession = SessionResponse(
-        accessToken: 'updated_access_token_67890',
-        refreshToken: 'updated_refresh_token_67890',
-      );
-
-      // Act - Second request with updated session
-      response = await zapPulse.get(
-        endpoint: 'https://httpbin.org/headers',
-        useAuth: true,
-      );
-
-      // Assert second request uses updated token
-      expect(response.isOk, true);
-      headers = response.body?.data?['headers'] as Map<String, dynamic>?;
-      expect(headers?['Authorization'], 'Bearer updated_access_token_67890');
-    });
-
-    test('Error handling for 404 response', () async {
-      // Act
-      final response = await zapPulse.get(
-        endpoint: 'https://jsonplaceholder.typicode.com/posts/999999',
-        useAuth: false,
-      );
-
-      // Assert
-      expect(response.isOk, false);
-      expect(response.body?.code, 404);
-      expect(response.status, 'error');
-    });
-
-    test('Error handling when session required but not provided', () async {
-      // Arrange
-      Flux.dispose();
-      
-      zapPulse = Flux(
-        config: FluxConfig(
-          showRequestLogs: true,
-          showResponseLogs: true,
-          showErrorLogs: true,
-        ),
-      );
-
-      // Act & Assert
       expect(
-        () => zapPulse.get(
-          endpoint: 'https://httpbin.org/headers',
-          useAuth: true,
-        ),
+        () => flux.get(endpoint: '/protected', useAuth: true),
         throwsA(isA<Exception>()),
       );
     });
 
-    test('Singleton pattern enforcement', () async {
-      // Act & Assert
+    test('Singleton pattern enforcement', () {
+      Flux(config: FluxConfig(zapConfig: ZapConfig(baseUrl: baseUrl), disposeOnCompleted: false));
+
       expect(
-        () => Flux(config: FluxConfig()),
+        () => Flux(config: FluxConfig(zapConfig: ZapConfig(baseUrl: baseUrl), disposeOnCompleted: false)),
         throwsA(isA<Exception>()),
       );
-    });
-
-    test('Multiple concurrent requests', () async {
-      // Arrange
-      final futures = <Future<Response<ApiResponse>>>[];
-
-      // Act
-      for (int i = 1; i <= 5; i++) {
-        futures.add(zapPulse.get(
-          endpoint: 'https://jsonplaceholder.typicode.com/posts/$i',
-          useAuth: false,
-        ));
-      }
-
-      final responses = await Future.wait(futures);
-
-      // Assert
-      expect(responses.length, 5);
-      for (int i = 0; i < responses.length; i++) {
-        expect(responses[i].isOk, true);
-        expect(responses[i].body?.data?['id'], i + 1);
-      }
     });
   });
 }

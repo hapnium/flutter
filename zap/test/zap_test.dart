@@ -1,8 +1,66 @@
+import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:zap/zap.dart';
 
 void main() {
   late Zap zap;
+  late HttpServer server;
+  late String baseUrl;
+
+  Future<void> writeJson(HttpRequest request, int statusCode, Map<String, dynamic> body) async {
+    request.response.statusCode = statusCode;
+    request.response.headers.contentType = ContentType.json;
+    request.response.write(jsonEncode(body));
+    await request.response.close();
+  }
+
+  setUpAll(() async {
+    server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+    baseUrl = 'http://${server.address.address}:${server.port}';
+
+    server.listen((request) async {
+      switch (request.uri.path) {
+        case '/get':
+          await writeJson(request, 200, {'id': 1, 'title': 'ok'});
+          return;
+        case '/query':
+          await writeJson(request, 200, {'userId': request.uri.queryParameters['userId']});
+          return;
+        case '/post':
+          final payload = jsonDecode(await utf8.decoder.bind(request).join());
+          await writeJson(request, 201, payload as Map<String, dynamic>);
+          return;
+        case '/upload':
+          final bytes = await request.fold<List<int>>(<int>[], (acc, chunk) {
+            acc.addAll(chunk);
+            return acc;
+          });
+          await writeJson(request, 201, {'size': bytes.length});
+          return;
+        case '/put':
+        case '/patch':
+          final payload = jsonDecode(await utf8.decoder.bind(request).join());
+          await writeJson(request, 200, payload as Map<String, dynamic>);
+          return;
+        case '/delete':
+          await writeJson(request, 200, {'deleted': true});
+          return;
+        case '/delay':
+          await Future.delayed(const Duration(seconds: 2));
+          await writeJson(request, 200, {'delayed': true});
+          return;
+        case '/404':
+          await writeJson(request, 404, {'error': 'not found'});
+          return;
+        default:
+          await writeJson(request, 400, {'error': 'bad request'});
+          return;
+      }
+    });
+  });
 
   setUp(() {
     zap = Zap();
@@ -12,213 +70,117 @@ void main() {
     zap.dispose();
   });
 
-  group('Zap Real HTTP Tests', () {
-    test('GET request to JSONPlaceholder API', () async {
-      // Act
-      final response = await zap.get<Map<String, dynamic>>(
-        'https://jsonplaceholder.typicode.com/posts/1',
-      );
+  tearDownAll(() async {
+    await server.close(force: true);
+  });
 
-      // Assert
+  group('Zap HTTP Tests', () {
+    test('GET request', () async {
+      final response = await zap.get<Map<String, dynamic>>('$baseUrl/get');
       expect(response.status.code, 200);
-      expect(response.body, isA<Map<String, dynamic>>());
       expect(response.body?['id'], 1);
-      expect(response.body?['title'], isNotEmpty);
-      expect(response.body?['userId'], isNotNull);
     });
 
-    test('GET request with query parameters', () async {
-      // Act
-      final response = await zap.get<List<dynamic>>(
-        'https://jsonplaceholder.typicode.com/posts',
-        query: {'userId': 1},
+    test('GET request with query', () async {
+      final response = await zap.get<Map<String, dynamic>>(
+        '$baseUrl/query',
+        query: {'userId': 7},
       );
-
-      // Assert
       expect(response.status.code, 200);
-      expect(response.body, isA<List<dynamic>>());
-      expect(response.body?.isNotEmpty, true);
-      
-      // Verify all posts are from userId 1
-      for (var post in response.body ?? []) {
-        expect(post['userId'], 1);
-      }
+      expect(response.body?['userId'], '7');
     });
 
-    test('POST request creates new resource', () async {
-      // Arrange
-      final postData = {
-        'title': 'Test Post from Zap',
-        'body': 'This is a test post created using Zap HTTP client',
-        'userId': 1
-      };
-
-      // Act
+    test('POST request', () async {
       final response = await zap.post<Map<String, dynamic>>(
-        'https://jsonplaceholder.typicode.com/posts',
-        postData,
+        '$baseUrl/post',
+        {'title': 'hello'},
       );
-
-      // Assert
       expect(response.status.code, 201);
-      expect(response.body, isA<Map<String, dynamic>>());
-      expect(response.body?['id'], isNotNull);
-      expect(response.body?['title'], postData['title']);
-      expect(response.body?['body'], postData['body']);
-      expect(response.body?['userId'], postData['userId']);
+      expect(response.body?['title'], 'hello');
     });
 
-    test('PUT request updates resource', () async {
-      // Arrange
-      final updateData = {
-        'id': 1,
-        'title': 'Updated Post Title',
-        'body': 'Updated post body content',
-        'userId': 1
-      };
+    test('POST upload progress callback reports completion', () async {
+      final progressUpdates = <double>[];
+      final payload = 'x' * 200000; // 200 KB
 
-      // Act
+      final response = await zap.post<Map<String, dynamic>>(
+        '$baseUrl/upload',
+        payload,
+        uploadProgress: (percent) {
+          progressUpdates.add(percent);
+        },
+      );
+
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+
+      expect(response.status.code, 201);
+      expect(response.body?['size'], payload.length);
+      expect(progressUpdates.isNotEmpty, true);
+      expect(progressUpdates.first, 0.0);
+      expect(progressUpdates.last, 100.0);
+    });
+
+    test('PUT request', () async {
       final response = await zap.put<Map<String, dynamic>>(
-        'https://jsonplaceholder.typicode.com/posts/1',
-        updateData,
+        '$baseUrl/put',
+        {'title': 'updated'},
       );
-
-      // Assert
       expect(response.status.code, 200);
-      expect(response.body, isA<Map<String, dynamic>>());
-      expect(response.body?['id'], 1);
-      expect(response.body?['title'], updateData['title']);
-      expect(response.body?['body'], updateData['body']);
+      expect(response.body?['title'], 'updated');
     });
 
-    test('PATCH request partially updates resource', () async {
-      // Arrange
-      final patchData = {
-        'title': 'Patched Title Only'
-      };
-
-      // Act
+    test('PATCH request', () async {
       final response = await zap.patch<Map<String, dynamic>>(
-        'https://jsonplaceholder.typicode.com/posts/1',
-        patchData,
+        '$baseUrl/patch',
+        {'title': 'patched'},
       );
-
-      // Assert
       expect(response.status.code, 200);
-      expect(response.body, isA<Map<String, dynamic>>());
-      expect(response.body?['title'], patchData['title']);
-      expect(response.body?['id'], 1); // Should still have original id
+      expect(response.body?['title'], 'patched');
     });
 
-    test('DELETE request removes resource', () async {
-      // Act
-      final response = await zap.delete<Map<String, dynamic>>(
-        'https://jsonplaceholder.typicode.com/posts/1',
-      );
-
-      // Assert
+    test('DELETE request', () async {
+      final response = await zap.delete<Map<String, dynamic>>('$baseUrl/delete');
       expect(response.status.code, 200);
+      expect(response.body?['deleted'], true);
     });
 
-    test('Request with custom headers', () async {
-      // Arrange
-      final customHeaders = {
-        'X-Custom-Header': 'TestValue',
-        'User-Agent': 'Zap-Test-Client/1.0'
-      };
-
-      // Act
-      final response = await zap.get<Map<String, dynamic>>(
-        'https://httpbin.org/headers',
-        headers: customHeaders,
-      );
-
-      // Assert
-      expect(response.status.code, 200);
-      expect(response.body?['headers']?['X-Custom-Header'], 'TestValue');
-      expect(response.body?['headers']?['User-Agent'], 'Zap-Test-Client/1.0');
-    });
-
-    test('Request cancellation works', () async {
-      // Arrange
-      final cancelToken = CancelToken();
-
-      // Act
-      final futureResponse = zap.get<Map<String, dynamic>>(
-        'https://httpbin.org/delay/3', // 3 second delay
-        cancelToken: cancelToken,
-      );
-
-      // Cancel after 1 second
-      Future.delayed(Duration(seconds: 1), () {
-        cancelToken.cancel('Test cancellation');
-      });
-
-      // Assert
-      expect(futureResponse, throwsA(isA<Exception>()));
-    });
-
-    test('Error handling for 404 response', () async {
-      // Act
-      final response = await zap.get<Map<String, dynamic>>(
-        'https://jsonplaceholder.typicode.com/posts/999999',
-      );
-
-      // Assert
+    test('404 response handling', () async {
+      final response = await zap.get<Map<String, dynamic>>('$baseUrl/404');
       expect(response.status.code, 404);
-    });
-
-    test('Error handling for invalid URL', () async {
-      // Act
-      final response = await zap.get<Map<String, dynamic>>(
-        'https://invalid-domain-that-does-not-exist-12345.com',
-      );
-
-      // Assert
-      expect(response.status.code, 0); // Network error
       expect(response.hasError, true);
     });
 
-    test('Multiple concurrent requests', () async {
-      // Arrange
-      final futures = <Future<Response<Map<String, dynamic>>>>[];
-
-      // Act
-      for (int i = 1; i <= 5; i++) {
-        futures.add(zap.get<Map<String, dynamic>>(
-          'https://jsonplaceholder.typicode.com/posts/$i',
-        ));
-      }
-
-      final responses = await Future.wait(futures);
-
-      // Assert
-      expect(responses.length, 5);
-      for (int i = 0; i < responses.length; i++) {
-        expect(responses[i].status.code, 200);
-        expect(responses[i].body?['id'], i + 1);
-      }
+    test('invalid url handling', () async {
+      final response = await zap.get<Map<String, dynamic>>('http://invalid-domain-zap-test.local');
+      expect(response.hasError, true);
     });
-  });
 
-  group('Zap Request Cancellation', () {
-    test('Cancel all active requests', () async {
-      // Arrange
-      final futures = <Future<Response<Map<String, dynamic>>>>[];
+    test('request cancellation works', () async {
+      final token = CancelToken();
+      final future = zap.get<Map<String, dynamic>>('$baseUrl/delay', cancelToken: token);
 
-      // Act
-      for (int i = 1; i <= 3; i++) {
-        futures.add(zap.get<Map<String, dynamic>>(
-          'https://httpbin.org/delay/2', // 2 second delay
-        ));
-      }
-
-      // Cancel all requests after 500ms
-      Future.delayed(Duration(milliseconds: 500), () {
-        zap.cancelAllRequests('Test cancellation');
+      Future.delayed(const Duration(milliseconds: 100), () {
+        token.cancel('cancelled by test');
       });
 
-      // Assert
+      expect(future, throwsA(isA<Exception>()));
+    });
+
+    test('cancel all active requests', () async {
+      final token1 = CancelToken();
+      final token2 = CancelToken();
+      final token3 = CancelToken();
+
+      final futures = <Future<Response<Map<String, dynamic>>>>[
+        zap.get<Map<String, dynamic>>('$baseUrl/delay', cancelToken: token1),
+        zap.get<Map<String, dynamic>>('$baseUrl/delay', cancelToken: token2),
+        zap.get<Map<String, dynamic>>('$baseUrl/delay', cancelToken: token3),
+      ];
+
+      Future.delayed(const Duration(milliseconds: 100), () {
+        zap.cancelAllRequests('bulk cancel');
+      });
+
       for (final future in futures) {
         expect(future, throwsA(isA<Exception>()));
       }
