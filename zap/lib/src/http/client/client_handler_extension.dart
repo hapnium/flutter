@@ -43,6 +43,16 @@ extension ClientHandlerExtension on ClientHandler {
       contentLength = await body.lengthAsync;
       bodyStream = await _processFormDataStreamWithProgress(body, uploadProgress, contentLength);
       headers[HttpHeaders.CONTENT_TYPE] = HttpContentType.MULTIPARET_FORM_DATA_WITH_BOUNDARY(body.boundary);
+    } else if (body is Uint8List || body is List<int> || body is Iterable<int>) {
+      final bodyBytes = await _processBinaryAsync(body);
+      bodyStream = _trackProgress(bodyBytes, uploadProgress);
+      contentLength = bodyBytes.length;
+      headers[HttpHeaders.CONTENT_TYPE] = contentType ?? defaultContentType;
+    } else if (body is BodyByteStream) {
+      final bodyBytes = await body.toBytes();
+      bodyStream = _trackProgress(bodyBytes, uploadProgress);
+      contentLength = bodyBytes.length;
+      headers[HttpHeaders.CONTENT_TYPE] = contentType ?? defaultContentType;
     } else if (contentType != null && 
                contentType.toLowerCase() == HttpContentType.APPLICATION_X_WWW_FORM_URLENCODED && 
                body is Map) {
@@ -64,8 +74,15 @@ extension ClientHandlerExtension on ClientHandler {
       contentLength = 0;
       headers[HttpHeaders.CONTENT_TYPE] = contentType ?? defaultContentType;
     } else {
-      if (!errorSafety) {
-        throw ZapException.parsing('Request body cannot be ${body.runtimeType}');
+      try {
+        final bodyBytes = await _processUnknownBodyAsync(body);
+        bodyStream = _trackProgress(bodyBytes, uploadProgress);
+        contentLength = bodyBytes.length;
+        headers[HttpHeaders.CONTENT_TYPE] = contentType ?? defaultContentType;
+      } catch (_) {
+        if (!errorSafety) {
+          throw ZapException.parsing('Request body cannot be ${body.runtimeType}');
+        }
       }
     }
 
@@ -193,6 +210,23 @@ extension ClientHandlerExtension on ClientHandler {
     return await compute(_encodeJson, body);
   }
 
+  /// Process binary body payloads without mutation.
+  Future<BodyBytes> _processBinaryAsync(dynamic body) async {
+    if (body is Uint8List) {
+      return body;
+    }
+
+    if (body is List<int>) {
+      return Uint8List.fromList(body);
+    }
+
+    if (body is Iterable<int>) {
+      return Uint8List.fromList(body.toList());
+    }
+
+    return Uint8List(0);
+  }
+
   /// Process form URL encoded without blocking UI
   Future<BodyBytes> _processFormUrlEncodedAsync(RequestParam body) async {
     return await compute(_encodeFormUrlEncoded, body);
@@ -201,6 +235,15 @@ extension ClientHandlerExtension on ClientHandler {
   /// Process string without blocking UI
   Future<BodyBytes> _processStringAsync(String body) async {
     return await compute(_encodeString, body);
+  }
+
+  /// Fallback serializer for body types outside the standard set.
+  Future<BodyBytes> _processUnknownBodyAsync(dynamic body) async {
+    try {
+      return await _processJsonAsync(body);
+    } catch (_) {
+      return await _processStringAsync(body.toString());
+    }
   }
 
   /// Sets simple headers for a request.
