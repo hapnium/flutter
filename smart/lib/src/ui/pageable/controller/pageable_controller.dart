@@ -405,7 +405,7 @@ class PageableController<PageKey, Item> extends ValueNotifier<PageableView<PageK
       _fetchingPages.remove(_firstPageKey);
       
       try {
-        _currentFetchCompleter?.complete();
+        _completeCurrentFetchIfPending();
         _currentFetchCompleter = null;
       } catch (_) {}
     }
@@ -554,7 +554,7 @@ class PageableController<PageKey, Item> extends ValueNotifier<PageableView<PageK
     // Cancel any ongoing operations
     _debounceTimer?.cancel();
     _fetchingPages.clear();
-    _currentFetchCompleter?.complete();
+    _completeCurrentFetchIfPending();
     _currentFetchCompleter = null;
     
     _log('Refreshing data');
@@ -629,7 +629,7 @@ class PageableController<PageKey, Item> extends ValueNotifier<PageableView<PageK
       );
     } finally {
       _fetchingPages.remove(_firstPageKey);
-      _currentFetchCompleter?.complete();
+      _completeCurrentFetchIfPending();
       _currentFetchCompleter = null;
     }
   }
@@ -659,12 +659,19 @@ class PageableController<PageKey, Item> extends ValueNotifier<PageableView<PageK
     _log('Clearing all data');
     _debounceTimer?.cancel();
     _fetchingPages.clear();
-    _currentFetchCompleter?.complete();
+    _completeCurrentFetchIfPending();
     _currentFetchCompleter = null;
     
     value = PageableView.initial(showLog: value.showLog, pageSize: value.pageSize);
   }
-  
+
+  void _completeCurrentFetchIfPending() {
+    final completer = _currentFetchCompleter;
+    if (completer != null && !completer.isCompleted) {
+      completer.complete();
+    }
+  }
+
   /// Logs a message if logging is enabled
   void _log(String message) {
     _logger?.log(message, tag: '$runtimeType ${runtimeType.hashCode}');
@@ -677,7 +684,8 @@ class PageableController<PageKey, Item> extends ValueNotifier<PageableView<PageK
     triggerPageableDispose();
     _debounceTimer?.cancel();
     _fetchingPages.clear();
-    _currentFetchCompleter?.complete();
+    _completeCurrentFetchIfPending();
+    _currentFetchCompleter = null;
     _log('PageableController disposed');
     
     super.dispose();
