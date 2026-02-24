@@ -501,7 +501,8 @@ class PageablePageView<Page, Item> extends StatelessWidget {
     int totalSeparators = hasSeparator
         ? PageableHelper.calculateTotalSeparators(strategy, separatorBuilder, context, count)
         : 0;
-    int totalItemCount = (widgetBuilder != null ? count - 1 : count) + totalSeparators;
+    int totalItemCount = count + totalSeparators;
+    /// int totalItemCount = (widgetBuilder != null ? count - 1 : count) + totalSeparators;
     // bool canShowSeparator(int index) => hasSeparator && totalSeparators.isGt(0) && strategy(index);
 
     bool canShowSeparator(int index) {
