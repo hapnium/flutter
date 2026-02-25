@@ -3,7 +3,7 @@ description: "State management, common ui and utilities for Hapnium mobile platf
 
 publish_to: none
 
-version: 1.3.8
+version: 1.3.9
 homepage: https://github.com/Hapnium/flutter/tree/main/smart
 repository: https://github.com/Hapnium/flutter/tree/main/smart
 

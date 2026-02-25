@@ -119,6 +119,8 @@ class PageableController<PageKey, Item> extends ValueNotifier<PageableView<PageK
   
   /// Completer that represents the ongoing fetch operation.
   Completer<void>? _currentFetchCompleter;
+
+  int _activeFetches = 0;
   
   /// Timer used to debounce successive fetchNextPage calls.
   Timer? _debounceTimer;
@@ -243,10 +245,33 @@ class PageableController<PageKey, Item> extends ValueNotifier<PageableView<PageK
   dynamic get error => value.error;
   
   /// Whether a fetch operation is currently in progress.
-  bool get isFetching => _currentFetchCompleter != null && !_currentFetchCompleter!.isCompleted;
+  bool get isFetching => _activeFetches > 0;
   
   /// Whether the controller can fetch the next page
   bool get canFetchNextPage => !isFetching && value.canLoadMore;
+
+  Completer<void> _beginFetchOperation() {
+    final completer = Completer<void>();
+    _currentFetchCompleter = completer;
+    _activeFetches += 1;
+    return completer;
+  }
+
+  void _endFetchOperation(Completer<void> completer) {
+    if (_activeFetches > 0) {
+      _activeFetches -= 1;
+    }
+
+    if (!completer.isCompleted) {
+      try {
+        completer.complete();
+      } catch (_) {}
+    }
+
+    if (identical(_currentFetchCompleter, completer)) {
+      _currentFetchCompleter = null;
+    }
+  }
 
   @override
   Type getPageKeyType() => PageKey;
@@ -311,12 +336,15 @@ class PageableController<PageKey, Item> extends ValueNotifier<PageableView<PageK
     // Prevent multiple simultaneous first page fetches
     if (isFetching) {
       _log('First page fetch already in progress, waiting...');
-      await _currentFetchCompleter!.future;
+      final inFlight = _currentFetchCompleter;
+      if (inFlight != null && !inFlight.isCompleted) {
+        await inFlight.future;
+      }
       return;
     }
     
     _log('Fetching first page');
-    _currentFetchCompleter = Completer<void>();
+    final fetchCompleter = _beginFetchOperation();
     
     try {
       final firstPageKey = _firstPageKey;
@@ -403,11 +431,7 @@ class PageableController<PageKey, Item> extends ValueNotifier<PageableView<PageK
       );
     } finally {
       _fetchingPages.remove(_firstPageKey);
-      
-      try {
-        _completeCurrentFetchIfPending();
-        _currentFetchCompleter = null;
-      } catch (_) {}
+      _endFetchOperation(fetchCompleter);
     }
   }
   
@@ -435,6 +459,7 @@ class PageableController<PageKey, Item> extends ValueNotifier<PageableView<PageK
     trackOperation('_performNextPageFetch');
     if (isDisposed || !canFetchNextPage) return;
     
+    final fetchCompleter = _beginFetchOperation();
     PageKey? nextPageKey;
     
     // Generate next page key
@@ -528,6 +553,7 @@ class PageableController<PageKey, Item> extends ValueNotifier<PageableView<PageK
       );
     } finally {
       _fetchingPages.remove(nextPageKey);
+      _endFetchOperation(fetchCompleter);
     }
   }
   
@@ -547,18 +573,18 @@ class PageableController<PageKey, Item> extends ValueNotifier<PageableView<PageK
     // Prevent multiple simultaneous refresh operations
     if (isFetching) {
       _log('Refresh already in progress, waiting...');
-      await _currentFetchCompleter!.future;
+      final inFlight = _currentFetchCompleter;
+      if (inFlight != null && !inFlight.isCompleted) {
+        await inFlight.future;
+      }
       return;
     }
     
     // Cancel any ongoing operations
     _debounceTimer?.cancel();
     _fetchingPages.clear();
-    _completeCurrentFetchIfPending();
-    _currentFetchCompleter = null;
-    
     _log('Refreshing data');
-    _currentFetchCompleter = Completer<void>();
+    final fetchCompleter = _beginFetchOperation();
     
     try {
       final firstPageKey = _firstPageKey;
@@ -629,8 +655,7 @@ class PageableController<PageKey, Item> extends ValueNotifier<PageableView<PageK
       );
     } finally {
       _fetchingPages.remove(_firstPageKey);
-      _completeCurrentFetchIfPending();
-      _currentFetchCompleter = null;
+      _endFetchOperation(fetchCompleter);
     }
   }
   
@@ -668,7 +693,9 @@ class PageableController<PageKey, Item> extends ValueNotifier<PageableView<PageK
   void _completeCurrentFetchIfPending() {
     final completer = _currentFetchCompleter;
     if (completer != null && !completer.isCompleted) {
-      completer.complete();
+      try {
+        completer.complete();
+      } catch (_) {}
     }
   }
 
@@ -684,6 +711,7 @@ class PageableController<PageKey, Item> extends ValueNotifier<PageableView<PageK
     triggerPageableDispose();
     _debounceTimer?.cancel();
     _fetchingPages.clear();
+    _activeFetches = 0;
     _completeCurrentFetchIfPending();
     _currentFetchCompleter = null;
     _log('PageableController disposed');
