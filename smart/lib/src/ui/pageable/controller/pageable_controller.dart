@@ -567,6 +567,8 @@ class PageableController<PageKey, Item> extends ValueNotifier<PageableView<PageK
   ///
   /// Cancels ongoing fetches and resets the controller state.
   Future<void> refresh() async {
+    if (useSafeMode && !mounted) return;
+
     trackOperation('refresh');
     debugAssertNotDisposed();
 
