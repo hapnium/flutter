@@ -692,6 +692,16 @@ class PageableController<PageKey, Item> extends ValueNotifier<PageableView<PageK
     value = PageableView.initial(showLog: value.showLog, pageSize: value.pageSize);
   }
 
+  /// Forces listeners to rebuild after in-place item mutations.
+  ///
+  /// Use this when you mutate objects already inside existing pages
+  /// without replacing the page/item lists.
+  void notifyItemListChanged() {
+    trackOperation('notifyItemListChanged');
+    debugAssertNotDisposed();
+    value = value.copyWith();
+  }
+
   void _completeCurrentFetchIfPending() {
     final completer = _currentFetchCompleter;
     if (completer != null && !completer.isCompleted) {

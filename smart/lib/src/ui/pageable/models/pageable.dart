@@ -46,6 +46,9 @@ class PageableView<PageKey, Item> with EqualsAndHashCode {
   
   /// Page size used for calculating pagination boundaries (optional).
   final int? pageSize;
+
+  /// Monotonic change token to force notifier updates for in-place mutations.
+  final int revision;
   
   /// Creates a [PageableView] with the given parameters.
   /// 
@@ -58,6 +61,7 @@ class PageableView<PageKey, Item> with EqualsAndHashCode {
     this.nextPageKey,
     this.showLog = false,
     this.pageSize,
+    this.revision = 0,
   });
   
   /// Creates an initial empty [PageableView] with no loaded pages.
@@ -75,6 +79,7 @@ class PageableView<PageKey, Item> with EqualsAndHashCode {
       status: PageableStatus.LOADING_FIRST_PAGE,
       showLog: showLog,
       pageSize: pageSize,
+      revision: 0,
     );
   }
   
@@ -99,6 +104,7 @@ class PageableView<PageKey, Item> with EqualsAndHashCode {
       nextPageKey: nextPageKey,
       showLog: showLog,
       pageSize: pageSize,
+      revision: 0,
     );
   }
   
@@ -179,6 +185,8 @@ class PageableView<PageKey, Item> with EqualsAndHashCode {
     PageKey? nextPageKey,
     bool? showLog,
     int? pageSize,
+    int? revision,
+    bool bumpRevision = true,
     bool clearError = false,
   }) {
     return PageableView<PageKey, Item>(
@@ -189,6 +197,7 @@ class PageableView<PageKey, Item> with EqualsAndHashCode {
       nextPageKey: nextPageKey ?? this.nextPageKey,
       showLog: showLog ?? this.showLog,
       pageSize: pageSize ?? this.pageSize,
+      revision: revision ?? (bumpRevision ? this.revision + 1 : this.revision),
     );
   }
   
@@ -201,6 +210,7 @@ class PageableView<PageKey, Item> with EqualsAndHashCode {
       status: PageableStatus.LOADING_FIRST_PAGE,
       showLog: showLog,
       pageSize: pageSize,
+      revision: revision + 1,
     );
   }
   
@@ -213,5 +223,5 @@ class PageableView<PageKey, Item> with EqualsAndHashCode {
   }
 
   @override
-  List<Object?> equalizedProperties() => [pages, status, nextPageKey, error, showLog, pageSize];
+  List<Object?> equalizedProperties() => [pages, status, nextPageKey, error, showLog, pageSize, revision];
 }

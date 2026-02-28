@@ -1,3 +1,5 @@
+import 'package:hapnium/hapnium.dart';
+
 /// {@template page_result}
 /// Represents the result of a single page fetch operation in a paginated data source.
 ///
@@ -23,7 +25,7 @@
 /// ```
 ///
 /// {@endtemplate}
-class PageResult<PageKey, Item> {
+class PageResult<PageKey, Item> with EqualsAndHashCode {
   /// The unique key identifying this page.
   final PageKey pageKey;
 
@@ -60,22 +62,10 @@ class PageResult<PageKey, Item> {
   int get itemCount => items.length;
 
   @override
+  List<Object?> equalizedProperties() => [pageKey, items, totalCount, metadata];
+
+  @override
   String toString() {
     return 'PageResult(pageKey: $pageKey, items: ${items.length}, totalCount: $totalCount)';
-  }
-
-  @override
-  bool operator ==(Object other) {
-    if (identical(this, other)) return true;
-
-    return other is PageResult<PageKey, Item> &&
-        other.pageKey == pageKey &&
-        other.items.length == items.length &&
-        other.totalCount == totalCount;
-  }
-
-  @override
-  int get hashCode {
-    return Object.hash(pageKey, items.length, totalCount);
   }
 }
