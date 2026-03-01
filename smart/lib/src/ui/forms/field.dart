@@ -341,9 +341,13 @@ base class Field extends StatelessWidget {
   /// Field(controller: controller)
   /// ```
   final TextEditingController? controller;
+
   final Object groupId;
+
   final String? initialValue;
+
   final String? forceErrorText;
+
   final FormFieldErrorBuilder? errorBuilder;
 
   /// Controls the scroll position of the field.
@@ -2287,8 +2291,8 @@ base class Field extends StatelessWidget {
     enableSuggestions: enableSuggestions,
     maxLength: maxLength,
     expands: expands,
-    maxLines: maxLines ?? (useBigField ? 20 : 1),
-    minLines: minLines ?? (useBigField ? 5 : null),
+    maxLines: expands ? null : maxLines ?? (useBigField ? 20 : 1),
+    minLines: expands ? null : minLines ?? (useBigField ? 5 : null),
     textAlignVertical: textAlignVertical ?? (useBigField ? TextAlignVertical.center : null),
     textCapitalization: textCapitalization ?? (useBigField ? TextCapitalization.sentences : TextCapitalization.none),
     autovalidateMode: modeValidator ?? AutovalidateMode.onUserInteraction,
