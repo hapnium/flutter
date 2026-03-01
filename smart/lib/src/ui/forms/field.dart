@@ -341,6 +341,10 @@ base class Field extends StatelessWidget {
   /// Field(controller: controller)
   /// ```
   final TextEditingController? controller;
+  final Object groupId;
+  final String? initialValue;
+  final String? forceErrorText;
+  final FormFieldErrorBuilder? errorBuilder;
 
   /// Controls the scroll position of the field.
   ///
@@ -379,6 +383,9 @@ base class Field extends StatelessWidget {
   /// )
   /// ```
   final TapRegionCallback? onTapOutside;
+  final TapRegionUpCallback? onTapUpOutside;
+  final GestureTapCallback? onTap;
+  final bool onTapAlwaysCalled;
 
   /// Called when the user submits the field value.
   ///
@@ -599,6 +606,8 @@ base class Field extends StatelessWidget {
   /// When false, the field appears disabled (greyed out) and doesn't
   /// respond to user input.
   final bool? enabled;
+  final bool readOnly;
+  final bool? showCursor;
 
   /// Whether to display a separate label above the field.
   ///
@@ -615,6 +624,7 @@ base class Field extends StatelessWidget {
   ///
   /// Defaults to false.
   final bool obscureText;
+  final String obscuringCharacter;
 
   /// Whether to use OTP (One-Time Password) field design.
   ///
@@ -913,14 +923,23 @@ base class Field extends StatelessWidget {
   ///
   /// Defaults to true for regular fields, false for password fields.
   final bool autoCorrect;
+  final SmartDashesType? smartDashesType;
+  final SmartQuotesType? smartQuotesType;
+  final bool enableSuggestions;
 
   /// How to enforce the maximum length limit.
   ///
   /// Controls whether input beyond max length is truncated or rejected.
   final MaxLengthEnforcement? maxLengthEnforcement;
+  final int? maxLength;
+  final bool expands;
 
   /// For customized decoration
   final InputDecoration? inputDecoration;
+  final bool? selectAllOnFocus;
+  final List<Locale>? hintLocales;
+  final TextStyle? style;
+  final StrutStyle? strutStyle;
 
   /// Determine the fill design
   final bool filled;
@@ -928,15 +947,22 @@ base class Field extends StatelessWidget {
   /// {@macro field}
   const Field({
     super.key,
+    this.groupId = EditableText,
     this.controller,
+    this.initialValue,
+    this.forceErrorText,
+    this.errorBuilder,
     this.stateController,
     this.onInit,
     this.onBind,
     this.enabled,
+    this.readOnly = false,
+    this.showCursor,
     this.focus,
     this.inputAction = TextInputAction.done,
     this.keyboard,
     this.obscureText = false,
+    this.obscuringCharacter = '•',
     this.validator,
     this.onChanged,
     this.hint,
@@ -976,11 +1002,16 @@ base class Field extends StatelessWidget {
     this.statesController,
     this.onEditingComplete,
     this.onTapOutside,
+    this.onTapUpOutside,
+    this.onTap,
+    this.onTapAlwaysCalled = false,
     this.onFieldSubmitted,
     this.replaceHintWithLabel = true,
     this.ignorePointers,
     this.enableInteractiveSelection,
     this.cursorOpacityAnimates,
+    this.maxLength,
+    this.expands = false,
     this.maxLines,
     this.minLines,
     this.inputFormatters,
@@ -995,14 +1026,21 @@ base class Field extends StatelessWidget {
     this.stylusHandwritingEnabled = true,
     this.canRequestFocus = true,
     this.scrollPadding = const EdgeInsets.all(20.0),
+    this.selectAllOnFocus,
+    this.hintLocales,
     this.selectionHeightStyle = ui.BoxHeightStyle.tight,
     this.selectionWidthStyle = ui.BoxWidthStyle.tight,
     this.dragStartBehavior = DragStartBehavior.start,
     this.clipBehavior = Clip.hardEdge,
     this.autoCorrect = true,
+    this.smartDashesType,
+    this.smartQuotesType,
+    this.enableSuggestions = true,
     this.maxLengthEnforcement,
     this.inputDecoration,
-    this.filled = true
+    this.filled = true,
+    this.style,
+    this.strutStyle
   });
 
   /// Deprecated: Use [PasswordField] instead.
@@ -1171,14 +1209,21 @@ base class Field extends StatelessWidget {
   /// {@macro field}
   const Field._internal({
     super.key,
+    required this.groupId,
     required this.stateController,
     required this.onInit,
     required this.onBind,
     required this.controller,
+    required this.initialValue,
+    required this.forceErrorText,
+    required this.errorBuilder,
     required this.scrollController,
     required this.statesController,
     required this.onEditingComplete,
     required this.onTapOutside,
+    required this.onTapUpOutside,
+    required this.onTap,
+    required this.onTapAlwaysCalled,
     required this.onFieldSubmitted,
     required this.validator,
     required this.onChanged,
@@ -1200,8 +1245,11 @@ base class Field extends StatelessWidget {
     required this.prefixIconConstraints,
     required this.useBigField,
     required this.enabled,
+    required this.readOnly,
+    required this.showCursor,
     required this.needLabel,
     required this.obscureText,
+    required this.obscuringCharacter,
     required this.useOtpDesign,
     required this.replaceHintWithLabel,
     required this.autofocus,
@@ -1209,10 +1257,14 @@ base class Field extends StatelessWidget {
     required this.enableInteractiveSelection,
     required this.enableIMEPersonalizedLearning,
     required this.cursorOpacityAnimates,
+    required this.maxLength,
+    required this.expands,
     required this.stylusHandwritingEnabled,
     required this.canRequestFocus,
     required this.padding,
     required this.scrollPadding,
+    required this.selectAllOnFocus,
+    required this.hintLocales,
     required this.textAlignVertical,
     required this.textCapitalization,
     required this.modeValidator,
@@ -1243,9 +1295,14 @@ base class Field extends StatelessWidget {
     required this.onSaved,
     required this.crossAxisAlignment,
     required this.autoCorrect,
+    required this.smartDashesType,
+    required this.smartQuotesType,
+    required this.enableSuggestions,
     required this.maxLengthEnforcement,
     required this.inputDecoration,
-    required this.filled
+    required this.filled,
+    required this.style,
+    required this.strutStyle
   });
 
   /// {@template field_copyWith}
@@ -1308,7 +1365,11 @@ base class Field extends StatelessWidget {
   /// by sharing unchanged properties between instances.
   /// {@endtemplate}
   Field copyWith({
+    Object? groupId,
     TextEditingController? controller,
+    String? initialValue,
+    String? forceErrorText,
+    FormFieldErrorBuilder? errorBuilder,
     FieldController? stateController,
     FieldControllerValue? onInit,
     FieldControllerValue? onBind,
@@ -1316,6 +1377,9 @@ base class Field extends StatelessWidget {
     WidgetStatesController? statesController,
     VoidCallback? onEditingComplete,
     TapRegionCallback? onTapOutside,
+    TapRegionUpCallback? onTapUpOutside,
+    GestureTapCallback? onTap,
+    bool? onTapAlwaysCalled,
     Consumer<String>? onFieldSubmitted,
     FieldValidator? validator,
     Consumer<String>? onChanged,
@@ -1337,8 +1401,11 @@ base class Field extends StatelessWidget {
     BoxConstraints? prefixIconConstraints,
     bool? useBigField,
     bool? enabled,
+    bool? readOnly,
+    bool? showCursor,
     bool? needLabel,
     bool? obscureText,
+    String? obscuringCharacter,
     bool? useOtpDesign,
     bool? replaceHintWithLabel,
     bool? autofocus,
@@ -1346,10 +1413,14 @@ base class Field extends StatelessWidget {
     bool? enableInteractiveSelection,
     bool? enableIMEPersonalizedLearning,
     bool? cursorOpacityAnimates,
+    int? maxLength,
+    bool? expands,
     bool? stylusHandwritingEnabled,
     bool? canRequestFocus,
     EdgeInsets? padding,
     EdgeInsets? scrollPadding,
+    bool? selectAllOnFocus,
+    List<Locale>? hintLocales,
     TextAlignVertical? textAlignVertical,
     TextCapitalization? textCapitalization,
     AutovalidateMode? modeValidator,
@@ -1380,13 +1451,22 @@ base class Field extends StatelessWidget {
     FormFieldSetter<String>? onSaved,
     CrossAxisAlignment? crossAxisAlignment,
     bool? autoCorrect,
+    SmartDashesType? smartDashesType,
+    SmartQuotesType? smartQuotesType,
+    bool? enableSuggestions,
     MaxLengthEnforcement? maxLengthEnforcement,
     InputDecoration? inputDecoration,
-    bool? filled
+    bool? filled,
+    TextStyle? style,
+    StrutStyle? strutStyle
   }) {
     return Field._internal(
       key: key,
+      groupId: groupId ?? this.groupId,
       controller: controller ?? this.controller,
+      initialValue: initialValue ?? this.initialValue,
+      forceErrorText: forceErrorText ?? this.forceErrorText,
+      errorBuilder: errorBuilder ?? this.errorBuilder,
       stateController: stateController ?? this.stateController,
       onInit: onInit ?? this.onInit,
       onBind: onBind ?? this.onBind,
@@ -1394,6 +1474,9 @@ base class Field extends StatelessWidget {
       statesController: statesController ?? this.statesController,
       onEditingComplete: onEditingComplete ?? this.onEditingComplete,
       onTapOutside: onTapOutside ?? this.onTapOutside,
+      onTapUpOutside: onTapUpOutside ?? this.onTapUpOutside,
+      onTap: onTap ?? this.onTap,
+      onTapAlwaysCalled: onTapAlwaysCalled ?? this.onTapAlwaysCalled,
       onFieldSubmitted: onFieldSubmitted ?? this.onFieldSubmitted,
       validator: validator ?? this.validator,
       onChanged: onChanged ?? this.onChanged,
@@ -1415,8 +1498,11 @@ base class Field extends StatelessWidget {
       prefixIconConstraints: prefixIconConstraints ?? this.prefixIconConstraints,
       useBigField: useBigField ?? this.useBigField,
       enabled: enabled ?? this.enabled,
+      readOnly: readOnly ?? this.readOnly,
+      showCursor: showCursor ?? this.showCursor,
       needLabel: needLabel ?? this.needLabel,
       obscureText: obscureText ?? this.obscureText,
+      obscuringCharacter: obscuringCharacter ?? this.obscuringCharacter,
       useOtpDesign: useOtpDesign ?? this.useOtpDesign,
       replaceHintWithLabel: replaceHintWithLabel ?? this.replaceHintWithLabel,
       autofocus: autofocus ?? this.autofocus,
@@ -1424,10 +1510,14 @@ base class Field extends StatelessWidget {
       enableInteractiveSelection: enableInteractiveSelection ?? this.enableInteractiveSelection,
       enableIMEPersonalizedLearning: enableIMEPersonalizedLearning ?? this.enableIMEPersonalizedLearning,
       cursorOpacityAnimates: cursorOpacityAnimates ?? this.cursorOpacityAnimates,
+      maxLength: maxLength ?? this.maxLength,
+      expands: expands ?? this.expands,
       stylusHandwritingEnabled: stylusHandwritingEnabled ?? this.stylusHandwritingEnabled,
       canRequestFocus: canRequestFocus ?? this.canRequestFocus,
       padding: padding ?? this.padding,
       scrollPadding: scrollPadding ?? this.scrollPadding,
+      selectAllOnFocus: selectAllOnFocus ?? this.selectAllOnFocus,
+      hintLocales: hintLocales ?? this.hintLocales,
       textAlignVertical: textAlignVertical ?? this.textAlignVertical,
       textCapitalization: textCapitalization ?? this.textCapitalization,
       modeValidator: modeValidator ?? this.modeValidator,
@@ -1458,9 +1548,14 @@ base class Field extends StatelessWidget {
       onSaved: onSaved ?? this.onSaved,
       crossAxisAlignment: crossAxisAlignment ?? this.crossAxisAlignment,
       autoCorrect: autoCorrect ?? this.autoCorrect,
+      smartDashesType: smartDashesType ?? this.smartDashesType,
+      smartQuotesType: smartQuotesType ?? this.smartQuotesType,
+      enableSuggestions: enableSuggestions ?? this.enableSuggestions,
       maxLengthEnforcement: maxLengthEnforcement ?? this.maxLengthEnforcement,
       inputDecoration: inputDecoration ?? this.inputDecoration,
-      filled: filled ?? this.filled
+      filled: filled ?? this.filled,
+      style: style ?? this.style,
+      strutStyle: strutStyle ?? this.strutStyle
     );
   }
 
@@ -2168,17 +2263,30 @@ base class Field extends StatelessWidget {
   /// - The method delegates to multiple helper methods for modularity
   @protected
   Widget buildField(BuildContext context, FieldController fieldController) => TextFormField(
-    style: TextStyle(
+    groupId: groupId,
+    initialValue: initialValue,
+    forceErrorText: forceErrorText,
+    errorBuilder: errorBuilder,
+    style: style ?? TextStyle(
       color: inputConfig.textColor ?? Theme.of(context).primaryColor,
       fontSize: inputConfig.textSize,
       fontWeight: inputConfig.textWeight
     ),
+    strutStyle: strutStyle,
     textAlign: textAlign ?? (useOtpDesign ? TextAlign.center : TextAlign.start),
     cursorColor: cursorColor ?? inputConfig.textColor ?? Theme.of(context).primaryColor,
     cursorHeight: cursorHeight,
     controller: controller,
     enabled: enabled,
+    readOnly: readOnly,
+    showCursor: showCursor,
     focusNode: focus,
+    obscuringCharacter: obscuringCharacter,
+    smartDashesType: smartDashesType,
+    smartQuotesType: smartQuotesType,
+    enableSuggestions: enableSuggestions,
+    maxLength: maxLength,
+    expands: expands,
     maxLines: maxLines ?? (useBigField ? 20 : 1),
     minLines: minLines ?? (useBigField ? 5 : null),
     textAlignVertical: textAlignVertical ?? (useBigField ? TextAlignVertical.center : null),
@@ -2191,7 +2299,10 @@ base class Field extends StatelessWidget {
     validator: (value) => whenValidated(value, fieldController),
     onChanged: (value) => whenChanged(value, fieldController),
     onSaved: (value) => whenSaved(value, fieldController),
+    onTap: onTap,
+    onTapAlwaysCalled: onTapAlwaysCalled,
     onTapOutside: onTapOutside,
+    onTapUpOutside: onTapUpOutside,
     onEditingComplete: onEditingComplete,
     onFieldSubmitted: onFieldSubmitted,
     ignorePointers: ignorePointers,
@@ -2202,6 +2313,7 @@ base class Field extends StatelessWidget {
     keyboardAppearance: keyboardAppearance,
     scrollPadding: scrollPadding,
     enableInteractiveSelection: enableInteractiveSelection,
+    selectAllOnFocus: selectAllOnFocus,
     selectionControls: selectionControls,
     buildCounter: buildCounter,
     scrollPhysics: scrollPhysics,
@@ -2223,6 +2335,7 @@ base class Field extends StatelessWidget {
     clipBehavior: clipBehavior,
     stylusHandwritingEnabled: stylusHandwritingEnabled,
     canRequestFocus: canRequestFocus,
+    hintLocales: hintLocales,
     maxLengthEnforcement: maxLengthEnforcement,
     inputFormatters: [
       if(useOtpDesign) ...[
