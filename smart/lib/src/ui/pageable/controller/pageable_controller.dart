@@ -187,52 +187,54 @@ class PageableController<PageKey, Item> extends ValueNotifier<PageableView<PageK
   /// Useful when you want to initialize the controller with pre-fetched data.
   ///
   /// {@macro pageable_controller}
-  factory PageableController.fromPages({
+  PageableController.fromPages({
     required List<PageResult<PageKey, Item>> pages,
     required PageableCallback<PageKey, Item> fetchPage,
     required PageKey getFirstPageKey,
     NextPageKeyGenerator<PageKey, Item>? getNextPageKey,
     PageKey? nextPageKey,
     required int pageSize,
-    bool useSafeMode = true,
-    int maxRetries = 0,
-    Duration retryDelay = Duration.zero,
-    PageableRetryIf? retryIf,
-    PageableRetryDelayBuilder? retryDelayBuilder,
-    PageableRetryCallback? onRetryAttempt,
-    VoidCallback? onPageableInitCallback,
-    VoidCallback? onPageableReadyCallback,
-    VoidCallback? onPageableDisposeCallback,
+    this.useSafeMode = true,
+    this.maxRetries = 0,
+    this.retryDelay = Duration.zero,
+    this.retryIf,
+    this.retryDelayBuilder,
+    this.onRetryAttempt,
+    this.onPageableInitCallback,
+    this.onPageableReadyCallback,
+    this.onPageableDisposeCallback,
     bool showLog = false,
     PageableLogger? logger,
-  }) {
-    final controller = PageableController<PageKey, Item>(
-      fetchPage: fetchPage,
-      getFirstPageKey: getFirstPageKey,
-      getNextPageKey: getNextPageKey,
-      pageSize: pageSize,
-      useSafeMode: useSafeMode,
-      maxRetries: maxRetries,
-      retryDelay: retryDelay,
-      retryIf: retryIf,
-      retryDelayBuilder: retryDelayBuilder,
-      onRetryAttempt: onRetryAttempt,
-      onPageableInitCallback: onPageableInitCallback,
-      onPageableReadyCallback: onPageableReadyCallback,
-      onPageableDisposeCallback: onPageableDisposeCallback,
-      showLog: showLog,
-      logger: logger,
-    );
+  }) : _pageFetcher = fetchPage,
+      _firstPageKey = getFirstPageKey,
+      _nextPageKeyGenerator = getNextPageKey,
+      _pageSize = pageSize,
+      _logger = logger ?? (showLog ? ConsolePageableLogger() : null),
+      super(PageableView.initial(showLog: showLog, pageSize: pageSize)) 
+  {
+
+    if (maxRetries < 0) {
+      throw ArgumentError.value(maxRetries, 'maxRetries', 'must be greater than or equal to 0');
+    }
+
+    triggerPageableInit();
+
+    if (!_hasInitialized) {
+      _hasInitialized = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          triggerPageableReady();
+          value = PageableView.fromPages(
+            pages: pages,
+            nextPageKey: nextPageKey,
+            showLog: showLog,
+            pageSize: pageSize,
+          );
+        }
+      });
+    }
     
-    controller.value = PageableView.fromPages(
-      pages: pages,
-      nextPageKey: nextPageKey,
-      showLog: showLog,
-      pageSize: pageSize,
-    );
-    
-    controller._log('Controller created from existing data: ${controller.value}');
-    return controller;
+    _log('Controller created from existing data: $value');
   }
   
   /// Current pageable data, including all loaded pages and status.
