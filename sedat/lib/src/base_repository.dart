@@ -418,7 +418,7 @@ abstract class BaseRepository<Entity, Insert> extends AbstractStreamableReposito
   @nonVirtual
   Entity get() {
     if(!_isInitialized) {
-      throw SecureDatabaseException("$_exPrefix - Repository is not initialized. Call open() first.");
+      throw SecureDatabaseException("$_exPrefix - $runtimeType ($_baseName) is not initialized. Call open() first.");
     } else if(read() case final reader?) {
       return reader(_box, _key);
     } else {
