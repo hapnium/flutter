@@ -337,25 +337,22 @@ abstract final class DeviceRuntime {
     _isWasm = isWasm;
     _customIpAddressFetcher = ipAddressSupplier;
 
+    if (_debug) {
+      console.log("Running application on $platformOS platform.", tag: "DeviceRuntime");
+    }
+
     // Compute network info first, then device info.
     // This ordering ensures `_device` can embed `_ipAddress` immediately.
     unawaited(() async {
       _ipAddress = await _fetchDeviceIpAddress();
+
+      if (_debug && _ipAddress.isNotEmpty) {
+        console.log("Running application on $_ipAddress ip address", tag: "DeviceRuntime");
+      }
     }());
     unawaited(_prepareDevice());
 
     _initialized = true;
-
-    // Optional startup diagnostics
-    if (_debug) {
-      console.log("Device Runtime Initialized", tag: "DeviceRuntime");
-      console.log("Platform: ${DeviceRuntime.platformOS}", tag: "DeviceRuntime");
-      console.log("Operating System: $_operatingSystem", tag: "DeviceRuntime");
-      console.log("Operating System Version: $_operatingSystemVersion", tag: "DeviceRuntime");
-      console.log("Device Info: $_deviceInfo", tag: "DeviceRuntime");
-      console.log("IP Address: $_ipAddress", tag: "DeviceRuntime");
-      console.log("Device: ${_device.toJson()}", tag: "DeviceRuntime");
-    }
   }
 
   /// Whether [initialize] has successfully completed.
@@ -692,6 +689,14 @@ abstract final class DeviceRuntime {
         _deviceInfo = "Unknown Device";
         _device = Device.empty();
         break;
+    }
+
+    if (_debug) {
+      console.log("Device Info Initialized", tag: "DeviceRuntime");
+      console.log("Device Info: $_deviceInfo", tag: "DeviceRuntime");
+      console.log("Operating System: $_operatingSystem", tag: "DeviceRuntime");
+      console.log("Operating System Version: $_operatingSystemVersion", tag: "DeviceRuntime");
+      console.log("Device: ${_device.toJson()}", tag: "DeviceRuntime");
     }
   }
 }
