@@ -1,5 +1,7 @@
 // ignore_for_file: deprecated_member_use_from_same_package
 
+import 'dart:async';
+
 import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:meta/meta.dart';
 
@@ -34,6 +36,8 @@ import 'repository_mixin.dart';
 /// }
 /// ```
 abstract class AbstractSecureDatabaseConfigurer {
+  final Map<BaseRepository, Timer> _deferredInitializationTimers = {};
+
   /// Initialize Hive and open the configured repositories.
   ///
   /// This performs the following sequence of steps (in order):
@@ -90,13 +94,34 @@ abstract class AbstractSecureDatabaseConfigurer {
 
       if (repositories().isNotEmpty) {
         for (final repository in repositories()) {
-          await repository.open(
-            prefix: prefix,
-            device: deviceName,
-            platform: platform,
-            showLogs: showLogs,
-            canDestroy: canDestroySavedData
-          );
+          if (repository.getStrategy().isEager()) {
+            await repository.open(
+              prefix: prefix,
+              device: deviceName,
+              platform: platform,
+              showLogs: showLogs,
+              canDestroy: canDestroySavedData
+            );
+          } else {
+            final Duration delay = repository.getStrategy().deferredTimeOfInitialization;
+
+            _deferredInitializationTimers[repository]?.cancel();
+            _deferredInitializationTimers[repository] = Timer(delay, () async {
+              try {
+                if (!repository.isInitialized) {
+                  await repository.open(
+                    prefix: prefix,
+                    device: deviceName,
+                    platform: platform,
+                    showLogs: showLogs,
+                    canDestroy: canDestroySavedData
+                  );
+                }
+              } finally {
+                _deferredInitializationTimers.remove(repository);
+              }
+            });
+          }
         }
 
         RepositoryContext.INSTANCE.register(repositories());
@@ -267,8 +292,15 @@ abstract class AbstractSecureDatabaseConfigurer {
   @mustCallSuper
   Future<void> clearAll() {
     return Future.sync(() async {
+      for (final timer in _deferredInitializationTimers.values) {
+        timer.cancel();
+      }
+      _deferredInitializationTimers.clear();
+
       for (final repository in repositories()) {
-        await repository.delete(); // Await the delete operation
+        if (repository.isInitialized) {
+          await repository.delete(); // Await the delete operation
+        }
       }
 
       await clear();
@@ -291,8 +323,15 @@ abstract class AbstractSecureDatabaseConfigurer {
   @mustCallSuper
   Future<void> closeAll() {
     return Future.sync(() async {
+      for (final timer in _deferredInitializationTimers.values) {
+        timer.cancel();
+      }
+      _deferredInitializationTimers.clear();
+
       for (final repository in repositories()) {
-        await repository.close(); // Await the close operation
+        if (repository.isInitialized) {
+          await repository.close(); // Await the close operation
+        }
       }
     }); // Await the close operation
   }

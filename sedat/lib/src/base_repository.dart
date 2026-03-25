@@ -13,6 +13,94 @@ import 'secure_database_exception.dart';
 import 'repository_service.dart';
 import 'streamable_repository.dart';
 
+/// {@template repository_initialization_design}
+/// Defines how and when a repository should be initialized.
+///
+/// This class encapsulates the initialization behavior for a repository,
+/// allowing it to be either eagerly initialized (immediately) or lazily
+/// initialized (deferred until later).
+///
+/// It also supports specifying a delay for lazy initialization,
+/// enabling controlled, timed setup of resources.
+///
+/// Properties:
+///
+/// * [initializer]: Determines whether the repository should be initialized
+///   eagerly or lazily.
+/// * [deferredTimeOfInitialization]: The duration to wait before initializing
+///   the repository when using lazy initialization.
+///
+/// Constraints:
+///
+/// * If [initializer] is [RepositoryInitializer.EAGER], then
+///   [deferredTimeOfInitialization] must be [Duration.zero].
+/// * Lazy initialization can optionally include a delay.
+///
+/// This design helps optimize resource usage and startup performance by
+/// deferring non-critical repository initialization.
+/// {@endtemplate}
+final class RepositoryInitialiationDesign { 
+  /// Determines how the repository should be initialized.
+  ///
+  /// This defines whether initialization happens immediately ([RepositoryInitializer.EAGER])
+  /// or is deferred ([RepositoryInitializer.LAZY]).
+  final RepositoryInitializer initializer;
+
+  /// The duration to wait before initializing the repository when using lazy initialization.
+  ///
+  /// This value is only applicable when [initializer] is [RepositoryInitializer.LAZY].
+  /// For eager initialization, this must be [Duration.zero].
+  final Duration deferredTimeOfInitialization;
+
+  /// {@macro repository_initialization_design}
+  const RepositoryInitialiationDesign({
+    this.deferredTimeOfInitialization = Duration.zero,
+    this.initializer = RepositoryInitializer.EAGER
+  }) : assert(
+    initializer != RepositoryInitializer.EAGER ||
+    deferredTimeOfInitialization == Duration.zero,
+    'Eager initialization cannot have a deferred time.',
+  );
+
+  /// {@macro repository_initialization_design}
+  const RepositoryInitialiationDesign.lazy(this.deferredTimeOfInitialization) : initializer = RepositoryInitializer.LAZY;
+
+  /// Returns `true` if the repository is configured for lazy initialization.
+  ///
+  /// Lazy initialization means the repository setup is deferred, optionally
+  /// using [deferredTimeOfInitialization].
+  bool isLazy() => initializer == RepositoryInitializer.LAZY;
+
+  /// Returns `true` if the repository is configured for eager initialization.
+  ///
+  /// Eager initialization means the repository is initialized immediately
+  /// without any delay.
+  bool isEager() => initializer == RepositoryInitializer.EAGER;
+}
+
+/// {@template repository_initializer}
+/// Represents the initialization strategy for a repository.
+///
+/// This enum defines whether a repository should be initialized immediately
+/// or deferred until later.
+///
+/// Values:
+///
+/// * [EAGER]: The repository is initialized immediately at creation time.
+///   This is suitable for critical dependencies required at startup.
+///
+/// * [LAZY]: The repository is initialized only when needed or after a
+///   specified delay. This helps reduce startup cost and improves
+///   performance for non-essential resources.
+///
+/// Helper methods [isLazy] and [isEager] are provided for convenience
+/// when checking the initialization type.
+/// {@endtemplate}
+enum RepositoryInitializer { 
+  EAGER,
+  LAZY;
+}
+
 /// {@template base_repository}
 /// An abstract repository class providing CRUD (Create, Read, Update, Delete) operations
 /// for data of type [Entity].
@@ -56,6 +144,9 @@ abstract class BaseRepository<Entity, Insert> extends AbstractStreamableReposito
   /// The name of the Hive box.
   late String _name;
 
+  /// The base Hive box name before runtime prefixes are applied.
+  late final String _baseName;
+
   /// The key used for storing data in the Hive box.
   late String _key;
 
@@ -84,8 +175,14 @@ abstract class BaseRepository<Entity, Insert> extends AbstractStreamableReposito
   /// 
   /// {@macro base_repository}
   BaseRepository(String boxName) {
-    _name = "$boxName-database";
+    _baseName = "$boxName-database";
+    _name = _baseName;
   }
+
+  RepositoryInitialiationDesign getStrategy() => RepositoryInitialiationDesign();
+
+  /// Whether the repository has already completed initialization.
+  bool get isInitialized => _isInitialized;
 
   /// Opens the Hive box and initializes the repository.
   ///
@@ -106,11 +203,15 @@ abstract class BaseRepository<Entity, Insert> extends AbstractStreamableReposito
     bool canDestroy = true,
     SecureRepositoryConfiguration? config
   }) async {
+    if (_isInitialized) {
+      return;
+    }
+
     _showLogs = showLogs;
     _device = device ?? "";
     _platform = platform ?? "";
     _prefix = prefix ?? "";
-    _name = "${_prefix.toLowerCase()}-$_name";
+    _name = _prefix.isEmpty ? _baseName : "${_prefix.toLowerCase()}-$_baseName";
 
     _key = "[${_prefix.toUpperCase()}]";
 
@@ -393,6 +494,10 @@ abstract class BaseRepository<Entity, Insert> extends AbstractStreamableReposito
   @override
   @mustCallSuper
   Future<bool> close() async {
+    if (!_isInitialized) {
+      return true;
+    }
+
     try {
       await _box.close();
       disposeStreamable();

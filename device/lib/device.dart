@@ -54,6 +54,8 @@ export 'src/models/device_validator.dart';
 export 'src/device_validation_manager.dart';
 export 'src/device_engine.dart';
 
+import 'dart:async';
+
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:universal_io/io.dart';
 import 'package:tracing/tracing.dart';
@@ -337,8 +339,10 @@ abstract final class DeviceRuntime {
 
     // Compute network info first, then device info.
     // This ordering ensures `_device` can embed `_ipAddress` immediately.
-    _ipAddress = await _fetchDeviceIpAddress();
-    await _prepareDevice();
+    unawaited(() async {
+      _ipAddress = await _fetchDeviceIpAddress();
+    }());
+    unawaited(_prepareDevice());
 
     _initialized = true;
 
