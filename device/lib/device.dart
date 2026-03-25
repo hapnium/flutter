@@ -337,6 +337,8 @@ abstract final class DeviceRuntime {
     _isWasm = isWasm;
     _customIpAddressFetcher = ipAddressSupplier;
 
+    _initialized = true;
+
     if (_debug) {
       console.log("Running application on $platformOS platform.", tag: "DeviceRuntime");
     }
@@ -351,8 +353,6 @@ abstract final class DeviceRuntime {
       }
     }());
     unawaited(_prepareDevice());
-
-    _initialized = true;
   }
 
   /// Whether [initialize] has successfully completed.
