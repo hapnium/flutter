@@ -1,39 +1,99 @@
-<!--
-This README describes the package. If you publish this package to pub.dev,
-this README's contents appear on the landing page for your package.
+# device
 
-For information about how to write a good package README, see the guide for
-[writing package pages](https://dart.dev/tools/pub/writing-package-pages).
+**Device identity**, **runtime detection**, and **integrity validation hooks** for Dart and Flutter. Uses **`device_info_plus`** and **`universal_io`**, and integrates with **`tracing`** for optional debug logging.
 
-For general information about developing packages, see the Dart guide for
-[creating packages](https://dart.dev/guides/libraries/create-packages)
-and the Flutter guide for
-[developing packages and plugins](https://flutter.dev/to/develop-packages).
--->
+**Import:** `package:device/device.dart` (also `io.dart` / `universal.dart` where needed for conditional imports).
 
-TODO: Put a short description of the package here that helps potential users
-know whether this package might be useful for them.
+---
 
-## Features
+## Main pieces
 
-TODO: List what your package can do. Maybe include images, gifs, or videos.
+### `Device` model
 
-## Getting started
+Structured fields (name, id, platform, OS version, IP, host, SDK int on Android, etc.) with **`Device.empty()`** and JSON helpers — used for telemetry or audit payloads.
 
-TODO: List prerequisites and provide or point to information on how to
-start using the package.
+### `DeviceValidator`
 
-## Usage
+Result type for individual checks (e.g. jailbreak/root/emulator).
 
-TODO: Include short and useful examples for package users. Add longer examples
-to `/example` folder.
+### `DeviceValidationManager` / `DeviceEngine`
+
+Framework for **composing validations**: you subclass **`DeviceValidationFactory`** (see `device_validation_manager.dart`) and implement checks such as jailbreak, emulator, developer mode, mock location. The library provides **`checkRootedOrJailBroken`**-style helpers to normalize plugin results into **`DeviceValidator`**.
+
+### `DeviceRuntime` (in `device.dart`)
+
+**Explicit initialization** is required: call **`DeviceRuntime.initialize(RuntimePlatform.xxx, ...)`** once at startup.
+
+**`initialize(platform, {debug, isWasm, ipAddressSupplier})`**
+
+- **`platform`**: required **`RuntimePlatform`** (`web`, `android`, `ios`, `macos`, `windows`, `linux`, `unknown`). Use **`RuntimePlatform.fromOperatingSystem`**, **`fromCurrentPlatform`**, or set explicitly (recommended with **`kIsWeb`**).
+- **`debug`**: when `true`, logs steps via **`tracing.console`**.
+- **`isWasm`**: only meaningful on web; sets **`isWebWasm`**.
+- **`ipAddressSupplier`**: optional **`Future<String> Function()`**; overrides default IP resolution (needed on web for public IP).
+
+**After init — getters** (each calls **`_ensureInitialized()`**; throws **`StateError`** if **`initialize`** was not called):
+
+| Getter | Meaning |
+|--------|---------|
+| **`isInitialized`** | Whether **`initialize`** ran. |
+| **`platform`** | **`RuntimePlatform`** you passed in. |
+| **`platformOS`** | Short label: `"Web"`, `"Android"`, … |
+| **`isWebWasm`** | Your **`isWasm`** flag. |
+| **`isWeb`**, **`isAndroid`**, **`isIOS`**, **`isMacOS`**, **`isWindows`**, **`isLinux`** | Booleans from **`platform`**. |
+| **`isMobile`** | Android or iOS. |
+| **`isDesktop`** | macOS, Windows, or Linux. |
+| **`operatingSystem`** | Human-readable OS line (browser on web). |
+| **`operatingSystemVersion`** | Version string (SDK int as string on Android, etc.). |
+| **`deviceInfo`** | Summary (e.g. user agent on web). |
+| **`ipAddress`** | Resolved or supplied IP; often `""` on web without supplier. |
+| **`device`** | **`Device`** model for telemetry. |
+| **`debug`** | Whether debug logging was enabled at init. |
+
+Design goals (from implementation):
+
+- **You choose the platform** so Web never accidentally calls mobile-only plugins.
+- **Web:** default IP is empty unless **`ipAddressSupplier`** is set.
+- **Native:** IP resolved via **`NetworkInterface.list`** when no custom supplier is set.
 
 ```dart
-const like = 'sample';
+import 'package:device/device.dart';
+import 'package:flutter/foundation.dart';
+
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  await DeviceRuntime.initialize(
+    kIsWeb ? RuntimePlatform.web : RuntimePlatform.android,
+    debug: kDebugMode,
+    ipAddressSupplier: kIsWeb ? () async => fetchIpFromBackend() : null,
+  );
+
+  runApp(const MyApp());
+}
 ```
 
-## Additional information
+---
 
-TODO: Tell users more about the package: where to find more information, how to
-contribute to the package, how to file issues, what response they can expect
-from the package authors, and more.
+## Dependencies
+
+- **`tracing`** — `console` logging when `debug: true` on **`DeviceRuntime`**.
+- **`hapnium`** — shared utilities used inside the package.
+
+---
+
+## Installation (private monorepo)
+
+```yaml
+dependencies:
+  device:
+    git:
+      url: https://github.com/Hapnium/flutter.git
+      ref: main
+      path: device
+```
+
+---
+
+## License
+
+See [LICENSE](LICENSE) in this package directory.

@@ -1,173 +1,65 @@
-# Photo Gallery
+# multimedia
 
-[![pub package](https://img.shields.io/pub/v/gallery.svg)](https://pub.dev/packages/gallery)
+**High-level Flutter UI** for **camera capture** and **gallery browsing**, built on **`camera`**, **`file_picker`**, and the internal **`gallery`** package. Includes configuration models, album/grid/list views, and a **video-style progress slider**.
 
-A Flutter plugin that retrieves images and videos from mobile native gallery.
+**Import:** `package:multimedia/multimedia.dart`  
+This library **re-exports** `package:gallery/gallery.dart` so consumers can use **`Gallery`**, **`Album`**, **`Medium`**, and providers from one import if desired.
 
-## Installation
+---
 
-First, add gallery as a [dependency in your pubspec.yaml file](https://flutter.dev/docs/development/packages-and-plugins/using-packages).
+## Modules
 
-#### iOS
-Add the following keys to your *Info.plist* file, located in ```<project root>/ios/Runner/Info.plist```:
+### Configuration models (`src/models/`)
 
-```NSPhotoLibraryUsageDescription``` - describe why your app needs permission for the photo library. This is called *Privacy - Photo Library Usage Description* in the visual editor.
+- **`MultimediaConfigurations`** — top-level entry for wiring camera + gallery settings.
+- **`MultimediaGalleryConfiguration`**, **`MultimediaGalleryAlbumConfiguration`**, **`GalleryViewConfiguration`**, **`AlbumViewConfiguration`** — layout, filtering, and album behavior.
+- **`MultimediaCameraConfiguration`** — resolution and camera behavior.
+- **`MultimediaLayoutConfiguration`** — grid spacing, sizing, cross-axis count, etc.
+- **`SelectedMedia`** — represents user-selected items.
 
-```xml
-<key>NSPhotoLibraryUsageDescription</key>
-<string>Example usage description</string>
+### Widgets
+
+- **`MultimediaGallery`** — full gallery experience with **`MultimediaGalleryState`**: grid/list toggles, album navigation, empty states (**`NotItemFound`** / `not_item_found.dart`). Typically driven by **`MultimediaConfigurations`** / **`MultimediaGalleryConfiguration`**.
+- **`MultimediaGalleryAlbum`** — album-scoped UI with **`MultimediaGalleryAlbumState`**, **`AlbumGridView`**, **`AlbumListView`**, **`MediumImage`**, **`AlbumInformation`**; configured via **`MultimediaGalleryAlbumConfiguration`** / **`AlbumViewConfiguration`**.
+- **`MultimediaCamera`** + **`MultimediaCameraState`** — live camera preview, **`RestorableCameraController`** for restoration flows; tune with **`MultimediaCameraConfiguration`**.
+- **`GalleryListView`**, **`GalleryGridView`** — reusable media list/grid pieces under **`multimedia_gallery/widgets/`**.
+
+### Progress slider
+
+**`ProgressSlider`** (`progress_slider/`) — timing labels, bar cap shape, drag details; used for trim/preview-style UIs.
+
+### Utilities
+
+**`MultimediaUtils`** — permissions, formatting, and shared helpers.
+
+### File reading
+
+**`FileReader`** abstraction with **IO** and **stub** implementations for cross-platform file access patterns.
+
+---
+
+## Dependencies
+
+- **`gallery`** (path) — native album/media access.
+- Dev: **`tracing`**, **`smart`** for development/testing support in this repo.
+
+---
+
+## Installation (private monorepo)
+
+```yaml
+dependencies:
+  multimedia:
+    git:
+      url: https://github.com/Hapnium/flutter.git
+      ref: main
+      path: multimedia
 ```
 
-#### Android
-Add the following permissions to your *AndroidManifest.xml*, located in ```<project root>/android/app/src/main/AndroidManifest.xml```:
+Ensure your app declares any **camera** / **storage** permissions required by `camera`, `file_picker`, and `gallery`.
 
-```xml
-<manifest ...>
-    <uses-permission
-        android:name="android.permission.READ_EXTERNAL_STORAGE"
-        android:maxSdkVersion="32" />
-    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
-    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
-<manifest/>
-```
+---
 
-## Usage
+## License
 
-* Listing albums in the gallery
-```dart
-final List<Album> imageAlbums = await Gallery.listAlbums();
-final List<Album> videoAlbums = await Gallery.listAlbums(
-    mediumType: MediumType.video,
-    newest: false,
-    hideIfEmpty: false,
-);
-```
-* Listing media in an album
-```dart
-final MediaPage imagePage = await imageAlbum.listMedia();
-final MediaPage videoPage = await imageAlbum.listMedia(
-    skip: 5,
-    take: 10,
-);
-final List<Medium> allMedia = [
-    ...imagePage.items,
-    ...videoPage.items,
-];
-```
-* Loading more media in a album
-```dart
-if (!imagePage.isLast) {
-    final nextImagePage = await imagePage.nextPage();
-    // ...
-}
-```
-* Getting a Medium
-```dart
-final Medium medium = await Gallery.getMedium(
-  mediumId: "10",
-  mediumType: MediumType.image
-);
-```
-* Getting a file
-```dart
-final File file = await medium.getFile();
-```
-```dart
-final File file = await Gallery.getFile(mediumId: mediumId);
-```
-* Getting thumbnail data
-```dart
-final List<int> data = await medium.getThumbnail();
-```
-```dart
-final List<int> data = await Gallery.getThumbnail(mediumId: mediumId);
-```
-You can also specify thumbnail width and height on Android API 29 or higher; You can also specify thumbnail width, height and whether provider high quality or not on iOS:
-```dart
-final List<int> data = await medium.getThumbnail(
-    width: 128,
-    height: 128,
-    highQuality: true,
-);
-```
-```dart
-final List<int> data = await Gallery.getThumbnail(
-    mediumId: mediumId,
-    mediumType: MediumType.image,
-    width: 128,
-    height: 128,
-    highQuality: true,
-);
-```
-* Getting album thumbnail data
-```dart
-final List<int> data = await album.getThumbnail();
-```
-```dart
-final List<int> data = await Gallery.getAlbumThumbnail(albumId: albumId);
-```
-You can also specify thumbnail width and height on Android API 29 or higher; You can also specify thumbnail width, height and whether provider high quality or not on iOS:
-```dart
-final List<int> data = await album.getThumbnail(
-    width: 128,
-    height: 128,
-    highQuality: true,
-);
-```
-```dart
-final List<int> data = await Gallery.getAlbumThumbnail(
-    albumId: albumId,
-    mediumType: MediumType.image,
-    newest: false,
-    width: 128,
-    height: 128,
-    highQuality: true,
-);
-```
-* Displaying medium thumbnail
-
-ThumbnailProvider are available to display thumbnail images (here with the help of dependency [transparent_image](https://pub.dev/packages/transparent_image)):
-
-```dart
-FadeInImage(
-    fit: BoxFit.cover,
-    placeholder: MemoryImage(kTransparentImage),
-    image: ThumbnailProvider(
-        mediumId: mediumId,
-        mediumType: MediumType.image,
-        width: 128,
-        height: 128,
-        hightQuality: true,
-    ),
-)
-```
-Width and height is only available on Android API 29+ or iOS platform
-* Displaying album thumbnail
-
-AlbumThumbnailProvider are available to display album thumbnail images (here with the help of dependency [transparent_image](https://pub.dev/packages/transparent_image)):
-```dart
-FadeInImage(
-    fit: BoxFit.cover,
-    placeholder: MemoryImage(kTransparentImage),
-    image: AlbumThumbnailProvider(
-        album: album,
-        width: 128,
-        height: 128,
-        hightQuality: true,
-    ),
-)
-```
-Width and height is only available on Android API 29+ or iOS platform. High quality is only available on iOS platform.
-* Displaying a full size image
-
-You can use PhotoProvider to display the full size image (here with the help of dependency [transparent_image](https://pub.dev/packages/transparent_image)):
-
-```dart
-FadeInImage(
-    fit: BoxFit.cover,
-    placeholder: MemoryImage(kTransparentImage),
-    image: PhotoProvider(
-        mediumId: mediumId,
-    ),
-)
-```
+See [LICENSE](LICENSE) in this package directory.

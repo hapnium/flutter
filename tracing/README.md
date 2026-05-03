@@ -1,141 +1,118 @@
-# LoggerFlutter
+# tracing
 
-**A private logging library for Flutter applications within SearchService Inc.**
+Structured logging for Dart / Flutter: **levels**, **listeners**, **printers**, **`LogConfig`**, and optional **tags**, **errors**, and **stack traces**. The global **`console`** is a **`Tracing`** instance.
 
-This package offers a convenient and flexible logging solution for Flutter projects. It leverages the `logger` package to provide structured and informative logging tailored to the needs of SearchService Inc.
+**Import:** `package:tracing/tracing.dart`
 
----
-
-## **Key Features**
-
-- **Consistent Logging**: Enforces a uniform logging style across all projects.
-- **Structured Logging**: Supports various data types, including strings, numbers, lists, maps, and more.
-- **Customizable**: Allows customization of log levels, prefixes, and output destinations.
-- **Readable Format**: Outputs well-structured log messages with timestamps and log levels.
-- **Internal Use**: Specifically designed for internal use within SearchService Inc.
+> Internal docs sometimes say “logger”; the package name is **`tracing`**.
 
 ---
 
+## `Tracing` class
 
-## Authentication
+| Method | Level | Description |
+|--------|-------|-------------|
+| **`info(message, {tag, error, stackTrace})`** | `INFO` | Normal operational messages. |
+| **`debug(...)`** | `DEBUG` | Verbose development logs. |
+| **`trace(...)`** | `TRACE` | Fine-grained flow. |
+| **`warn(...)`** | `WARN` | Recoverable issues. |
+| **`error(...)`** | `ERROR` | Failures needing attention. |
+| **`fatal(...)`** | `FATAL` | Critical failures. |
+| **`log(..., {level})`** | configurable | Log with explicit **`LogLevel`**. |
+| **`addListener(TracingListener listener)`** | — | Replace the active listener (strategy). |
 
-For local development, leverage the `.netrc` file for secure credential storage. This eliminates the need to embed credentials directly in URLs.
+**Constructor `Tracing({...})`** creates **`DefaultTracingListener`** with:
 
-**Steps:**
+| Parameter | Effect |
+|-----------|--------|
+| **`level`** | Minimum **`LogLevel`** (filter in listener). |
+| **`printer`** | Custom **`LogPrinter`**; overrides **`type`** if set. |
+| **`type`** | **`LogType`** → built-in printer (see below). |
+| **`output`** | `void Function(String)` per line; default **`print`**. |
+| **`name`** | Default logger/tag name when **`tag`** omitted. |
+| **`config`** | **`LogConfig`** passed into built-in printers. |
 
-1. **Create a `.netrc` File:**
-    - In your home directory (e.g., `~/.netrc`), create a file with the following content:
+**Global:** **`final console = Tracing();`** — same API as **`Tracing`**.
 
-   ```bash
-   machine github.com
-   login your_username
-   password your_personal_access_token
-   ```
+---
 
-2. **Set Permissions:**
-    - Ensure the file is not readable by others for security:
+## `TracingListener` and `onLog`
 
-   ```bash
-   chmod 600 ~/.netrc
-   ```
+**`TracingListener`** is the strategy interface. Subclasses use the constructor with **`level`**, **`printer`** / **`type`**, **`output`**, **`name`**, **`config`**.
 
-## Installation
+**`onLog(LogLevel level, dynamic message, {String? tag, Object? error, StackTrace? stackTrace})`**:
 
-Install `logging` using Flutter:
+1. If **`!_level.isEnabledFor(level)`** → return.
+2. Builds **`LogRecord`** (`message.toString()`, **`loggerName: tag ?? _name`**, **`error`**, **`stackTrace`**).
+3. Calls **`_printer.log(record)`** → `List<String>` lines.
+4. Sends each line to **`_output`** or **`print`**.
+
+Implement a **custom listener** by extending **`TracingListener`** and overriding **`onLog`** if you need non-printer routing (metrics, remote sink without string formatting).
+
+---
+
+## `LogPrinter` and `LogType`
+
+**`LogPrinter`** — implement **`List<String> log(LogRecord record)`**.
+
+**Built-in mapping** (`TracingListener` constructor):
+
+| `LogType` | Printer class |
+|-----------|----------------|
+| `SIMPLE` | `SimplePrinter` |
+| `FLAT` | `FlatPrinter` |
+| `FLAT_STRUCTURED` | `FlatStructuredPrinter` |
+| `PRETTY` | `PrettyPrinter` |
+| `PRETTY_STRUCTURED` | `PrettyStructuredPrinter` |
+| `PREFIX` | `PrefixPrinter` |
+| `FMT` | `FmtPrinter` |
+| `HYBRID` | `HybridPrinter` |
+
+All are constructed with **`LogConfig`** (timestamps, colors, **`LogStep`** inclusion, etc. — see **`log_config.dart`** and **`log_step.dart`**).
+
+---
+
+## `LogRecord` (key fields)
+
+| Field | Meaning |
+|-------|---------|
+| **`level`** | **`LogLevel`**. |
+| **`message`** | String body. |
+| **`loggerName`** | Tag / source. |
+| **`time`** | **`DateTime`**. |
+| **`error`** | Optional **`Object`**. |
+| **`stackTrace`** | Optional **`StackTrace`**. |
+
+Printers may use **`StackTraceParser`** helpers for pretty output.
+
+---
+
+## `LogLevel` / `LogStep`
+
+- **`LogLevel`**: `TRACE`, `DEBUG`, `INFO`, `WARN`, `ERROR`, `FATAL` — **`isEnabledFor`** defines filtering relative to configured minimum.
+- **`LogStep`**: which parts of a line to include (message, time, level, error, …) — used by **`LogConfig`**.
+
+---
+
+## Integration note (`smart` package)
+
+**`package:smart/smart.dart`** re-exports **`tracing`** but **hides `console`**. Use **`import 'package:tracing/tracing.dart';`** when you need the global **`console`**.
+
+---
+
+## Installation (private monorepo)
 
 ```yaml
 dependencies:
-  logging:
+  tracing:
     git:
       url: https://github.com/Hapnium/flutter.git
       ref: main
-      path: logging
-```
-
-Run `flutter pub get` to install the package.
-
----
-
-## **Usage**
-
-### 1. Import the package:
-
-```dart
-import 'package:logger/logger.dart';
-```
-
-### 2. Create a `LogManager` instance:
-
-```dart
-final logManager = LogManager();
-```
-
-### 3. Log messages:
-
-```dart
-// Log a simple string message
-String message = 'Initializing location services...';
-logManager.log(message);
-
-// Log a JSON object
-Map<String, dynamic> user = {
-  'id': 123,
-  'name': 'John Doe',
-  'email': 'john.doe@example.com'
-};
-logManager.log(user);
-
-// Log a list of strings
-List<String> messages = ['Message 1', 'Message 2', 'Message 3'];
-logManager.log(messages);
-
-// Log with a custom prefix and source
-logManager.log(
-  "Network request successful",
-  prefix: "Network",
-  from: "NetworkService"
-);
+      path: tracing
 ```
 
 ---
 
-## **Available Log Levels**
+## License
 
-- `LogMode.TRACE`: For highly detailed logs.
-- `LogMode.DEBUG`: For debugging information.
-- `LogMode.INFO`: For informational messages.
-- `LogMode.WARN`: For warnings.
-- `LogMode.ERROR`: For error messages.
-- `LogMode.FATAL`: For critical errors.
-
----
-
-## **Customization**
-
-- **Log Level**: Control the verbosity by adjusting the `LogMode` parameter in the `log()` method.
-- **Prefix**: Add a custom prefix to log messages for better identification.
-- **Source Identifier**: Include a source identifier (e.g., class or service name) to provide additional context.
-
----
-
-## **Internal Use Only**
-
-This package is intended for internal use within SearchService Inc. It is not designed for external projects and may include features or configurations specific to the company's requirements.
-
----
-
-## **Contributing**
-
-Contributions are welcome from employees of SearchService Inc. Please adhere to the company's standard contribution guidelines when submitting updates or enhancements to this package.
-
----
-
-## **Disclaimer**
-
-This package is provided "as is," without any warranty. SearchService Inc. assumes no responsibility for any issues or damages arising from the use of this package.
-
----
-
-### **Notes**
-
-This README provides an overview of the `logger` package, including its purpose, features, usage examples, and internal usage guidelines. It has been tailored for internal documentation purposes and can be adapted further to meet specific project requirements.# logger
+See [LICENSE](LICENSE) in this package directory.

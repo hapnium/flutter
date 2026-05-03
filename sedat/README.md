@@ -1,42 +1,123 @@
-## Overview
+# sedat
 
-`sedat` is a Flutter package designed to provide a secure and efficient local database solution for Hapnium platforms. It leverages Hive for secure storage, offering encryption and other security features. The package emphasizes the repository pattern, making data access clean and maintainable.
+**Hive CE**–backed local persistence with a **repository** abstraction, optional **streams**, and a single **database configurer** entry point for Flutter apps.
 
-**Key Features:**
+**Import:** `package:sedat/sedat.dart`  
+**SDK:** Dart `^3.0.0`.
 
-* **Repository Pattern:** Offers abstract classes and implementations for defining repositories, simplifying data access and management.
-* **Secure Storage:** Utilizes Hive for local storage, supporting encryption and other security measures.
-* **Database Configuration:** Provides a structured way to configure your database, including opening boxes and setting up repositories.
-* **Type Safety:** Supports various data storage formats and provides mechanisms for data encoding and decoding.
-* **Customizable:** Easily extendable to fit diverse application needs.
+**Dependencies:** `hive_ce_flutter`, `meta`, **`hapnium`**, **`tracing`**.
 
-## Getting Started
+---
 
-### Authentication
+## Concepts
 
-For local development, leverage the `.netrc` file for secure credential storage. This eliminates the need to embed credentials directly in URLs.
+### `AbstractSecureDatabaseConfigurer`
 
-**Steps:**
+Subclass this to define:
 
-1. **Create a `.netrc` File:**
-    - In your home directory (e.g., `~/.netrc`), create a file with the following content:
+- **`prefix`** — storage namespace (e.g. reverse-DNS).
+- **`repositories()`** — list of **`BaseRepository`** instances (stable instances, not new objects every call).
+- Optional lifecycle: **`setup`**, **`clear`**, **`close`**, plus inherited **`initialize`**, **`clearAll`**, **`closeAll`**.
 
-   ```bash
-   machine github.com
-   login your_username
-   password your_personal_access_token
-   ```
+`initialize()`:
 
-2. **Set Permissions:**
-    - Ensure the file is not readable by others for security:
+1. Runs **`Hive.initFlutter`** via **`SecureDatabaseConfiguration`** (from **`getConfiguration()`** or passed **`config`**).
+2. Opens each repository with prefix/device/platform/logging flags.
+3. Registers repositories with **`RepositoryContext.INSTANCE`** (`repository_mixin.dart`).
+4. Awaits **`setup()`**.
 
-   ```bash
-   chmod 600 ~/.netrc
-   ```
+Call **`await configurer.initialize()`** once before `runApp` (after **`WidgetsFlutterBinding.ensureInitialized()`**).
 
-### Installation
+### `Repository<Entity, Insert>`
 
-Install `logging` using Flutter:
+Generic repository bridging **domain** type **`Entity`** and **stored** type **`Insert`** (often `Map<String, dynamic>`).
+
+You **must** register before use:
+
+- **`registerDecoder`** / **`registerEncoder`** / **`registerDefault`**, or **`registerAll`** (decoder, encoder, default value).
+
+Otherwise reads/writes throw **`SecureDatabaseException`**.
+
+### Other types
+
+- **`BaseRepository`** — box name and open/close contract.
+- **`StreamableRepository`** — reactive variants where applicable.
+- **`RepositoryService`**, **`RepositoryConfiguration`**, **`RepositoryContext`** — wiring and shared context.
+- **`SecureDatabaseException`** — database-layer errors.
+
+---
+
+## Example (shape only)
+
+```dart
+import 'package:hive_ce_flutter/hive_ce_flutter.dart';
+import 'package:flutter/material.dart';
+import 'package:sedat/sedat.dart';
+
+class User {
+  User({required this.name});
+  final String name;
+  Map<String, dynamic> toJson() => {'name': name};
+  static User fromJson(Map<String, dynamic> j) => User(name: j['name'] as String);
+  static User empty() => User(name: '');
+}
+
+class UserRepository extends Repository<User, Map<String, dynamic>> {
+  UserRepository() : super('users') {
+    registerAll(
+      decoder: User.fromJson,
+      encoder: (u) => u.toJson(),
+      defaultValue: User.empty(),
+    );
+  }
+}
+
+class AppDb extends AbstractSecureDatabaseConfigurer {
+  @override
+  String get prefix => 'com.example.app';
+
+  @override
+  List<BaseRepository> repositories() => [UserRepository()];
+
+  @override
+  Future<void> setup() async {}
+}
+
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await AppDb().initialize();
+  runApp(const MyApp());
+}
+```
+
+### `BaseRepository` / `Repository` — common operations
+
+After **`open(...)`** on the configurer, typical **`Repository<Entity, Insert>`** API includes:
+
+| Method | Purpose |
+|--------|---------|
+| **`registerDecoder`**, **`registerEncoder`**, **`registerDefault`**, **`registerAll`** | Required adapters; throws **`SecureDatabaseException`** if missing when reading/writing. |
+| **`fromStore`**, **`toStore`** | Map storage ↔ domain (override on concrete repo or use adapters). |
+| **`get()`** | Synchronous read of current value (single-key box semantics); uses default when empty. |
+| **`save(Entity item)`** | `Future<Entity>` — persist and notify listeners. |
+| **`fetchAll()`** | `Future<List<Entity>>` — list/collection boxes. |
+| **`delete()`** | `Future<Optional<Entity>>` — remove current. |
+| **`deleteAll(List<Entity> items)`** | Bulk delete. |
+| **`close()`**, **`dispose()`** | Box lifecycle. |
+| **`getLength()`**, **`isStoreEmpty`**, **`isNotEmpty`** | Introspection. |
+| **`put()`**, **`read()`** | Advanced hooks for custom Hive **`put`** / read paths. |
+
+**`StreamableRepository`** adds reactive streams (see `streamable_repository.dart`). Full behavior depends on box type (single vs collection); read **`base_repository.dart`** for edge cases and lazy/eager **`RepositoryInitializer`**.
+
+---
+
+## Code generation
+
+`hive_ce_generator` is a **dev_dependency** for type adapters where you use generated Hive types.
+
+---
+
+## Installation (private monorepo)
 
 ```yaml
 dependencies:
@@ -47,133 +128,8 @@ dependencies:
       path: sedat
 ```
 
-Then, run `flutter pub get`.
-
-### 2\. Usage
-
-Here's a step-by-step guide to using the `sedat` package:
-
-**1. Define your data models:**
-
-Create Dart classes representing the data you want to store. Ensure these classes have `toJson` and `fromJson` methods for serialization and deserialization.
-
-```dart
-class User {
-  final String name;
-  final int age;
-
-  User({required this.name, required this.age});
-
-  Map<String, dynamic> toJson() => {'name': name, 'age': age};
-  factory User.fromJson(Map<String, dynamic> json) => User(name: json['name'], age: json['age']);
-}
-```
-
-**2. Implement a repository:**
-
-Extend `JsonRepository<T>` to create a repository for your data type. Register your decoder, encoder, and default value.
-
-```dart
-import 'package:sedat/sedat.dart';
-
-class UserRepository extends JsonRepository<User> {
-  UserRepository() : super('users') {
-    registerDecoder(User.fromJson);
-    registerDefault(User(name: 'Unknown', age: 0));
-    registerEncoder((user) => user.toJson());
-  }
-}
-```
-
-**3. Create a configurer:**
-
-Extend `AbstractSecureDatabaseConfigurer` to set up your database. Override `prefix` and `repositories` methods.
-
-```dart
-import 'package:sedat/sedat.dart';
-
-class MyAppDatabaseConfigurer extends AbstractSecureDatabaseConfigurer {
-  @override
-  String get prefix => 'myApp';
-
-  @override
-  List<BaseRepository> repositories() => [UserRepository()];
-
-  @override
-  Future<void> setup() async {
-    print("Database setup complete.");
-  }
-}
-```
-
-**4. Initialize the database:**
-
-In your `main` function, initialize the database using your configurer.
-
-```dart
-import 'package:flutter/material.dart';
-import 'package:sedat/sedat.dart';
-import 'package:hive_flutter/hive_flutter.dart'; // Ensure you have this import
-
-void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  await HiveFlutter.initFlutter(); // Initialize Hive for Flutter
-
-  final configurer = MyAppDatabaseConfigurer();
-  await configurer.initialize();
-
-  // ... rest of your code
-}
-```
-
-**5. Use your repositories:**
-
-Access your data through the repository methods.
-
-```dart
-void main() async {
-  // ... (Initialization from previous step)
-
-  final userRepository = UserRepository();
-
-  final newUser = User(name: 'Alice', age: 30);
-  await userRepository.save(newUser);
-  print('User saved: ${newUser.name}');
-
-  final retrievedUser = userRepository.get();
-  print('Retrieved user: ${retrievedUser.name}, ${retrievedUser.age}');
-
-  final anotherUser = User(name: 'Bob', age: 25);
-  await userRepository.save(anotherUser);
-  print('User saved: ${anotherUser.name}');
-}
-```
-
-## API Reference
-
-**Core:**
-
-* `AbstractSecureDatabaseConfigurer`: Base class for database configuration.
-
-**Exceptions:**
-
-* `SecureDatabaseException`: Custom exception for database errors.
-
-**Repository:**
-
-* `BaseRepository`: Base class for repositories.
-* `JsonRepository<T>`: Repository class for JSON-serializable data.
-* `RepositoryService`: Interface for repository operations.
-* `types.dart`: Contains type definitions for repositories.
-
-**Typedefs:**
-
-* `typedefs.dart`: Contains common typedefs.
-
-## Contributing
-
-Contributions are welcome\! Please feel free to submit issues or pull requests on the GitHub repository.
+---
 
 ## License
 
-This package is released under the [MIT License](https://www.google.com/url?sa=E&source=gmail&q=LICENSE).
+See [LICENSE](LICENSE) in this package directory.

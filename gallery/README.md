@@ -1,173 +1,127 @@
-# Photo Gallery
+# gallery
 
-[![pub package](https://img.shields.io/pub/v/gallery.svg)](https://pub.dev/packages/gallery)
+**Flutter plugin** for reading the device **photo/video library** on **Android** and **iOS**. Uses a **`MethodChannel`** named **`smart_hap_gallery`** to talk to native code (`GalleryPlugin`).
 
-A Flutter plugin that retrieves images and videos from mobile native gallery.
+**Import:** `package:gallery/gallery.dart`.
 
-## Installation
+This package is **not** the same as the public `gallery` on pub.dev; it is maintained inside the Hapnium monorepo (`publish_to: none`).
 
-First, add gallery as a [dependency in your pubspec.yaml file](https://flutter.dev/docs/development/packages-and-plugins/using-packages).
+---
 
-#### iOS
-Add the following keys to your *Info.plist* file, located in ```<project root>/ios/Runner/Info.plist```:
+## Platform setup
 
-```NSPhotoLibraryUsageDescription``` - describe why your app needs permission for the photo library. This is called *Privacy - Photo Library Usage Description* in the visual editor.
+### iOS — `Info.plist`
+
+Add photo library usage:
 
 ```xml
 <key>NSPhotoLibraryUsageDescription</key>
-<string>Example usage description</string>
+<string>Describe why you need library access</string>
 ```
 
-#### Android
-Add the following permissions to your *AndroidManifest.xml*, located in ```<project root>/android/app/src/main/AndroidManifest.xml```:
+### Android — `AndroidManifest.xml`
+
+Typical permissions (adjust for target SDK / policy):
 
 ```xml
-<manifest ...>
-    <uses-permission
-        android:name="android.permission.READ_EXTERNAL_STORAGE"
-        android:maxSdkVersion="32" />
-    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
-    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
-<manifest/>
+<uses-permission
+    android:name="android.permission.READ_EXTERNAL_STORAGE"
+    android:maxSdkVersion="32" />
+<uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+<uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
 ```
 
-## Usage
+---
 
-* Listing albums in the gallery
+## API overview
+
+### `Gallery` — static methods (`src/gallery.dart`)
+
+Channel: **`smart_hap_gallery`**.
+
+| Method | Returns | Notes |
+|--------|---------|--------|
+| **`listAlbums({mediumType, newest, hideIfEmpty})`** | `Future<List<Album>>` | **`hideIfEmpty`**: iOS behavior for empty albums. |
+| **`getMedium({mediumId, mediumType})`** | `Future<Medium>` | Metadata only. |
+| **`getThumbnail({mediumId, mediumType, width, height, highQuality})`** | `Future<List<int>>` | Raw bytes; throws if native returns null. |
+| **`getAlbumThumbnail({albumId, mediumType, newest, width, height, highQuality})`** | `Future<List<int>>` | Album cover bytes. |
+| **`getFile({mediumId, mediumType, mimeType})`** | `Future<File>` | Local path from native. |
+| **`deleteMedium({mediumId, mediumType})`** | `Future<void>` | Irreversible. |
+| **`cleanCache()`** | `Future<void>` | Clears native cache (fire-and-forget invoke). |
+
+**`Gallery._listMedia`** is private; use **`album.listMedia(...)`** on **`Album`**.
+
+### `Album` / `Medium` / `MediaPage`
+
+- **`Album.listMedia`** — paginated **`MediaPage`** (`skip`, `take`, **`lightWeight`**).
+- **`MediaPage.nextPage`** — fetch next chunk when **`isLast`** is false.
+- **`Medium.getFile`**, **`getThumbnail`** — instance methods wrapping `Gallery` statics.
+
+### Image providers (Flutter)
+
+- **`ThumbnailProvider`**, **`AlbumThumbnailProvider`**, **`PhotoProvider`** — `ImageProvider` subclasses for **`Image`**, **`FadeInImage`**, etc.
+
+---
+
+## Usage examples
+
+### List albums and first page of media
+
 ```dart
-final List<Album> imageAlbums = await Gallery.listAlbums();
-final List<Album> videoAlbums = await Gallery.listAlbums(
-    mediumType: MediumType.video,
-    newest: false,
-    hideIfEmpty: false,
-);
-```
-* Listing media in an album
-```dart
-final MediaPage imagePage = await imageAlbum.listMedia();
-final MediaPage videoPage = await imageAlbum.listMedia(
-    skip: 5,
-    take: 10,
-);
-final List<Medium> allMedia = [
-    ...imagePage.items,
-    ...videoPage.items,
-];
-```
-* Loading more media in a album
-```dart
-if (!imagePage.isLast) {
-    final nextImagePage = await imagePage.nextPage();
+import 'package:gallery/gallery.dart';
+
+Future<void> load() async {
+  final albums = await Gallery.listAlbums(mediumType: MediumType.image);
+  if (albums.isEmpty) return;
+
+  final page = await albums.first.listMedia(take: 24);
+  for (final m in page.items) {
+    // m.id, medium type, dates, etc.
+  }
+
+  if (!page.isLast) {
+    final next = await page.nextPage();
     // ...
+  }
 }
 ```
-* Getting a Medium
+
+### Thumbnail in a widget
+
 ```dart
-final Medium medium = await Gallery.getMedium(
-  mediumId: "10",
-  mediumType: MediumType.image
-);
-```
-* Getting a file
-```dart
-final File file = await medium.getFile();
-```
-```dart
-final File file = await Gallery.getFile(mediumId: mediumId);
-```
-* Getting thumbnail data
-```dart
-final List<int> data = await medium.getThumbnail();
-```
-```dart
-final List<int> data = await Gallery.getThumbnail(mediumId: mediumId);
-```
-You can also specify thumbnail width and height on Android API 29 or higher; You can also specify thumbnail width, height and whether provider high quality or not on iOS:
-```dart
-final List<int> data = await medium.getThumbnail(
-    width: 128,
-    height: 128,
-    highQuality: true,
-);
-```
-```dart
-final List<int> data = await Gallery.getThumbnail(
-    mediumId: mediumId,
+Image(
+  image: ThumbnailProvider(
+    mediumId: id,
     mediumType: MediumType.image,
     width: 128,
     height: 128,
     highQuality: true,
-);
-```
-* Getting album thumbnail data
-```dart
-final List<int> data = await album.getThumbnail();
-```
-```dart
-final List<int> data = await Gallery.getAlbumThumbnail(albumId: albumId);
-```
-You can also specify thumbnail width and height on Android API 29 or higher; You can also specify thumbnail width, height and whether provider high quality or not on iOS:
-```dart
-final List<int> data = await album.getThumbnail(
-    width: 128,
-    height: 128,
-    highQuality: true,
-);
-```
-```dart
-final List<int> data = await Gallery.getAlbumThumbnail(
-    albumId: albumId,
-    mediumType: MediumType.image,
-    newest: false,
-    width: 128,
-    height: 128,
-    highQuality: true,
-);
-```
-* Displaying medium thumbnail
-
-ThumbnailProvider are available to display thumbnail images (here with the help of dependency [transparent_image](https://pub.dev/packages/transparent_image)):
-
-```dart
-FadeInImage(
-    fit: BoxFit.cover,
-    placeholder: MemoryImage(kTransparentImage),
-    image: ThumbnailProvider(
-        mediumId: mediumId,
-        mediumType: MediumType.image,
-        width: 128,
-        height: 128,
-        hightQuality: true,
-    ),
+  ),
+  fit: BoxFit.cover,
 )
 ```
-Width and height is only available on Android API 29+ or iOS platform
-* Displaying album thumbnail
 
-AlbumThumbnailProvider are available to display album thumbnail images (here with the help of dependency [transparent_image](https://pub.dev/packages/transparent_image)):
-```dart
-FadeInImage(
-    fit: BoxFit.cover,
-    placeholder: MemoryImage(kTransparentImage),
-    image: AlbumThumbnailProvider(
-        album: album,
-        width: 128,
-        height: 128,
-        hightQuality: true,
-    ),
-)
+---
+
+## Example app
+
+See **`example/`** (`gallery_example`) for a runnable demo.
+
+---
+
+## Installation (private monorepo)
+
+```yaml
+dependencies:
+  gallery:
+    git:
+      url: https://github.com/Hapnium/flutter.git
+      ref: main
+      path: gallery
 ```
-Width and height is only available on Android API 29+ or iOS platform. High quality is only available on iOS platform.
-* Displaying a full size image
 
-You can use PhotoProvider to display the full size image (here with the help of dependency [transparent_image](https://pub.dev/packages/transparent_image)):
+---
 
-```dart
-FadeInImage(
-    fit: BoxFit.cover,
-    placeholder: MemoryImage(kTransparentImage),
-    image: PhotoProvider(
-        mediumId: mediumId,
-    ),
-)
-```
+## License
+
+See [LICENSE](LICENSE) in this package directory.

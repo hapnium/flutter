@@ -1,36 +1,65 @@
-### README for `secure` Package
+# secure
+
+**Cryptography and secure messaging** for Dart: **RSA** and **elliptic-curve (EC)** key pairs, **PEM** encoding/decoding, encrypt/decrypt flows, built on **PointyCastle**.
+
+**Import:** `package:secure/secure.dart`  
+**SDK:** Dart `^3.0.0` (no Flutter SDK in `pubspec`).
+
+**Runtime dependency:** `tracing` — implementations can log via the shared tracing package.
 
 ---
 
-# **Secure**
+## Public surface (from `secure.dart`)
 
-`secure` is a versatile encryption and decryption library designed for Flutter applications. It supports RSA and EC cryptographic algorithms to ensure secure messaging and data exchange.
+- **`SecureMessaging`** — facade with factories **`SecureMessaging.rsa()`** and **`SecureMessaging.ec()`** (the old `resolve(PemStyle)` factory is deprecated). Implements **`SecureMessagingService`**: **`generate()`**, **`encrypt({message, publicKey})`**, **`decrypt({message, privateKey})`** → **`MessagingResponse`**.
+- **`SecureKey`** — implements **`SecureKeyService`**. Use **`SecureKey.factory()`** for the default implementation. Methods:
+  - **`generate(String identifier)`** → **`SecureKeyResponse`** (PEM / key material for that id).
+  - **`encrypt({required message, required publicKey})`** → ciphertext string.
+  - **`decrypt({required message, required privateKey})`** → plaintext string.
+- Models: **`SecureKeyResponse`**, **`MessagingMetadata`**, **`MessagingResponse`**.
+- **`SecureException`** — domain errors.
+- **`PemStyle`** enum — **RSA** vs **EC** PEM handling.
 
----
-
-## **Authentication**
-
-For local development, use the `.netrc` file for secure credential storage. This ensures credentials are not embedded directly in URLs.
-
-### Steps:
-
-1. **Create a `.netrc` File:**
-    ```bash
-    machine github.com
-    login your_username
-    password your_personal_access_token
-    ```
-
-2. **Set Permissions:**
-    ```bash
-    chmod 600 ~/.netrc
-    ```
+Utilities (not all re-exported from `secure.dart`): **`Pem`**, RSA/EC helpers under `src/utilities/`. Open **`secure.dart`** for the exact export list.
 
 ---
 
-## **Installation**
+## Typical flow
 
-Install `secure` using Flutter:
+1. Create messaging: `final messaging = SecureMessaging.rsa();` or `.ec()`.
+2. Generate a key pair for each party: `final keys = messaging.generate();` → **`SecureKeyResponse`** (public/private PEM strings).
+3. Encrypt for recipient’s public key: `messaging.encrypt(message: '...', publicKey: recipientPublicPem)`.
+4. Decrypt with private key: `messaging.decrypt(message: cipherText, privateKey: privatePem)` → **`MessagingResponse`**.
+
+Exact method names match **`SecureMessagingService`** in `src/core/messaging/secure_messaging_service.dart`.
+
+---
+
+## Example
+
+```dart
+import 'package:secure/secure.dart';
+
+void rsaRoundTrip() {
+  final messaging = SecureMessaging.rsa();
+  final alice = messaging.generate();
+  final bob = messaging.generate();
+
+  final cipher = messaging.encrypt(
+    message: 'Hello',
+    publicKey: bob.publicKey,
+  );
+  final plain = messaging.decrypt(
+    message: cipher,
+    privateKey: bob.privateKey,
+  );
+  // use plain (MessagingResponse)
+}
+```
+
+---
+
+## Installation (private monorepo)
 
 ```yaml
 dependencies:
@@ -41,70 +70,15 @@ dependencies:
       path: secure
 ```
 
-Run `flutter pub get` to install the package.
+---
+
+## Security notes
+
+- Use this as a **building block**; wire keys, storage, and protocol choices to your threat model.
+- Prefer platform secure storage for private keys in real apps (this package focuses on crypto primitives and messaging).
 
 ---
 
-## **Usage**
+## License
 
-### **Example Implementation**
-
-```dart
-import 'package:tracing/tracing.dart';
-import 'package:secure/secure.dart';
-
-void main() {
-  console.log(":::::::::::::::::::::::::::: RSASecureMessaging Example ::::::::::::::::::::::::::::::::");
-  _showRSAMessagingExample();
-
-  console.log(":::::::::::::::::::::::::::: ECSecureMessaging Example ::::::::::::::::::::::::::::::::");
-  _showECMessagingExample();
-}
-
-void _showRSAMessagingExample() {
-  SecureMessaging messaging = SecureMessaging.rsa();
-
-  SecureKeyResponse user = messaging.generate();
-  console.log(user.toJson());
-  SecureKeyResponse recipient = messaging.generate();
-  console.log(recipient.toJson());
-
-  String message = "Welcome to Hapnium";
-  console.log(message, from: "RSASecureMessaging | Initial Message");
-
-  String encryptedMessage = messaging.encrypt(message: message, publicKey: recipient.publicKey);
-  MessagingResponse decryptedMessage = messaging.decrypt(message: encryptedMessage, privateKey: recipient.privateKey);
-  console.log(decryptedMessage.toJson(), from: "RSASecureMessaging | Decrypted Recipient Message");
-}
-
-void _showECMessagingExample() {
-  SecureMessaging messaging = SecureMessaging.ec();
-
-  SecureKeyResponse user = messaging.generate();
-  console.log(user.toJson());
-  SecureKeyResponse recipient = messaging.generate();
-  console.log(recipient.toJson());
-
-  String message = "Welcome to Hapnium";
-  console.log(message, from: "ECSecureMessaging | Initial Message");
-
-  String encryptedMessage = messaging.encrypt(message: message, publicKey: recipient.publicKey);
-  MessagingResponse decryptedMessage = messaging.decrypt(message: encryptedMessage, privateKey: recipient.privateKey);
-  console.log(decryptedMessage.toJson(), from: "ECSecureMessaging | Decrypted Recipient Message");
-}
-```
-
-### **Supported Features**
-
-| Feature                     | Description                                                                  |
-|-----------------------------|------------------------------------------------------------------------------|
-| **RSA Encryption/Decryption** | Encrypt and decrypt messages using RSA cryptography.                       |
-| **EC Encryption/Decryption**  | Encrypt and decrypt messages using Elliptic Curve cryptography.            |
-| **Key Generation**            | Generate secure RSA or EC keys for messaging.                              |
-| **tracing Support**           | Integrated logging for debugging and monitoring encryption operations.      |
-
----
-
-## **License**
-
-This package is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+See [LICENSE](LICENSE) in this package directory.

@@ -1,240 +1,262 @@
-Here's the README file for your `tappy` package:
+# chime
+
+Flutter notification stack: **device** notifications (`flutter_local_notifications`), **in-app** toasts (`toastification` / `fluttertoast`), **event routing**, **broadcast streams**, and optional **push-builder** helpers. A global **`Chime`** registry ties **`ChimeController`**, **`ChimeInAppNotification`**, and **`ChimePushNotification`** together.
+
+**Import:** `package:chime/chime.dart`
 
 ---
 
-# **Tappy Package**
+## Concepts (read this first)
 
-A powerful and easy-to-use Flutter package for managing notifications across your applications. With `Tappy`, you can seamlessly handle **in-app**, **remote**, and **device-level notifications**, including notifications tapped in the background.
+| Piece | Role |
+|--------|------|
+| **`Chime`** | Static registry: holds controller, in-app handler, push handler; **`Chime.mixable`** exposes **`ChimeMixin`** for advanced use. |
+| **`ChimeApplication`** | Root widget: calls `Chime.setApplicationName` / `setPlatform`, registers controller & push, wraps child in **`ToastificationWrapper`**. |
+| **`ChimeController`** | Streams + **`publishEvent`** + buffers for created/tapped notifications. Default impl is **`DefaultChimeController`** (`@internal`, constructed by **`getController()`** when unset). |
+| **`ChimeInAppNotification`** | Contract for success/error/info/warning/custom toasts and **`dismissInAppNotification`**. Default is **`DefaultChimeInAppNotification`** (`@internal`). |
+| **`ChimePushNotification`** | Permission + **`initialize`** + launch-from-notification. Default is **`DefaultChimePushNotification`** (`@internal`). |
+| **`ChimeMixin`** | Forwards streams, **`publishEvent`**, buffer APIs, and **`FlutterLocalNotificationsPlugin`** helpers (**`dismissById`**, **`dismissAll`**, **`dismissChannelNotifications`**, **`dismissGroupedNotifications`**) to **`Chime.getController()`**. |
+| **`ChimePushNotificationBuilder`** | Abstract helper: **`pushChimeNotification`**, **`pushScheduledChimeNotification`**, timezone + sound + vibration helpers for FCM/APNs-style integrations. |
 
-## **Features**
+Payload hierarchy (see `chime_notification.dart`):
 
-- Initialize notifications easily with `TappyWrapper`.
-- Support for in-app and device-level notifications.
-- Background and foreground notification handling.
-- App-specific notification tap handlers.
-- Simple and flexible API for creating and managing notifications.
-- Supports both Android and iOS platforms.
+- **`ChimeNotification`** — `id`, `identifier`, `action`, `input`, `payload` (JSON string), `data` map; **`getPayloadAsJson()`**, **`toJson()`**.
+- **`ChimeCreatedNotification`** — adds `title`, `body`, **`NotificationDetails?`** (required for scheduling/showing via plugin).
+- **`ChimeScheduledNotification`** — adds **`TZDateTime scheduledDate`**, optional **`AndroidScheduleMode`**, **`DateTimeComponents`**.
+- **`ChimeAppNotification`** / **`ChimeCreatedAppNotification`** / **`ChimeCreatedCustomAppNotification`** — in-app / toast-backed types.
+
+Events (**`ChimeEvent`**, `chime_event.dart`): **`NotificationReceivedEvent`** (includes **`NotificationResponse`**, **`isBackgroundNotification`**), **`NotificationCreatedEvent`**, **`NotificationScheduledEvent`**, **`NotificationLaunchedAppEvent`**, **`NotificationTappedEvent`**, **`NotificationClosedEvent`**, **`NotificationDismissedEvent`**, **`NotificationFailedEvent`** (`error`, `stackTrace`).
 
 ---
 
-## Authentication
+## `Chime` class — static API
 
-For local development, leverage the `.netrc` file for secure credential storage. This eliminates the need to embed credentials directly in URLs.
+| Member | Type | Description |
+|--------|------|-------------|
+| **`showLogs`** | `bool` | Global flag; **`ChimeMixin.showChimeLogs`** reads this. Components may log when true. |
+| **`getController()`** | `ChimeController` | Returns **`_controller`** or a **new `DefaultChimeController`** each time if unset. Prefer **`setController`** once at startup. |
+| **`setController(ChimeController c)`** | `void` | Replace controller instance. |
+| **`mixable`** | `ChimeMixin` | **`Chime._()`** instance used as mixin host for **`Chime.mixable.dismissAll()`**-style calls (forwards to controller + plugin). |
+| **`setApplicationName(String)`** | `void` | Used by push default channel naming / logs; **`getPushNotification`** may update via optional args. |
+| **`setPlatform(ChimePlatform)`** | `void` | **`ANDROID`**, **`IOS`**, **`WEB`**. |
+| **`setShowLogs(bool)`** | `void` | Sets **`Chime.showLogs`**. |
+| **`getInAppNotification()`** | `ChimeInAppNotification` | Returns set instance or **new `DefaultChimeInAppNotification`** per call if unset. |
+| **`setChimeInAppNotification(...)`** | `void` | Register custom in-app implementation (e.g. tests or branded UI). |
+| **`getPushNotification({applicationName, platform})`** | `ChimePushNotification` | Returns set instance or builds **`DefaultChimePushNotification(_applicationName, _platform)`**, optionally updating name/platform from args. |
+| **`setChimePushNotification(...)`** | `void` | Register custom push service. |
 
-**Steps:**
+---
 
-1. **Create a `.netrc` File:**
-    - In your home directory (e.g., `~/.netrc`), create a file with the following content:
+## `ChimeApplication` widget
 
-   ```bash
-   machine github.com
-   login your_username
-   password your_personal_access_token
-   ```
+Wrap **`MaterialApp`** / **`CupertinoApp`**. In **`initState`** (post-frame), it:
 
-2. **Set Permissions:**
-    - Ensure the file is not readable by others for security:
+1. **`Chime.setApplicationName`**, **`setPlatform`**, **`setShowLogs`**
+2. Uses **`configuration.controller`** or **`DefaultChimeController`**, registers **`configuration.eventListeners`**
+3. Unless **`platform == WEB && skipDeviceNotificationInitializationOnWeb`**: creates **`DefaultChimePushNotification`**, **`setChimePushNotification`**, **`initialize`** with **`initializationSettings`**, wires **`onBackgroundNotification`**, **`onLaunchedByNotification`**
+4. **`Chime.setController(controller)`**; optional **`setChimeInAppNotification`**
 
-   ```bash
-   chmod 600 ~/.netrc
-   ```
+| Parameter | Purpose |
+|-----------|---------|
+| **`child`** | Your app root. |
+| **`applicationName`** | Channel / logging label. |
+| **`platform`** | **`ChimePlatform`**. |
+| **`configuration`** | **`ChimeConfiguration`**: optional **`controller`**, **`eventListeners`**, **`inAppNotification`**, **`pushNotification`**. |
+| **`showLog`** | Passed to **`Chime.setShowLogs`**. |
+| **`skipDeviceNotificationInitializationOnWeb`** | Skips plugin init on web (default `true`). |
+| **`onPermitted`** | After permission check callback. |
+| **`onLaunchedByNotification`** | **`ChimeNotificationCallback`** when app opened from notification. |
+| **`onForegroundNotification`** | Passed to **`initialize`** as **`onNotificationTapped`**. |
+| **`onBackgroundNotification`** | **`NotificationResponseCallback`**; combined with internal dispatcher **`chimeBackgroundNotificationDispatcher`** (see below). |
+| **`inAppConfigurer`** | Mutates **`InAppConfiguration`** for **`ToastificationWrapper`**. |
+| **`initializationSettings`** | **`InitializationSettings`** for **`flutter_local_notifications`**. |
 
-## Installation
+**`build`**: merges **`InAppConfiguration`** into **`ToastificationConfig`** and returns **`ToastificationWrapper`**.
 
-Install `tappy` using Flutter:
+---
+
+## `ChimeController` (contract + behavior)
+
+**`ChimeController`** extends **`ChimeStreamable`** and implements **`ChimeEventManager`** + **`ChimeNotificationManager`**.
+
+### Event dispatch — `publishEvent(ChimeEvent event)`
+
+**`DefaultChimeController.publishEvent`**:
+
+1. Notifies all **`ChimeEventListener`**s whose **`supportsChimeEvent`** returns true (`await Future.wait`).
+2. Then routes by event type: updates streams / buffers (e.g. **`NotificationCreatedEvent`** → **`emitCreatedNotification`** + append to `_createdNotifications`; **`NotificationTappedEvent`** → emit + buffer; **`NotificationReceivedEvent`** → **`emitReceivedNotification`**, etc.).
+
+Register listeners: **`addChimeEventListener`**, remove: **`removeChimeEventListener`**, **`removeChimeEventListeners`**, **`removeAllChimeEventListeners`**. **`dispose`** closes streams and clears listeners.
+
+### Streams (`ChimeStreamable`)
+
+Each stream is backed by a **broadcast** `StreamController`. Emit helpers only add if **`hasXxxListener()`** is true (except scheduling path also emits created — see **`emitScheduledNotification`**).
+
+| Stream getter | Payload |
+|---------------|---------|
+| **`getReceivedChimeNotificationStream()`** | `ChimeNotification` |
+| **`getCreatedChimeNotificationStream()`** | `ChimeCreatedNotification` |
+| **`getScheduledChimeNotificationStream()`** | `ChimeScheduledNotification` |
+| **`getLaunchedAppChimeNotificationStream()`** | `ChimeNotification` |
+| **`getTappedChimeNotificationStream()`** | `ChimeNotification` |
+| **`getClosedChimeNotificationStream()`** | `ChimeNotification` |
+| **`getDismissedChimeNotificationStream()`** | `ChimeNotification` |
+| **`getFailedChimeNotificationStream()`** | `ChimeNotification` |
+
+### Buffer / dedupe (`ChimeNotificationManager`)
+
+| Method | Purpose |
+|--------|---------|
+| **`getTappedNotifications()`** / **`getCreatedNotifications()`** | Read-only views of buffers. |
+| **`getCreatedAppNotifications()`** | Maps buffered **`ChimeCreatedAppNotification`** to **`ChimeAppNotification`** summaries. |
+| **`hasCreatedNotification(ChimeCreatedNotification)`** | Dedupe by **`identifier`** or instance. |
+| **`addCreatedNotification`**, **`removeCreatedNotification`** | Manual buffer management. |
+| **`addTappedNotification`**, **`removeTappedNotification`** | Tap buffer. |
+| **`flushCreatedNotifications`** | **`emitCreatedNotification`** for each buffered then clear. |
+| **`flushPendingTappedNotifications`** | **`emitTappedNotification`** for each pending tap then clear. |
+
+---
+
+## Device notifications — building & showing
+
+### Using `ChimePushNotification` directly
+
+Implement **`ChimePushNotification`** or rely on **`DefaultChimePushNotification`** (via **`ChimeApplication`**):
+
+- **`requestPermission()`** — Android notification permission / iOS alert+badge+sound.
+- **`isPermitted`** — **`areNotificationsEnabled`** / **`checkPermissions`**.
+- **`getPlatform()`**, **`getApplicationName()`**
+- **`initialize(...)`** — **`InitializationSettings`** required; optional **`onNotificationTapped`** (**`ChimeNotificationCallback`**) and **`onBackgroundNotificationReceived`** (**`NotificationResponseCallback`**). Registers **`chimeBackgroundNotificationDispatcher`** for background taps.
+- **`onAppLaunchedByNotification`** — reads **`getNotificationAppLaunchDetails`**, publishes **`NotificationLaunchedAppEvent`**.
+
+Background dispatcher (**`chime_push_notification.dart`**): **`@pragma('vm:entry-point') void chimeBackgroundNotificationDispatcher(NotificationResponse details)`** forwards to internal publisher (emits **`NotificationReceivedEvent`** with **`isBackgroundNotification: true`**) then your callback.
+
+### Using `ChimePushNotificationBuilder`
+
+Subclass **`ChimePushNotificationBuilder with ChimeMixin`** (gives **`plugin`**, **`publishEvent`**, **`hasCreatedNotification`**, etc.):
+
+| Method | Purpose |
+|--------|---------|
+| **`pushChimeNotification(() async => ChimeCreatedNotification(...))`** | Builds notification; skips if **`hasCreatedNotification`**; **`plugin.show`**; **`publishEvent(NotificationCreatedEvent)`** or **`NotificationFailedEvent`**. |
+| **`pushScheduledChimeNotification(onCreatedNotification: () => ChimeScheduledNotification(...))`** | Requires non-null **`notificationDetails`**; **`plugin.zonedSchedule`**; **`NotificationScheduledEvent`** or failed. |
+| **`configureLocalTimeZone(String timezone)`** | **`tz.initializeTimeZones()`** + **`setLocalLocation`** (default `"Africa/Lagos"` if empty). |
+| **`androidSound(ChimeSound sound)`** | **`RawResourceAndroidNotificationSound`**. |
+| **`getLowVibrationPattern()`** / **medium** / **high** | `Int64List` patterns for Android details. |
+| **`parseTimeToDate(String time)`** | Parses `"9:00 AM"`-style strings into today’s ISO datetime string. |
+| **`showChimeLogs`** | Override to control **`tracing`** logs in builder (used in template examples). |
+
+**Building a `ChimeCreatedNotification`:**
+
+```dart
+ChimeCreatedNotification(
+  id: 42, // notification id for cancel/replace
+  identifier: 'msg:abc', // stable dedupe key
+  title: 'Title',
+  body: 'Body',
+  payload: '{"route":"/inbox"}', // optional JSON for routing
+  notificationDetails: NotificationDetails(
+    android: AndroidNotificationDetails(
+      'channel_id',
+      'Channel name',
+      channelDescription: '…',
+    ),
+    iOS: DarwinNotificationDetails(),
+  ),
+);
+```
+
+**Scheduled:** use **`ChimeScheduledNotification`** with **`scheduledDate: TZDateTime(...)`**, required **`notificationDetails`**, optional **`androidScheduleMode`**, **`dateTimeComponents`**.
+
+---
+
+## In-app notifications — `ChimeInAppNotification`
+
+Implement the interface or use the default (toastification-backed). All **`showInApp*`** methods accept **`duration`** (seconds), **`Alignment position`** (except tip toast), and optional lifecycle callbacks **`InAppNotificationCallback`** = `void Function(String id)`:
+
+| Method | Behavior |
+|--------|----------|
+| **`showInAppSuccessNotification`** | Green / check icon; **`NotificationCreatedEvent(ChimeCreatedAppNotification)`**. |
+| **`showInAppErrorNotification`** | Red / error icon. |
+| **`showInAppInfoNotification`** | Blue / info icon. |
+| **`showInAppWarningNotification`** | Yellow / warning icon. |
+| **`showInAppCustomNotification`** | **`ToastificationBuilder`**; **`ChimeCreatedCustomAppNotification`**. |
+| **`showInAppNotification`** | Short **`Fluttertoast`** (tip-style); no Chime created event pattern like the others. |
+| **`dismissInAppNotification({required String id})`** | **`id.isEmpty`** → **`toastification.dismissAll()`** + dismiss events for tracked app notifications; else **`dismissById`** + **`NotificationDismissedEvent`**. |
+
+**`DefaultChimeInAppNotification`** (constructor has many styling fields: **`ChimeInAppStyle`**, colors, **`titleBuilder`** / **`descriptionBuilder`** / **`iconBuilder`**, padding, border, **`ToastificationCallbacks`** → **`publishEvent`** for tap/close/dismiss → **`ChimeAppNotification`**).
+
+**`ChimeInAppMixin`**: delegates every interface method to **`Chime.getInAppNotification()`** so your class `with ChimeInAppMixin` can call **`showInAppInfoNotification`** without storing the notifier.
+
+---
+
+## `ChimeMixin` — plugin helpers
+
+In addition to forwarding **controller** APIs, **`ChimeMixin`** exposes:
+
+| Method | Behavior |
+|--------|----------|
+| **`dismissById(int id, {String? tag})`** | **`plugin.cancel`**. |
+| **`dismissAll()`** | **`plugin.cancelAll`**. |
+| **`dismissChannelNotifications(String channelId)`** | Filters **`getActiveNotifications()`** by **`channelId`**, cancels each. |
+| **`dismissGroupedNotifications(String groupKey)`** | Same for **`groupKey`**. |
+
+Override **`plugin`** if you use a shared **`FlutterLocalNotificationsPlugin`** instance.
+
+---
+
+## Minimal app setup
+
+```dart
+void main() {
+  runApp(
+    ChimeApplication(
+      applicationName: 'MyApp',
+      platform: ChimePlatform.ANDROID,
+      configuration: const ChimeConfiguration(),
+      initializationSettings: const InitializationSettings(
+        android: AndroidInitializationSettings('@mipmap/ic_launcher'),
+      ),
+      child: MaterialApp(home: HomeScreen()),
+    ),
+  );
+}
+```
+
+Subscribe to taps:
+
+```dart
+Chime.getController().getTappedChimeNotificationStream().listen((n) {
+  final json = n.getPayloadAsJson();
+});
+```
+
+Show in-app:
+
+```dart
+await Chime.getInAppNotification().showInAppInfoNotification(message: 'Saved');
+```
+
+---
+
+## Installation (private monorepo)
 
 ```yaml
 dependencies:
-  tappy:
+  chime:
     git:
       url: https://github.com/Hapnium/flutter.git
       ref: main
-      path: tappy
-```
-
-Run `flutter pub get` to install the package.
-
----
-
-## **Usage**
-
-### **1. Wrapping Your App with `TappyWrapper`**
-
-Wrap your app with the `TappyWrapper` to initialize and manage notifications:
-
-```dart
-import 'package:flutter/material.dart';
-import 'package:tappy/tappy.dart';
-
-void main() {
-  runApp(
-    TappyWrapper(
-      info: AppInfo(
-        androidIcon: "ic_launcher",
-        app: App.user,
-      ),
-      platform: DevicePlatform.ANDROID,
-      showInitializationLogs: true,
-      onPermitted: (isPermitted) {
-        debugPrint('Notification permission: $isPermitted');
-      },
-      onLaunchedByNotification: (notification) {
-        debugPrint('App launched by notification: $notification');
-      },
-      child: MaterialApp(
-        home: MyHomePage(),
-      ),
-    ),
-  );
-}
-```
-
-### **2. Listening for Notification Updates**
-
-To listen for updates from notifications, you can use a `Stream`:
-
-```dart
-import 'package:flutter/material.dart';
-import 'package:tappy/tappy.dart';
-
-class MyHomePage extends StatefulWidget {
-  @override
-  _MyHomePageState createState() => _MyHomePageState();
-}
-
-class _MyHomePageState extends State<MyHomePage> {
-  late final StreamSubscription<Notifier> _subscription;
-
-  @override
-  void initState() {
-    super.initState();
-    _subscription = Tappy.instance.remote().notificationStream.listen((notifier) {
-      debugPrint("Notification tapped: ${notifier.id}");
-      // Handle the notification response here.
-    });
-  }
-
-  @override
-  void dispose() {
-    _subscription.cancel();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text("Tappy Example")),
-      body: Center(child: Text("Listen for notifications here!")),
-    );
-  }
-}
+      path: chime
 ```
 
 ---
 
-### **3. Handling Background Notifications**
+## CI note
 
-For apps requiring custom handling of background notifications, add a VM entry point in your app:
-
-```dart
-import 'package:tappy/tappy.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-
-@pragma('vm:entry-point')
-void notificationTapBackground(NotificationResponse response) {
-  Tappy.instance.handleNotificationResponse(response, handler: (notifier) {
-    debugPrint("Background notification tapped: ${notifier.id}");
-    // Custom logic for the app.
-  });
-}
-```
-
-**Remember to optionally add `flutter_local_notifications: ` under dependencies in your `pubspec.yaml` file.**
-**This eliminates the `depend_on_referenced_package` lint issue in flutter. Leave the version empty for version compatibility.**
----
-
-### **4. Adding App-Specific Notification Tap Handlers**
-
-You can add app-specific handlers to process notifications tapped while the app is in the background or foreground.
-
-#### Example:
-
-```dart
-import 'package:tappy/tappy.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-
-void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-
-  TappyWrapper(
-    info: AppInfo(
-      androidIcon: "ic_launcher",
-      app: App.user,
-    ),
-    platform: DevicePlatform.ANDROID,
-    handler: (notifier) {
-      debugPrint("Notification tapped while app in foreground: ${notifier.id}");
-    },
-    backgroundHandler: notificationTapBackground,
-    child: MaterialApp(
-      home: MyHomePage(),
-    ),
-  );
-}
-```
+`chime` is not in the root GitHub Actions release matrix; add it if you tag releases like other packages.
 
 ---
 
-## **Features of the `Tappy` Class**
+## License
 
-The `Tappy` class provides multiple services for notifications:
-
-- **In-App Notifications:**
-  ```dart
-  Tappy.instance.inApp().showNotification("In-App Message", "Hello from Tappy!");
-  ```
-
-- **Remote Notifications:**
-  ```dart
-  Tappy.instance.remote().sendNotification("Remote Title", "Remote message body.");
-  ```
-
-- **Device-Level Notifications:**
-  ```dart
-  Tappy.instance.manager().dismissNotification(notificationId: 123);
-  ```
-
-- **Notification Tap Handlers:**
-  ```dart
-  Tappy.instance.handleNotificationResponse(
-    response,
-    handler: (notifier) {
-      debugPrint("Notification tapped: ${notifier.id}");
-    },
-  );
-  ```
-
----
-
-## **API Reference**
-
-### **TappyWrapper Parameters**
-
-| Parameter                  | Type                         | Description                                                                                       | Default  |
-|----------------------------|------------------------------|---------------------------------------------------------------------------------------------------|----------|
-| `child`                    | `Widget`                    | The root widget of the app, typically `MaterialApp` or `CupertinoApp`.                           | Required |
-| `info`                     | `AppInfo`                   | Provides information about the application.                                                      | Required |
-| `platform`                 | `DevicePlatform`            | Specifies the target platform, e.g., `DevicePlatform.ANDROID` or `DevicePlatform.IOS`.           | Required |
-| `showInitializationLogs`   | `bool`                      | Enables logging during initialization for debugging purposes.                                     | `false`  |
-| `onPermitted`              | `Function(bool)`            | Callback for checking notification permission status.                                             | `null`   |
-| `onLaunchedByNotification` | `Function(Notifier)`         | Callback triggered when the app is launched via a notification.                                  | `null`   |
-| `handler`                  | `NotificationTapHandler`    | Handles notification taps when the app is in the foreground.                                      | `null`   |
-| `backgroundHandler`        | `NotificationResponseHandler` | Handles notification taps when the app is in the background.                                      | `null`   |
-
----
-
-## **License**
-
-This package is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
-
----
+See [LICENSE](LICENSE) in this package directory.

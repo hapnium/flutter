@@ -1,39 +1,78 @@
-<!--
-This README describes the package. If you publish this package to pub.dev,
-this README's contents appear on the landing page for your package.
+# link_preview
 
-For information about how to write a good package README, see the guide for
-[writing package pages](https://dart.dev/tools/pub/writing-package-pages).
+**Fetch, cache, and render URL previews** in Flutter: HTTP fetch, HTML/OG/Twitter/YouTube/JSON-LD-style parsing, **`LinkPreviewData`** models, **`CacheManager`**, and widgets for **linkified** text.
 
-For general information about developing packages, see the Dart guide for
-[creating packages](https://dart.dev/guides/libraries/create-packages)
-and the Flutter guide for
-[developing packages and plugins](https://flutter.dev/to/develop-packages).
--->
+**Import:** `package:link_preview/link_preview.dart`.
 
-TODO: Put a short description of the package here that helps potential users
-know whether this package might be useful for them.
+---
 
-## Features
+## Entry points
 
-TODO: List what your package can do. Maybe include images, gifs, or videos.
+### `LinkPreviewInterface` / `LinkPreview` singleton
 
-## Getting started
+**`LinkPreview`** is a **`LinkPreviewInterface`** instance (default impl **`_LinkPreviewImpl`**).
 
-TODO: List prerequisites and provide or point to information on how to
-start using the package.
+**`Future<LinkPreviewData?> get(String link, {proxy, cacheDuration, requestTimeout, userAgent})`**
 
-## Usage
+1. Runs **v1** pipeline (`runV1` / `core_v1.dart`).
+2. If `null` and **`LinkPreview.isValidLink(link)`**, normalizes `www.` and runs **v2** (`core_v2.dart` + parsers).
+3. **`proxy`**: optional CORS proxy prefix (Flutter Web).
+4. **`cacheDuration`**: TTL for in-memory cache.
+5. **`requestTimeout`**: applies to v1 HTTP fetch.
+6. **`userAgent`**: override request user-agent.
 
-TODO: Include short and useful examples for package users. Add longer examples
-to `/example` folder.
+Helper **`LinkPreview.isValidLink`** — URL validation used before v2.
+
+**Usage:**
 
 ```dart
-const like = 'sample';
+final data = await LinkPreview.get(
+  'https://example.com',
+  proxy: 'https://your-cors-proxy/', // optional; useful on Web
+  cacheDuration: const Duration(minutes: 5),
+  requestTimeout: const Duration(seconds: 5),
+  userAgent: 'MyBot/1.0',
+);
 ```
 
-## Additional information
+**Algorithm:** tries **v1** (`runV1`) first; if that yields no result and the string is a valid link, falls back to **v2** with richer parsing (`core_v2.dart` and `v2/parsers/*`).
 
-TODO: Tell users more about the package: where to find more information, how to
-contribute to the package, how to file issues, what response they can expect
-from the package authors, and more.
+### Widgets and extensions
+
+- **`LinkPreviewBuilder`** (see `src/ui/link_preview_builder.dart`) — compose preview cards.
+- **`linkify.dart`** — linkify text widget; package re-exports selected **`linkify`** types (`LinkifyOptions`, `LinkifyElement`, …).
+- **Extensions:** `cache_extension`, `url_extension`, `ui_extension`, `linkifier_extension`, `url_launcher_extension` — ergonomic chaining on strings, URIs, and widgets.
+
+### Caching
+
+**`CacheManager`** (`cache_manager.dart`, `cache.dart`) — pluggable cache for preview metadata; extensions add cache-aware helpers.
+
+### Models
+
+- **`LinkPreviewData`** — title, description, image(s), site name, etc.; flags like **`hasAllMetadata`** / **`hasAnyData`** (see model).
+- **`LinkPreviewImage`** — image URL and dimensions for cards.
+
+---
+
+## Dependencies
+
+- **`html`**, **`http`**, **`xml`**, **`linkify`**, **`url_launcher`**, **`meta`**, **`tracing`**.
+
+---
+
+## Installation (private monorepo)
+
+```yaml
+dependencies:
+  link_preview:
+    git:
+      url: https://github.com/Hapnium/flutter.git
+      ref: main
+      path: link_preview
+```
+
+---
+
+## License
+
+See [LICENSE](LICENSE) in this package directory.
