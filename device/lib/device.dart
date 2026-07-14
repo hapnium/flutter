@@ -52,7 +52,6 @@ export 'src/models/device.dart';
 export 'src/models/device_validator.dart';
 
 export 'src/device_validation_manager.dart';
-export 'src/device_engine.dart';
 
 import 'dart:async';
 

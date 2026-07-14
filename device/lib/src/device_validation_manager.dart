@@ -1,8 +1,7 @@
 import 'package:hapnium/hapnium.dart';
 import 'package:meta/meta.dart';
 
-import 'device_engine.dart';
-import 'models/device_validator.dart';
+import '../device.dart';
 
 /// {@template device_validation_factory}
 /// An abstract service class used for validating the authenticity and integrity of a device.
@@ -48,7 +47,7 @@ abstract class DeviceValidationManager {
   @protected
   @nonVirtual
   DeviceValidator checkRootedOrJailBroken(bool isRooted, {bool validateWeb = false, String? message}) {
-    if (DeviceEngine.instance.isWeb && validateWeb.isFalse) {
+    if (DeviceRuntime.isWeb && validateWeb.isFalse) {
       return DeviceValidator.valid();
     }
 
@@ -79,7 +78,7 @@ abstract class DeviceValidationManager {
   @protected
   @nonVirtual
   DeviceValidator checkRealDevice(bool isReal, {bool validateWeb = false, String? message}) {
-    if (DeviceEngine.instance.isWeb && validateWeb.isFalse) {
+    if (DeviceRuntime.isWeb && validateWeb.isFalse) {
       return DeviceValidator.valid();
     }
 
@@ -109,7 +108,7 @@ abstract class DeviceValidationManager {
   @protected
   @nonVirtual
   DeviceValidator checkDeveloperMode(bool isEnabled, {bool validateWeb = false, String? message}) {
-    if (DeviceEngine.instance.isWeb && validateWeb.isFalse) {
+    if (DeviceRuntime.isWeb && validateWeb.isFalse) {
       return DeviceValidator.valid();
     }
 
@@ -138,7 +137,7 @@ abstract class DeviceValidationManager {
   @protected
   @nonVirtual
   DeviceValidator checkMockLocation(bool isMocked, {bool validateWeb = false, String? message}) {
-    if (DeviceEngine.instance.isWeb && validateWeb.isFalse) {
+    if (DeviceRuntime.isWeb && validateWeb.isFalse) {
       return DeviceValidator.valid();
     }
 
