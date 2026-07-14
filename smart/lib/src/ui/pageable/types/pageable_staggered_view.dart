@@ -56,7 +56,7 @@ class PageableStaggeredView<Page, Item> extends StatelessWidget {
   final double anchor;
 
   /// The number of pixels to cache for preloading items.
-  final double? cacheExtent;
+  final ScrollCacheExtent? scrollCacheExtent;
 
   /// Number of children for semantic accessibility.
   final int? semanticChildCount;
@@ -104,7 +104,7 @@ class PageableStaggeredView<Page, Item> extends StatelessWidget {
     required this.shrinkWrap,
     required this.center,
     required this.anchor,
-    required this.cacheExtent,
+    required this.scrollCacheExtent,
     required this.semanticChildCount,
     required this.dragStartBehavior,
     required this.keyboardDismissBehavior,
@@ -134,7 +134,7 @@ class PageableStaggeredView<Page, Item> extends StatelessWidget {
     bool shrinkWrap = false,
     Key? center,
     double anchor = 0.0,
-    double? cacheExtent,
+    ScrollCacheExtent? scrollCacheExtent,
     int? semanticChildCount,
     DragStartBehavior dragStartBehavior = DragStartBehavior.start,
     ScrollViewKeyboardDismissBehavior keyboardDismissBehavior = ScrollViewKeyboardDismissBehavior.manual,
@@ -158,7 +158,7 @@ class PageableStaggeredView<Page, Item> extends StatelessWidget {
     shrinkWrap: shrinkWrap,
     center: center,
     anchor: anchor,
-    cacheExtent: cacheExtent,
+    scrollCacheExtent: scrollCacheExtent,
     semanticChildCount: semanticChildCount,
     dragStartBehavior: dragStartBehavior,
     keyboardDismissBehavior: keyboardDismissBehavior,
@@ -189,7 +189,7 @@ class PageableStaggeredView<Page, Item> extends StatelessWidget {
     bool shrinkWrap = false,
     Key? center,
     double anchor = 0.0,
-    double? cacheExtent,
+    ScrollCacheExtent? scrollCacheExtent,
     DragStartBehavior dragStartBehavior = DragStartBehavior.start,
     ScrollViewKeyboardDismissBehavior keyboardDismissBehavior = ScrollViewKeyboardDismissBehavior.manual,
     String? restorationId,
@@ -214,7 +214,7 @@ class PageableStaggeredView<Page, Item> extends StatelessWidget {
     shrinkWrap: shrinkWrap,
     center: center,
     anchor: anchor,
-    cacheExtent: cacheExtent,
+    scrollCacheExtent: scrollCacheExtent,
     semanticChildCount: null,
     dragStartBehavior: dragStartBehavior,
     keyboardDismissBehavior: keyboardDismissBehavior,
@@ -246,7 +246,7 @@ class PageableStaggeredView<Page, Item> extends StatelessWidget {
     bool shrinkWrap = false,
     Key? center,
     double anchor = 0.0,
-    double? cacheExtent,
+    ScrollCacheExtent? scrollCacheExtent,
     int? semanticChildCount,
     DragStartBehavior dragStartBehavior = DragStartBehavior.start,
     ScrollViewKeyboardDismissBehavior keyboardDismissBehavior = ScrollViewKeyboardDismissBehavior.manual,
@@ -272,7 +272,7 @@ class PageableStaggeredView<Page, Item> extends StatelessWidget {
     shrinkWrap: shrinkWrap,
     center: center,
     anchor: anchor,
-    cacheExtent: cacheExtent,
+    scrollCacheExtent: scrollCacheExtent,
     semanticChildCount: separatorBuilder == null ? semanticChildCount : null,
     dragStartBehavior: dragStartBehavior,
     keyboardDismissBehavior: keyboardDismissBehavior,
@@ -304,7 +304,7 @@ class PageableStaggeredView<Page, Item> extends StatelessWidget {
     bool shrinkWrap = false,
     Key? center,
     double anchor = 0.0,
-    double? cacheExtent,
+    ScrollCacheExtent? scrollCacheExtent,
     int? semanticChildCount,
     DragStartBehavior dragStartBehavior = DragStartBehavior.start,
     ScrollViewKeyboardDismissBehavior keyboardDismissBehavior = ScrollViewKeyboardDismissBehavior.manual,
@@ -330,7 +330,7 @@ class PageableStaggeredView<Page, Item> extends StatelessWidget {
     shrinkWrap: shrinkWrap,
     center: center,
     anchor: anchor,
-    cacheExtent: cacheExtent,
+    scrollCacheExtent: scrollCacheExtent,
     semanticChildCount: separatorBuilder == null ? semanticChildCount : null,
     dragStartBehavior: dragStartBehavior,
     keyboardDismissBehavior: keyboardDismissBehavior,
@@ -360,7 +360,7 @@ class PageableStaggeredView<Page, Item> extends StatelessWidget {
     properties.add(FlagProperty('shrinkWrap', value: shrinkWrap, ifTrue: 'shrinkWrap enabled'));
     properties.add(DiagnosticsProperty<Key?>('center', center));
     properties.add(DoubleProperty('anchor', anchor));
-    properties.add(DoubleProperty('cacheExtent', cacheExtent));
+    properties.add(DiagnosticsProperty<ScrollCacheExtent?>('scrollCacheExtent', scrollCacheExtent));
     properties.add(IntProperty('semanticChildCount', semanticChildCount));
     properties.add(EnumProperty<DragStartBehavior>('dragStartBehavior', dragStartBehavior));
     properties.add(EnumProperty<ScrollViewKeyboardDismissBehavior>('keyboardDismissBehavior', keyboardDismissBehavior));
@@ -441,7 +441,7 @@ class PageableStaggeredView<Page, Item> extends StatelessWidget {
       shrinkWrap: shrinkWrap,
       center: center,
       anchor: anchor,
-      cacheExtent: cacheExtent,
+      scrollCacheExtent: scrollCacheExtent,
       semanticChildCount: semanticChildCount,
       dragStartBehavior: dragStartBehavior,
       keyboardDismissBehavior: keyboardDismissBehavior,

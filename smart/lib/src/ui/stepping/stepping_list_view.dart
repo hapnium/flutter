@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 
 import 'stepping.dart';
 
@@ -47,7 +48,7 @@ class SteppingListView extends StatelessWidget {
   final double? itemExtent;
 
   /// Optional cache extent for the list.
-  final double? cacheExtent;
+  final ScrollCacheExtent? scrollCacheExtent;
 
   /// Optional restoration ID for state restoration.
   final String? restorationId;
@@ -73,7 +74,7 @@ class SteppingListView extends StatelessWidget {
     this.useBuilder = false,
     this.useSeparated = false,
     this.itemExtent,
-    this.cacheExtent,
+    this.scrollCacheExtent,
     this.restorationId,
     this.keyboardDismissBehavior = ScrollViewKeyboardDismissBehavior.manual,
     this.clipBehavior = Clip.hardEdge,
@@ -91,7 +92,7 @@ class SteppingListView extends StatelessWidget {
     this.shrinkWrap = false,
     this.padding,
     this.separatorBuilder,
-    this.cacheExtent,
+    this.scrollCacheExtent,
     this.restorationId,
     this.keyboardDismissBehavior = ScrollViewKeyboardDismissBehavior.manual,
     this.clipBehavior = Clip.hardEdge,
@@ -108,7 +109,7 @@ class SteppingListView extends StatelessWidget {
     this.physics,
     this.shrinkWrap = false,
     this.padding,
-    this.cacheExtent,
+    this.scrollCacheExtent,
     this.restorationId,
     this.itemExtent,
     this.keyboardDismissBehavior = ScrollViewKeyboardDismissBehavior.manual,
@@ -131,7 +132,7 @@ class SteppingListView extends StatelessWidget {
           return _buildStepping(index);
         },
         separatorBuilder: separatorBuilder!,
-        cacheExtent: cacheExtent,
+        scrollCacheExtent: scrollCacheExtent,
         restorationId: restorationId,
         keyboardDismissBehavior: keyboardDismissBehavior,
         clipBehavior: clipBehavior,
@@ -152,7 +153,7 @@ class SteppingListView extends StatelessWidget {
           return _buildStepping(index);
         },
         itemExtent: itemExtent,
-        cacheExtent: cacheExtent,
+        scrollCacheExtent: scrollCacheExtent,
         restorationId: restorationId,
         keyboardDismissBehavior: keyboardDismissBehavior,
         clipBehavior: clipBehavior,
@@ -169,7 +170,7 @@ class SteppingListView extends StatelessWidget {
       padding: padding,
       children: List.generate(children.length, _buildStepping),
       itemExtent: itemExtent,
-      cacheExtent: cacheExtent,
+      scrollCacheExtent: scrollCacheExtent,
       restorationId: restorationId,
       keyboardDismissBehavior: keyboardDismissBehavior,
       clipBehavior: clipBehavior,

@@ -156,7 +156,7 @@ class PageableGridView<Page, Item> extends StatelessWidget {
   final double anchor;
 
   /// The number of pixels to cache for preloading items.
-  final double? cacheExtent;
+  final ScrollCacheExtent? scrollCacheExtent;
 
   /// The number of children for semantic accessibility.
   final int? semanticChildCount;
@@ -215,7 +215,7 @@ class PageableGridView<Page, Item> extends StatelessWidget {
     this.shrinkWrap = false,
     this.center,
     this.anchor = 0.0,
-    this.cacheExtent,
+    this.scrollCacheExtent,
     this.semanticChildCount,
     this.dragStartBehavior = DragStartBehavior.start,
     this.keyboardDismissBehavior = ScrollViewKeyboardDismissBehavior.manual,
@@ -246,7 +246,7 @@ class PageableGridView<Page, Item> extends StatelessWidget {
     this.shrinkWrap = false,
     this.center,
     this.anchor = 0.0,
-    this.cacheExtent,
+    this.scrollCacheExtent,
     this.dragStartBehavior = DragStartBehavior.start,
     this.keyboardDismissBehavior = ScrollViewKeyboardDismissBehavior.manual,
     this.restorationId,
@@ -277,7 +277,7 @@ class PageableGridView<Page, Item> extends StatelessWidget {
     properties.add(FlagProperty('shrinkWrap', value: shrinkWrap, ifTrue: 'shrinkWrap enabled'));
     properties.add(DiagnosticsProperty<Key?>('center', center));
     properties.add(DoubleProperty('anchor', anchor));
-    properties.add(DoubleProperty('cacheExtent', cacheExtent));
+    properties.add(DiagnosticsProperty<ScrollCacheExtent?>('scrollCacheExtent', scrollCacheExtent));
     properties.add(IntProperty('semanticChildCount', semanticChildCount));
     properties.add(EnumProperty<DragStartBehavior>('dragStartBehavior', dragStartBehavior));
     properties.add(EnumProperty<ScrollViewKeyboardDismissBehavior>('keyboardDismissBehavior', keyboardDismissBehavior));
@@ -338,7 +338,7 @@ class PageableGridView<Page, Item> extends StatelessWidget {
       shrinkWrap: shrinkWrap,
       center: center,
       anchor: anchor,
-      cacheExtent: cacheExtent,
+      scrollCacheExtent: scrollCacheExtent,
       semanticChildCount: semanticChildCount,
       dragStartBehavior: dragStartBehavior,
       keyboardDismissBehavior: keyboardDismissBehavior,

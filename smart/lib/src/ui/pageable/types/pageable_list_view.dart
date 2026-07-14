@@ -105,7 +105,7 @@ class PageableListView<Page, Item> extends StatelessWidget {
   final bool addSemanticIndexes;
 
   /// The number of pixels to cache for preloading items.
-  final double? cacheExtent;
+  final ScrollCacheExtent? scrollCacheExtent;
 
   /// The number of children for semantic accessibility.
   final int? semanticChildCount;
@@ -172,7 +172,7 @@ class PageableListView<Page, Item> extends StatelessWidget {
     this.addAutomaticKeepAlives = true,
     this.addRepaintBoundaries = true,
     this.addSemanticIndexes = true,
-    this.cacheExtent,
+    this.scrollCacheExtent,
     this.semanticChildCount,
     this.dragStartBehavior = DragStartBehavior.start,
     this.keyboardDismissBehavior = ScrollViewKeyboardDismissBehavior.manual,
@@ -204,7 +204,7 @@ class PageableListView<Page, Item> extends StatelessWidget {
     this.addAutomaticKeepAlives = true,
     this.addRepaintBoundaries = true,
     this.addSemanticIndexes = true,
-    this.cacheExtent,
+    this.scrollCacheExtent,
     this.dragStartBehavior = DragStartBehavior.start,
     this.keyboardDismissBehavior = ScrollViewKeyboardDismissBehavior.manual,
     this.restorationId,
@@ -235,7 +235,7 @@ class PageableListView<Page, Item> extends StatelessWidget {
     properties.add(FlagProperty('addAutomaticKeepAlives', value: addAutomaticKeepAlives, ifTrue: 'keeps alive'));
     properties.add(FlagProperty('addRepaintBoundaries', value: addRepaintBoundaries, ifTrue: 'adds repaint boundaries'));
     properties.add(FlagProperty('addSemanticIndexes', value: addSemanticIndexes, ifTrue: 'adds semantic indexes'));
-    properties.add(DoubleProperty('cacheExtent', cacheExtent));
+    properties.add(DiagnosticsProperty<ScrollCacheExtent?>('scrollCacheExtent', scrollCacheExtent));
     properties.add(IntProperty('semanticChildCount', semanticChildCount));
     properties.add(EnumProperty<DragStartBehavior>('dragStartBehavior', dragStartBehavior));
     properties.add(EnumProperty<ScrollViewKeyboardDismissBehavior>('keyboardDismissBehavior', keyboardDismissBehavior));
@@ -292,7 +292,7 @@ class PageableListView<Page, Item> extends StatelessWidget {
         addAutomaticKeepAlives: addAutomaticKeepAlives,
         addRepaintBoundaries: addRepaintBoundaries,
         addSemanticIndexes: addSemanticIndexes,
-        cacheExtent: cacheExtent,
+        scrollCacheExtent: scrollCacheExtent,
         hitTestBehavior: hitTestBehavior,
         findChildIndexCallback: findItemIndexCallback,
         dragStartBehavior: dragStartBehavior,
@@ -319,7 +319,7 @@ class PageableListView<Page, Item> extends StatelessWidget {
         addAutomaticKeepAlives: addAutomaticKeepAlives,
         addRepaintBoundaries: addRepaintBoundaries,
         addSemanticIndexes: addSemanticIndexes,
-        cacheExtent: cacheExtent,
+        scrollCacheExtent: scrollCacheExtent,
         hitTestBehavior: hitTestBehavior,
         findItemIndexCallback: findItemIndexCallback,
         dragStartBehavior: dragStartBehavior,
