@@ -129,7 +129,7 @@ class DefaultDeviceNotification implements DeviceNotificationInterface {
     }
 
     await plugin.initialize(
-      _initializationSettings(Tappy.appInformation),
+      settings: _initializationSettings(Tappy.appInformation),
       onDidReceiveNotificationResponse: (NotificationResponse response) {
         if(Tappy.showLogs) {
           console.info("Remote notification for ${Tappy.appInformation.app.name}", tag: prefix);
@@ -137,8 +137,8 @@ class DefaultDeviceNotification implements DeviceNotificationInterface {
 
         Notifier notifier;
 
-        if(response.payload != null) {
-          notifier = Notifier.fromString(response.payload!);
+        if(response.payload case String? payload when payload != null) {
+          notifier = Notifier.fromString(payload);
         } else {
           notifier = Notifier.empty();
         }
@@ -195,8 +195,8 @@ class DefaultDeviceNotification implements DeviceNotificationInterface {
       if(response != null) {
         Notifier notifier;
 
-        if(response.payload != null) {
-          notifier = Notifier.fromString(response.payload!);
+        if(response.payload case String? payload when payload != null) {
+          notifier = Notifier.fromString(payload);
         } else {
           notifier = Notifier.empty();
         }

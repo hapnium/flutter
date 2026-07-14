@@ -195,8 +195,8 @@ class DefaultInAppNotification<T> implements InAppNotificationInterface<T> {
 
     Widget? titleWidget;
     if(title.isNotEmpty) {
-      if(titleBuilder != null) {
-        titleWidget = titleBuilder!(title, state);
+      if(titleBuilder case InAppNotificationBuilder? inAppNotificationBuilder when inAppNotificationBuilder != null) {
+        titleWidget = inAppNotificationBuilder(title, state);
       } else {
         titleWidget = Padding(
           padding: titlePadding ?? EdgeInsets.only(top: 12),
@@ -207,8 +207,8 @@ class DefaultInAppNotification<T> implements InAppNotificationInterface<T> {
 
     Widget? descriptionWidget;
     if(description.isNotEmpty) {
-      if (descriptionBuilder != null) {
-        descriptionWidget = descriptionBuilder!(description, state);
+      if (descriptionBuilder case InAppNotificationBuilder? inAppNotificationBuilder when inAppNotificationBuilder != null) {
+        descriptionWidget = inAppNotificationBuilder(description, state);
       } else {
         descriptionWidget = Padding(
           padding: descriptionPadding ?? EdgeInsets.only(top: 6),
@@ -218,8 +218,8 @@ class DefaultInAppNotification<T> implements InAppNotificationInterface<T> {
     }
 
     Widget? iconWidget;
-    if(iconBuilder != null) {
-      iconWidget = iconBuilder!(state);
+    if(iconBuilder case InAppNotificationIconBuilder? inAppNotificationIconBuilder when inAppNotificationIconBuilder != null) {
+      iconWidget = inAppNotificationIconBuilder(state);
     } else if(icon != null) {
       iconWidget = Icon(icon, color: color, size: iconSize);
     }

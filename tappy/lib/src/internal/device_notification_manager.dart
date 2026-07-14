@@ -24,7 +24,7 @@ class DefaultDeviceNotificationManager<T> implements DeviceNotificationManagerIn
 
   @override
   void dismissById(int id) async {
-    await plugin.cancel(id);
+    await plugin.cancel(id: id);
   }
 
   @override
@@ -41,8 +41,8 @@ class DefaultDeviceNotificationManager<T> implements DeviceNotificationManagerIn
 
     if(notifications.isNotEmpty) {
       for (final n in notifications) {
-        if(n.id != null) {
-          await plugin.cancel(n.id!);
+        if(n.id case int? id when id != null) {
+          await plugin.cancel(id: id);
         }
       }
     }
@@ -55,8 +55,8 @@ class DefaultDeviceNotificationManager<T> implements DeviceNotificationManagerIn
 
     if(notifications.isNotEmpty) {
       for (final n in notifications) {
-        if(n.id != null) {
-          await plugin.cancel(n.id!);
+        if(n.id case int? id when id != null) {
+          await plugin.cancel(id: id);
         }
       }
     }

@@ -197,7 +197,13 @@ class DefaultDeviceNotificationBuilder<T> with TappyMixin implements DeviceNotif
         console.info("Notification body info: Encrypted = ${notification.body} | Decrypted = $body", tag: prefix);
       }
 
-      await plugin.show(id, notification.title, body, notificationDetails, payload: notifier.toString()).then((v) {
+      await plugin.show(
+        id: id,
+        title: notification.title,
+        body: body,
+        notificationDetails: notificationDetails,
+        payload: notifier.toString()
+      ).then((v) {
         if(Tappy.showLogs) {
           console.info("Notification builder done", tag: prefix);
         }
@@ -301,7 +307,13 @@ class DefaultDeviceNotificationBuilder<T> with TappyMixin implements DeviceNotif
         iOS: iosNotificationDetails,
       );
 
-      await plugin.show(id, notification.title, notification.body, notificationDetails, payload: notifier.toString()).then((v) {
+      await plugin.show(
+        id: id,
+        title: notification.title,
+        body: notification.body,
+        notificationDetails: notificationDetails,
+        payload: notifier.toString()
+      ).then((v) {
         if(Tappy.showLogs) {
           console.info("Notification builder done", tag: prefix);
         }
@@ -387,7 +399,13 @@ class DefaultDeviceNotificationBuilder<T> with TappyMixin implements DeviceNotif
         iOS: iosNotificationDetails,
       );
 
-      await plugin.show(id, notification.title, notification.body, notificationDetails, payload: notifier.toString()).then((v) {
+      await plugin.show(
+        id: id,
+        title: notification.title,
+        body: notification.body,
+        notificationDetails: notificationDetails,
+        payload: notifier.toString()
+      ).then((v) {
         if(Tappy.showLogs) {
           console.info("Notification builder done", tag: prefix);
         }
@@ -489,7 +507,13 @@ class DefaultDeviceNotificationBuilder<T> with TappyMixin implements DeviceNotif
         iOS: iosNotificationDetails,
       );
 
-      await plugin.show(id, notification.title, notification.body, notificationDetails, payload: notifier.toString()).then((v) {
+      await plugin.show(
+        id: id,
+        title: notification.title,
+        body: notification.body,
+        notificationDetails: notificationDetails,
+        payload: notifier.toString()
+      ).then((v) {
         if(Tappy.showLogs) {
           console.info("Notification builder done", tag: prefix);
         }
@@ -587,11 +611,11 @@ class DefaultDeviceNotificationBuilder<T> with TappyMixin implements DeviceNotif
     );
 
     await plugin.zonedSchedule(
-      id,
-      notification.title,
-      notification.body,
-      tz.TZDateTime.parse(tz.local, _parseTimeToDate(message.time)),
-      notificationDetails,
+      id: id,
+      title: notification.title,
+      body: notification.body,
+      scheduledDate: tz.TZDateTime.parse(tz.local, _parseTimeToDate(message.time)),
+      notificationDetails: notificationDetails,
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
       matchDateTimeComponents: DateTimeComponents.dateAndTime,
       payload: notifier.toString()
@@ -674,7 +698,13 @@ class DefaultDeviceNotificationBuilder<T> with TappyMixin implements DeviceNotif
         iOS: iosNotificationDetails,
       );
 
-      await plugin.show(id, notification.title, notification.body, notificationDetails, payload: notifier.toString()).then((v) {
+      await plugin.show(
+        id: id,
+        title: notification.title,
+        body: notification.body,
+        notificationDetails: notificationDetails,
+        payload: notifier.toString()
+      ).then((v) {
         if(Tappy.showLogs) {
           console.info("Notification builder done", tag: prefix);
         }
@@ -754,7 +784,13 @@ class DefaultDeviceNotificationBuilder<T> with TappyMixin implements DeviceNotif
         iOS: iosNotificationDetails,
       );
 
-      await plugin.show(id, notification.title, notification.body, notificationDetails, payload: notifier.toString()).then((v) {
+      await plugin.show(
+        id: id,
+        title: notification.title,
+        body: notification.body,
+        notificationDetails: notificationDetails,
+        payload: notifier.toString()
+      ).then((v) {
         if(Tappy.showLogs) {
           console.info("Notification builder done", tag: prefix);
         }
@@ -835,7 +871,13 @@ class DefaultDeviceNotificationBuilder<T> with TappyMixin implements DeviceNotif
         iOS: iosNotificationDetails,
       );
 
-      await plugin.show(id, notification.title, notification.body, notificationDetails, payload: notifier.toString()).then((v) {
+      await plugin.show(
+        id: id,
+        title: notification.title,
+        body: notification.body,
+        notificationDetails: notificationDetails,
+        payload: notifier.toString()
+      ).then((v) {
         if(Tappy.showLogs) {
           console.info("Notification builder done", tag: prefix);
         }
@@ -915,7 +957,13 @@ class DefaultDeviceNotificationBuilder<T> with TappyMixin implements DeviceNotif
         iOS: iosNotificationDetails,
       );
 
-      await plugin.show(id, notification.title, notification.body, notificationDetails, payload: notifier.toString()).then((v) {
+      await plugin.show(
+        id: id,
+        title: notification.title,
+        body: notification.body,
+        notificationDetails: notificationDetails,
+        payload: notifier.toString()
+      ).then((v) {
         if(Tappy.showLogs) {
           console.info("Notification builder done", tag: prefix);
         }
@@ -984,7 +1032,13 @@ class DefaultDeviceNotificationBuilder<T> with TappyMixin implements DeviceNotif
         iOS: iosNotificationDetails,
       );
 
-      await plugin.show(id, notification.title, notification.body, notificationDetails, payload: notifier.toString())
+      await plugin.show(
+        id: id,
+        title: notification.title,
+        body: notification.body,
+        notificationDetails: notificationDetails,
+        payload: notifier.toString()
+      )
         .then((v) {
           if(Tappy.showLogs) {
             console.info("Notification builder done", tag: prefix);
