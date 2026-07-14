@@ -203,7 +203,7 @@ class _LinkPreviewBuilderState extends State<LinkPreviewBuilder> with SingleTick
 
   Widget _defaultAnimated(Widget child) => SizeTransition(
     axis: Axis.vertical,
-    axisAlignment: -1,
+    alignment: AlignmentDirectional(-1, 0),
     sizeFactor: _animation,
     child: child,
   );
