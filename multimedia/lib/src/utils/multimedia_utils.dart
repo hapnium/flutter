@@ -54,7 +54,7 @@ class MultimediaUtils {
     int? minSize
   }) async {
     try {
-      FilePickerResult? result = await FilePicker.platform.pickFiles(
+      FilePickerResult? result = await FilePicker.pickFiles(
         type: onlyVideo ? FileType.video : onlyPhoto ? FileType.image : FileType.media,
         allowMultiple: multipleAllowed,
         dialogTitle: title,
