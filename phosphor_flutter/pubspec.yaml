@@ -41,3 +41,11 @@ flutter:
       fonts:
         - asset: lib/fonts/Phosphor.ttf
           weight: 400
+  assets:
+    - assets/icons/regular/
+    - assets/icons/thin/
+    - assets/icons/light/
+    - assets/icons/bold/
+    - assets/icons/fill/
+    - assets/icons/duotone/
+    - meta/
