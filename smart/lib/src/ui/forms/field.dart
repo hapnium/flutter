@@ -1707,7 +1707,8 @@ base class Field extends StatelessWidget {
   /// }
   /// ```
   @protected
-  BorderRadius get inputBorderRadius => BorderRadius.circular(borderRadius ?? 14);
+  BorderRadius get inputBorderRadius => decorationConfig.borderRadiusGeometry?.resolve(textDirection) 
+    ?? BorderRadius.circular(borderRadius ?? decorationConfig.borderRadius ?? 14);
 
   /// The border style for the input field.
   ///
