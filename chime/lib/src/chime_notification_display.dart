@@ -2,21 +2,34 @@ import 'package:flutter/material.dart';
 
 import 'enums.dart';
 
-/// Signature for building a custom icon widget. The builder is passed
-/// the current context, the notification state and a suggested color
-/// derived from the state style. Builders can return any widget; a
-/// common use case is to return an [Icon] or an animated SVG.
+/// {@template chime_notification_display_icon_builder}
+/// Signature for building a custom icon widget for a [ChimeNotificationDisplay].
+///
+/// The builder receives:
+/// - [context] — the current build context
+/// - [state] — the semantic notification state (success, error, etc.)
+/// - [color] — a suggested colour derived from the [ChimeNotificationDisplayStateStyle]
+///
+/// Return any widget; a common use case is an [Icon] or animated SVG.
+/// {@endtemplate}
 typedef ChimeNotificationDisplayIconBuilder = Widget Function(
   BuildContext context,
   ChimeInAppState state,
   Color color,
 );
 
-/// Signature for building the message portion of the notification. The
-/// builder receives the context, the notification text, a suggested
-/// [TextStyle], and the current state. It should return a widget
-/// capable of rendering the message, such as a [Text] or a custom
-/// rich text widget.
+/// {@template chime_notification_display_message_builder}
+/// Signature for building the message portion of a [ChimeNotificationDisplay].
+///
+/// The builder receives:
+/// - [context] — the current build context
+/// - [message] — the notification text
+/// - [textStyle] — a suggested [TextStyle] with theme-aware colour applied
+/// - [state] — the semantic notification state
+///
+/// Return a widget capable of rendering the message, such as [Text] or a
+/// custom rich text widget.
+/// {@endtemplate}
 typedef ChimeNotificationDisplayMessageBuilder = Widget Function(
   BuildContext context,
   String message,
@@ -24,58 +37,107 @@ typedef ChimeNotificationDisplayMessageBuilder = Widget Function(
   ChimeInAppState state,
 );
 
+/// {@template chime_notification_display_decoration_builder}
 /// Signature for building a custom [BoxDecoration] for the container
-/// around the notification. The builder receives the context, a
-/// suggested state colour, and the current state. If provided, this
-/// completely replaces the default decoration used by
-/// [ChimeNotificationDisplay].
+/// surrounding a [ChimeNotificationDisplay].
+///
+/// The builder receives:
+/// - [context] — the current build context
+/// - [stateColor] — the primary colour for the current notification state
+/// - [state] — the semantic notification state
+///
+/// When provided, this completely replaces the default decoration built
+/// from [ChimeNotificationDisplayConfiguration.borderRadius],
+/// [ChimeNotificationDisplayConfiguration.borderWidth], and the app theme.
+/// {@endtemplate}
 typedef ChimeNotificationDisplayDecorationBuilder = BoxDecoration Function(
   BuildContext context,
   Color stateColor,
   ChimeInAppState state,
 );
 
-typedef ChimeNotificationDisplayConfigurationBuilder =
-    ChimeNotificationDisplayConfiguration Function(
+/// {@template chime_notification_display_configuration_builder}
+/// Signature for deriving a new [ChimeNotificationDisplayConfiguration]
+/// from an existing one.
+///
+/// Used to selectively override configuration fields while preserving
+/// defaults for unspecified values.
+/// {@endtemplate}
+typedef ChimeNotificationDisplayConfigurationBuilder = ChimeNotificationDisplayConfiguration Function(
   ChimeNotificationDisplayConfiguration config,
 );
 
+/// {@template chime_notification_display_theme_builder}
+/// Signature for deriving a new [ChimeNotificationDisplayTheme]
+/// from an existing one.
+///
+/// Used to selectively override theme fields while preserving defaults
+/// for unspecified values.
+/// {@endtemplate}
 typedef ChimeNotificationDisplayThemeBuilder = ChimeNotificationDisplayTheme Function(
   ChimeNotificationDisplayTheme theme,
 );
 
-typedef ChimeNotificationDisplayStateStyleBuilder =
-    ChimeNotificationDisplayStateStyle Function(
+/// {@template chime_notification_display_state_style_builder}
+/// Signature for deriving a new [ChimeNotificationDisplayStateStyle]
+/// from an existing one.
+///
+/// Used to selectively override state style fields while preserving
+/// defaults for unspecified values.
+/// {@endtemplate}
+typedef ChimeNotificationDisplayStateStyleBuilder = ChimeNotificationDisplayStateStyle Function(
   ChimeNotificationDisplayStateStyle style,
 );
 
-/// Holds the visual configuration for a single notification state. It
-/// specifies the default colour and icon for that state, and allows
-/// an optional [iconBuilder] to override how the icon is built.
+/// {@template chime_notification_display_state_style}
+/// Holds the visual configuration for a single notification state
+/// ([ChimeInAppState]).
+///
+/// Specifies the default colour and icon for a state, and allows an
+/// optional [iconBuilder] to fully control icon rendering. When
+/// [iconBuilder] is provided, [icon] is ignored for that state.
+///
+/// Use this inside [ChimeNotificationDisplayConfiguration.stateStyles]
+/// to define per-state appearance.
+///
+/// ### Example
+/// ```dart
+/// const style = ChimeNotificationDisplayStateStyle(
+///   color: Colors.green,
+///   icon: Icons.check_circle,
+/// );
+/// ```
+/// {@endtemplate}
 final class ChimeNotificationDisplayStateStyle {
-  /// The primary colour associated with this state. This colour is
-  /// applied to the icon and border, and is passed to builder
-  /// callbacks.
+  /// The primary colour associated with this state.
+  ///
+  /// Applied to the icon tint and container border. Also passed to
+  /// [ChimeNotificationDisplayIconBuilder] and
+  /// [ChimeNotificationDisplayDecorationBuilder] as a suggestion.
   final Color color;
 
-  /// The default [IconData] to use when building the icon for this
-  /// state. If null, callers must provide an [iconBuilder] in
-  /// [ChimeNotificationDisplayConfiguration] to render the icon.
+  /// The default [IconData] for this state.
+  ///
+  /// If null, callers must provide an [iconBuilder] in the same state
+  /// style or in [ChimeNotificationDisplayConfiguration] to render the icon.
   final IconData? icon;
 
   /// An optional builder to fully control how the icon is rendered.
+  ///
   /// When provided, [icon] is ignored for this state. The builder
-  /// receives the context, state and colour and must return a widget.
+  /// receives the current context, the notification state, and the
+  /// state colour, and must return a widget.
   final ChimeNotificationDisplayIconBuilder? iconBuilder;
 
+  /// {@macro chime_notification_display_state_style}
   const ChimeNotificationDisplayStateStyle({
     required this.color,
     this.icon,
     this.iconBuilder,
   });
 
-  /// Returns a new [ChimeNotificationDisplayStateStyle] with the given fields
-  /// replaced. Unspecified fields retain their original values.
+  /// Returns a new [ChimeNotificationDisplayStateStyle] with the given
+  /// fields replaced. Unspecified fields retain their original values.
   ChimeNotificationDisplayStateStyle copyWith({
     Color? color,
     IconData? icon,
@@ -89,26 +151,39 @@ final class ChimeNotificationDisplayStateStyle {
   }
 }
 
-/// Theme-level styling for the notification display. It allows the
-/// caller to specify separate background colours for light and dark
-/// themes. Additional theme attributes can be added here over time.
+/// {@template chime_notification_display_theme}
+/// Theme-level styling for [ChimeNotificationDisplay].
+///
+/// Allows specifying separate background and text colours for light and
+/// dark themes. Additional theme attributes can be added over time.
+///
+/// When provided via [ChimeNotificationDisplayConfiguration.theme],
+/// the widget resolves colours based on the current [ThemeData.brightness].
+///
+/// ### Example
+/// ```dart
+/// const theme = ChimeNotificationDisplayTheme(
+///   lightBackgroundColor: Colors.white,
+///   darkBackgroundColor: Color(0xFF1E1E1E),
+///   lightTextColor: Colors.black,
+///   darkTextColor: Colors.white,
+/// );
+/// ```
+/// {@endtemplate}
 final class ChimeNotificationDisplayTheme {
-  /// Background colour used when the app’s theme brightness is
-  /// [Brightness.light]. If null, a sensible default is used.
+  /// Background colour used when [Brightness.light].
   final Color lightBackgroundColor;
 
-  /// Background colour used when the app’s theme brightness is
-  /// [Brightness.dark]. If null, a sensible default is used.
+  /// Background colour used when [Brightness.dark].
   final Color darkBackgroundColor;
 
-  /// Text colour used when the app’s theme brightness is
-  /// [Brightness.light]. If null, a sensible default is used.
+  /// Text colour used when [Brightness.light].
   final Color lightTextColor;
 
-  /// Text colour used when the app’s theme brightness is
-  /// [Brightness.dark]. If null, a sensible default is used.
+  /// Text colour used when [Brightness.dark].
   final Color darkTextColor;
 
+  /// {@macro chime_notification_display_theme}
   const ChimeNotificationDisplayTheme({
     required this.lightBackgroundColor,
     required this.darkBackgroundColor,
@@ -117,6 +192,7 @@ final class ChimeNotificationDisplayTheme {
   });
 
   /// Returns a copy of this theme with the given fields replaced.
+  /// Unspecified fields retain their original values.
   ChimeNotificationDisplayTheme copyWith({
     Color? lightBackgroundColor,
     Color? darkBackgroundColor,
@@ -132,64 +208,89 @@ final class ChimeNotificationDisplayTheme {
   }
 }
 
-/// Global configuration object for the [ChimeNotificationDisplay] widget. All
-/// configurable aspects—including colours, padding, border styling,
-/// typography, and state-specific styles—are defined here. Users can
-/// derive new configurations from existing ones via [copyWith] to
-/// customise just the parts they care about.
+/// {@template chime_notification_display_configuration}
+/// Global configuration object for [ChimeNotificationDisplay].
+///
+/// All configurable aspects — colours, padding, border styling, typography,
+/// and state-specific styles — are defined here. Derive new configurations
+/// from existing ones via [copyWith] to customise only the parts you need.
+///
+/// ### Example
+/// ```dart
+/// final config = ChimeNotificationDisplayConfiguration(
+///   iconSize: 24,
+///   borderWidth: 2,
+///   theme: ChimeNotificationDisplayTheme(
+///     lightBackgroundColor: Colors.white,
+///     darkBackgroundColor: Colors.grey.shade900,
+///     lightTextColor: Colors.black87,
+///     darkTextColor: Colors.white70,
+///   ),
+/// );
+/// ```
+/// {@endtemplate}
 final class ChimeNotificationDisplayConfiguration {
-  /// Mapping of each [ChimeInAppState] to its visual style. All
-  /// possible states must be present in this map. Defaults are
-  /// provided via [ChimeNotificationDisplayConfiguration.defaults].
-  final Map<ChimeInAppState, ChimeNotificationDisplayStateStyle>
-      stateStyles;
+  /// Mapping of each [ChimeInAppState] to its visual style.
+  ///
+  /// All possible states should be present in this map. Defaults cover
+  /// success, error, warning, and info with Material accent colours.
+  final Map<ChimeInAppState, ChimeNotificationDisplayStateStyle> stateStyles;
 
-  /// The margin applied around the outer container. Defaults to
-  /// horizontal spacing only (8px on the right).
+  /// The margin applied around the outer container.
+  ///
+  /// Defaults to `EdgeInsets.only(right: 8.0)`.
   final EdgeInsets margin;
 
-  /// The padding applied inside the container around the icon and
-  /// message. Defaults to vertical: 6, horizontal: 16.
+  /// The padding applied inside the container around the icon and message.
+  ///
+  /// Defaults to `EdgeInsets.symmetric(vertical: 6, horizontal: 16)`.
   final EdgeInsets padding;
 
-  /// The border radius applied to the container. Defaults to a
-  /// circular radius of 16.
+  /// The border radius applied to the container.
+  ///
+  /// Defaults to `BorderRadius.all(Radius.circular(16))`.
   final BorderRadius borderRadius;
 
   /// The thickness of the border around the notification container.
-  /// Defaults to a thin border with alpha applied to the state colour.
+  ///
+  /// Defaults to `1.0`. The border colour is the state colour at 20% alpha.
   final double borderWidth;
 
-  /// The size of the icon. Default is 20.
+  /// The size of the icon in logical pixels.
+  ///
+  /// Defaults to `20.0`.
   final double iconSize;
 
-  /// The text style applied to the message. Defaults to size 12,
-  /// semi-bold weight. The colour is not specified here; it is
-  /// resolved at build time based on the app’s dark/light theme and
-  /// passed into [messageBuilder].
+  /// The text style applied to the message.
+  ///
+  /// Defaults to size 12, `FontWeight.w500`. The colour is not specified
+  /// here; it is resolved at build time based on the app's theme and
+  /// passed into [messageBuilder] or used directly in the default [Text].
   final TextStyle messageTextStyle;
 
-  /// An optional builder to override how the message widget is
-  /// constructed. When provided, [messageTextStyle] is still passed
-  /// to the builder as a suggestion, but the builder may ignore it.
+  /// An optional builder to override how the message widget is constructed.
+  ///
+  /// When provided, [messageTextStyle] is still passed to the builder as
+  /// a suggestion, but the builder may ignore it.
   final ChimeNotificationDisplayMessageBuilder? messageBuilder;
 
-  /// An optional builder to override how the container’s decoration
-  /// (colour, border, radius) is created. The builder receives the
-  /// context, state colour and current state. When provided, it
-  /// supersedes the default decoration built from [stateStyles],
-  /// [borderRadius], [borderWidth] and the app theme. If null, the
-  /// default decoration is used.
+  /// An optional builder to override the container's [BoxDecoration].
+  ///
+  /// Receives the context, state colour, and current state. When provided,
+  /// it supersedes the default decoration built from [stateStyles],
+  /// [borderRadius], [borderWidth], and the app theme.
   final ChimeNotificationDisplayDecorationBuilder? decorationBuilder;
 
-  /// Theme-level configuration such as light and dark backgrounds. If
-  /// null, defaults will be used based on [CommonColors] and
-  /// [Database.instance] when available.
+  /// Theme-level configuration for light and dark backgrounds and text.
+  ///
+  /// If null, defaults to white/black backgrounds and black/white text
+  /// based on the current brightness.
   final ChimeNotificationDisplayTheme? theme;
 
-  /// Creates a [ChimeNotificationDisplayConfiguration] with sensible defaults. You can
-  /// override any field using [copyWith]. All undefined colours and
-  /// icons fall back to Material defaults for each state.
+  /// {@macro chime_notification_display_configuration}
+  ///
+  /// Creates a configuration with sensible defaults for all fields.
+  /// Override any field using [copyWith].
   const ChimeNotificationDisplayConfiguration({
     this.stateStyles = const {
       ChimeInAppState.success: ChimeNotificationDisplayStateStyle(
@@ -224,10 +325,8 @@ final class ChimeNotificationDisplayConfiguration {
     this.theme,
   });
 
-  /// Returns a copy of this configuration with the given fields
-  /// replaced by new values. Unspecified fields remain unchanged. Use
-  /// this method to customise only the parts you need without
-  /// constructing a whole new config from scratch.
+  /// Returns a copy of this configuration with the given fields replaced
+  /// by new values. Unspecified fields remain unchanged.
   ChimeNotificationDisplayConfiguration copyWith({
     Map<ChimeInAppState, ChimeNotificationDisplayStateStyle>? stateStyles,
     EdgeInsets? margin,
@@ -255,24 +354,49 @@ final class ChimeNotificationDisplayConfiguration {
   }
 }
 
-/// A flexible and highly configurable notification widget. It retains
-/// the same overall structure (a centred row containing a coloured
-/// container with an icon and message) but exposes a rich set of
-/// configuration options via [ChimeNotificationDisplayConfiguration]. Clients can
-/// customise colours, icons, padding, borders, and even replace
+/// {@template chime_notification_display}
+/// A flexible and highly configurable notification widget.
+///
+/// Retains the same overall structure — a centred row containing a coloured
+/// container with an icon and message — but exposes a rich set of
+/// configuration options via [ChimeNotificationDisplayConfiguration].
+///
+/// Clients can customise colours, icons, padding, borders, and even replace
 /// internal widgets with their own builders.
+///
+/// ### Example
+/// ```dart
+/// ChimeNotificationDisplay(
+///   message: 'File uploaded successfully',
+///   state: ChimeInAppState.success,
+///   config: ChimeNotificationDisplayConfiguration(
+///     theme: ChimeNotificationDisplayTheme(
+///       lightBackgroundColor: Colors.white,
+///       darkBackgroundColor: Color(0xFF1E1E1E),
+///       lightTextColor: Colors.black,
+///       darkTextColor: Colors.white,
+///     ),
+///   ),
+/// )
+/// ```
+/// {@endtemplate}
 class ChimeNotificationDisplay extends StatelessWidget {
   /// The text to display in the notification.
   final String message;
 
-  /// The semantic state of the notification. Determines which
-  /// [ChimeNotificationDisplayStateStyle] is used from [config.stateStyles].
+  /// The semantic state of the notification.
+  ///
+  /// Determines which [ChimeNotificationDisplayStateStyle] is used from
+  /// [config.stateStyles] to resolve the icon, colour, and border.
   final ChimeInAppState state;
 
-  /// Visual and behavioural configuration for this notification. If
-  /// omitted, [ChimeNotificationDisplayConfiguration.defaults] are used.
+  /// Visual and behavioural configuration for this notification.
+  ///
+  /// If omitted, [ChimeNotificationDisplayConfiguration]'s const defaults
+  /// are used.
   final ChimeNotificationDisplayConfiguration config;
 
+  /// {@macro chime_notification_display}
   const ChimeNotificationDisplay({
     super.key,
     required this.message,
@@ -282,20 +406,10 @@ class ChimeNotificationDisplay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Select the style for the current state.
-    final stateStyle = config.stateStyles[state] ??
-        const ChimeNotificationDisplayStateStyle(
-          color: Colors.black,
-        );
+    final stateStyle = config.stateStyles[state] ?? const ChimeNotificationDisplayStateStyle(color: Colors.black);
 
-    // Determine the base colour and icon for the state. The caller can
-    // override the icon entirely via [iconBuilder] on the state style.
     final Color stateColor = stateStyle.color;
 
-    // Resolve the container’s background colour based on the current
-    // theme. Use the configured theme if provided; otherwise fall back
-    // to `CommonColors` when available. If neither is available,
-    // default to transparent.
     final Brightness brightness = Theme.of(context).brightness;
     final Color backgroundColor;
     if (config.theme case ChimeNotificationDisplayTheme theme?) {
@@ -304,8 +418,6 @@ class ChimeNotificationDisplay extends StatelessWidget {
       backgroundColor = brightness == Brightness.dark ? Colors.black : Colors.white;
     }
 
-    // Build the icon using either a custom builder or the default
-    // IconData. If neither is specified, an empty SizedBox is used.
     Widget iconWidget;
     if (stateStyle.iconBuilder case var builder?) {
       iconWidget = builder(context, state, stateColor);
@@ -319,9 +431,6 @@ class ChimeNotificationDisplay extends StatelessWidget {
       iconWidget = const SizedBox.shrink();
     }
 
-    // Build the message widget. Use the custom builder if provided;
-    // otherwise, use a default Text with the configured style
-    // and theme-aware colour.
     final Color textColor;
     if (config.theme case ChimeNotificationDisplayTheme theme?) {
       textColor = brightness == Brightness.dark ? theme.darkTextColor : theme.lightTextColor;
@@ -347,9 +456,6 @@ class ChimeNotificationDisplay extends StatelessWidget {
       );
     }
 
-    // Build the decoration. Use custom builder if provided; else
-    // default to theme-aware background, configured border radius and
-    // state-coloured border.
     final BoxDecoration decoration = config.decorationBuilder != null
         ? config.decorationBuilder!(context, stateColor, state)
         : BoxDecoration(
@@ -361,8 +467,6 @@ class ChimeNotificationDisplay extends StatelessWidget {
             ),
           );
 
-    // Assemble the final widget tree. The structure mirrors the
-    // original implementation but uses configuration parameters.
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       crossAxisAlignment: CrossAxisAlignment.center,

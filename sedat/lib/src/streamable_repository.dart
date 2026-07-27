@@ -31,6 +31,7 @@ abstract final class RepositoryEvent<Entity> {
   /// The payload entity for the event, if any.
   final Entity? _entity;
 
+  /// {@macro repository_event}
   const RepositoryEvent(this._entity);
 
   /// Retrieve the entity payload carried by this event.

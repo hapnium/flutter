@@ -235,17 +235,6 @@ mixin CollectionPageableRepository<Entity, Repository extends CollectionReposito
 /// ```
 mixin ListablePageableRepository<Entity, Repository extends ListRepository<Entity>> on PageableRepository<Entity, List<dynamic>, Repository> {}
 
-/// Convenience mixins for primitive and typed repository variants.
-///
-/// These mixins do not alter runtime behavior, but make it ergonomic to
-/// opt a strongly-typed repository into the pageable contract without
-/// repeating generic parameters. Use the exact typed mixin that matches
-/// your repository's backing value to avoid ambiguous or verbose generics.
-///
-/// Note: each of these mixins simply specializes the `Insert` type used by
-/// `PageableRepository`. They rely on the repository implementation to
-/// override paging methods when meaningful paging is supported.
-
 /// Pageable support for repositories that persist `String` values.
 /// Use on `StringRepository<T>` implementations.
 ///
@@ -266,22 +255,132 @@ mixin StringPageableRepository<Entity, Repository extends StringRepository<Entit
 /// ```
 mixin IntPageableRepository<Entity, Repository extends IntRepository<Entity>> on PageableRepository<Entity, int, Repository> {}
 
-/// Pageable support for repositories that persist `double` values.
+/// Convenience mixin for `DoubleRepository<T>` implementations that want to
+/// opt into the pageable contract provided by [PageableRepository].
+///
+/// This mixin specializes the `Insert` backing type to `double`, making it
+/// ergonomic to use for repositories that persist floating-point values
+/// (for example, a repository that stores measurement results or ratings).
+///
+/// Use this mixin when your repository stores elements as `double` values
+/// and you want to add paging/sorting support without repeating generic
+/// parameters.
+///
+/// Example:
+/// ```dart
+/// class SensorReadingRepo extends DoubleRepository<SensorReading>
+///     with DoublePageableRepository<SensorReading, SensorReadingRepo> {
+///   @override
+///   Future<Page<SensorReading>> findPage(Pageable pageable) { ... }
+/// }
+/// ```
 mixin DoublePageableRepository<Entity, Repository extends DoubleRepository<Entity>> on PageableRepository<Entity, double, Repository> {}
 
-/// Pageable support for repositories that persist `bool` values.
+/// Convenience mixin for `BoolRepository<T>` implementations that want to
+/// opt into the pageable contract provided by [PageableRepository].
+///
+/// This mixin specializes the `Insert` backing type to `bool`, making it
+/// ergonomic to use for repositories that persist boolean flags
+/// (for example, feature toggles or completion states).
+///
+/// Use this mixin when your repository stores elements as `bool` values
+/// and you want to add paging/sorting support without repeating generic
+/// parameters.
+///
+/// Example:
+/// ```dart
+/// class FeatureFlagRepo extends BoolRepository<FeatureFlag>
+///     with BoolPageableRepository<FeatureFlag, FeatureFlagRepo> {
+///   @override
+///   Future<Page<FeatureFlag>> findPage(Pageable pageable) { ... }
+/// }
+/// ```
 mixin BoolPageableRepository<Entity, Repository extends BoolRepository<Entity>> on PageableRepository<Entity, bool, Repository> {}
 
-/// Pageable support for repositories that persist `DateTime` values.
+/// Convenience mixin for `DateTimeRepository<T>` implementations that want to
+/// opt into the pageable contract provided by [PageableRepository].
+///
+/// This mixin specializes the `Insert` backing type to `DateTime`, making it
+/// ergonomic to use for repositories that persist temporal values
+/// (for example, event timestamps or scheduled reminders).
+///
+/// Use this mixin when your repository stores elements as `DateTime` values
+/// and you want to add paging/sorting support without repeating generic
+/// parameters.
+///
+/// Example:
+/// ```dart
+/// class AppointmentRepo extends DateTimeRepository<Appointment>
+///     with DateTimePageableRepository<Appointment, AppointmentRepo> {
+///   @override
+///   Future<Page<Appointment>> findPage(Pageable pageable) { ... }
+/// }
+/// ```
 mixin DateTimePageableRepository<Entity, Repository extends DateTimeRepository<Entity>> on PageableRepository<Entity, DateTime, Repository> {}
 
-/// Pageable support for repositories that persist `Duration` values.
+/// Convenience mixin for `DurationRepository<T>` implementations that want to
+/// opt into the pageable contract provided by [PageableRepository].
+///
+/// This mixin specializes the `Insert` backing type to `Duration`, making it
+/// ergonomic to use for repositories that persist time-span values
+/// (for example, task durations or timeout configurations).
+///
+/// Use this mixin when your repository stores elements as `Duration` values
+/// and you want to add paging/sorting support without repeating generic
+/// parameters.
+///
+/// Example:
+/// ```dart
+/// class TaskDurationRepo extends DurationRepository<TaskDuration>
+///     with DurationPageableRepository<TaskDuration, TaskDurationRepo> {
+///   @override
+///   Future<Page<TaskDuration>> findPage(Pageable pageable) { ... }
+/// }
+/// ```
 mixin DurationPageableRepository<Entity, Repository extends DurationRepository<Entity>> on PageableRepository<Entity, Duration, Repository> {}
 
-/// Pageable support for repositories that persist `Set` values.
+/// Convenience mixin for `SetRepository<T>` implementations that want to
+/// opt into the pageable contract provided by [PageableRepository].
+///
+/// This mixin specializes the `Insert` backing type to `Set<dynamic>`,
+/// making it ergonomic to use for repositories that persist unordered
+/// collections with uniqueness guarantees (for example, tag sets or
+/// permission collections).
+///
+/// Use this mixin when your repository stores elements as `Set` values
+/// and you want to add paging/sorting support without repeating generic
+/// parameters.
+///
+/// Example:
+/// ```dart
+/// class TagRepo extends SetRepository<Tag>
+///     with SetPageableRepository<Tag, TagRepo> {
+///   @override
+///   Future<Page<Tag>> findPage(Pageable pageable) { ... }
+/// }
+/// ```
 mixin SetPageableRepository<Entity, Repository extends SetRepository<Entity>> on PageableRepository<Entity, Set<dynamic>, Repository> {}
 
-/// Pageable support for repositories that persist arbitrary `Map` values.
+/// Convenience mixin for `DynamicMapRepository<T>` implementations that want
+/// to opt into the pageable contract provided by [PageableRepository].
+///
+/// This mixin specializes the `Insert` backing type to `Map<dynamic, dynamic>`,
+/// making it ergonomic to use for repositories that persist heterogeneous
+/// key-value stores (for example, configuration bags or loosely-structured
+/// payloads where the schema is not known at compile time).
+///
+/// Use this mixin when your repository stores elements as `Map` values
+/// and you want to add paging/sorting support without repeating generic
+/// parameters.
+///
+/// Example:
+/// ```dart
+/// class ConfigRepo extends DynamicMapRepository<AppConfig>
+///     with DynamicMapPageableRepository<AppConfig, ConfigRepo> {
+///   @override
+///   Future<Page<AppConfig>> findPage(Pageable pageable) { ... }
+/// }
+/// ```
 mixin DynamicMapPageableRepository<Entity, Repository extends DynamicMapRepository<Entity>> on PageableRepository<Entity, Map<dynamic, dynamic>, Repository> {} 
 
 /// Global lookup and registration context for repositories used by the

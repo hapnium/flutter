@@ -96,11 +96,7 @@ class Medium {
   /// Get a JPEG thumbnail's data for this medium.
   /// 
   /// {@macro medium}
-  Future<List<int>> getThumbnail({
-    int? width,
-    int? height,
-    bool? highQuality = false,
-  }) {
+  Future<List<int>> getThumbnail({int? width, int? height, bool? highQuality = false}) {
     return Gallery.getThumbnail(
       mediumId: id,
       width: width,

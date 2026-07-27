@@ -1,76 +1,102 @@
 /// {@template location_data}
-/// A structured model representing detailed geographical location data.
+/// A highly structured Data Transfer Object (DTO) representing detailed 
+/// reverse-geocoded address data.
 ///
-/// This class is typically used to encapsulate address-level information retrieved
-/// from a geolocation API (such as Nominatim or Google Places). It supports serialization
-/// to/from JSON for easy API integration.
+/// **Architectural Context:**
+/// This class is explicitly designed to handle payload structures typical of 
+/// OpenStreetMap (OSM) or Nominatim geocoding services. Because geospatial APIs 
+/// are notoriously inconsistent (e.g., an address might have a `city` but no 
+/// `borough`, or a `road` but no `house_number`), this model is built with a 
+/// **defensive null-object pattern**. It guarantees that all fields are non-null 
+/// strings, preventing `NoSuchMethodError` crashes in the UI layer when formatting 
+/// partial addresses.
 ///
-/// ---
-///
-/// ### 📍 Fields Breakdown:
-/// - [road] — The street or road name.
-/// - [amenity] — A notable place nearby (e.g., hospital, café, school).
-/// - [county] — Administrative county or district name.
-/// - [state] — State or region (e.g., California, Bavaria).
-/// - [isoCode] — ISO 3166-2 subdivision code (e.g., `US-CA`).
-/// - [postcode] — Postal or ZIP code.
-/// - [country] — Full country name (e.g., "United States").
-/// - [countryCode] — 2-letter ISO country code (e.g., "us").
-/// - [houseNumber] — Street number or house number.
-/// - [borough] — Borough or sub-district (mostly urban areas).
-/// - [city] — City or town name.
-/// - [iso31662Lvl4] — Redundant field for ISO 3166-2 level 4 code.
-///
-/// ---
-///
-/// ### 🏗️ Usage Example:
-///
+/// **Example Usage:**
 /// ```dart
+/// // Safely parsing a potentially incomplete API response
 /// final location = LocationData.fromJson(apiResponse['address']);
-/// print('${location.city}, ${location.state}, ${location.country}');
+/// 
+/// // Safely formats to ", California, US" if city is missing, without crashing.
+/// final displayAddress = '${location.city}, ${location.state},${location.countryCode.toUpperCase()}';
 /// ```
-///
 /// {@endtemplate}
 class LocationData {
-  /// Street or road name (e.g., "Main Street").
+  /// The primary street, avenue, or road name.
+  /// 
+  /// In rural or developing areas, this may represent an unnamed route or highway 
+  /// designation instead of a traditional street name.
   final String road;
 
-  /// Nearby amenity or landmark (e.g., "Starbucks").
+  /// A specific Point of Interest (POI) or landmark at this location.
+  /// 
+  /// Examples include "Starbucks", "General Hospital", or "Central Park". 
+  /// This field is often heavily populated in dense urban areas but entirely 
+  /// absent in residential zones.
   final String amenity;
 
-  /// The county or district name (e.g., "Los Angeles County").
+  /// The secondary administrative boundary, typically sitting between a city and a state.
+  /// 
+  /// Examples: "Los Angeles County" (US), "Oxfordshire" (UK).
   final String county;
 
-  /// State or region name (e.g., "California").
+  /// The primary administrative region or province.
+  /// 
+  /// Examples: "California" (US), "Bavaria" (Germany), "Anambra" (Nigeria).
   final String state;
 
-  /// ISO 3166-2 code for the location’s subdivision (e.g., "US-CA").
+  /// A developer-friendly alias for the ISO 3166-2 subdivision code.
+  /// 
+  /// This field is populated simultaneously with [iso31662Lvl4] during JSON parsing. 
+  /// It provides a cleaner, camel-cased variable name for frontend usage (e.g., `US-CA`), 
+  /// preventing developers from having to type `iso31662Lvl4` in their UI widgets.
   final String isoCode;
 
-  /// Postal or ZIP code (e.g., "94107").
+  /// The postal code, ZIP code, or sorting code for the area.
+  /// 
+  /// Note: Not all countries utilize postal codes. This will fall back to an 
+  /// empty string in regions where postal routing does not apply.
   final String postcode;
 
-  /// Full country name (e.g., "United States").
+  /// The full, localized display name of the country.
+  /// 
+  /// Example: "United States" or "Federal Republic of Nigeria".
   final String country;
 
-  /// Two-letter ISO 3166-1 alpha-2 country code (e.g., "us").
+  /// The two-letter ISO 3166-1 alpha-2 country code.
+  /// 
+  /// Example: `"us"`, `"ng"`, `"gb"`. Useful for fetching localized flag icons, 
+  /// determining currency, or routing to country-specific backend endpoints.
   final String countryCode;
 
-  /// House or street number (e.g., "123").
+  /// The specific plot or building identifier on the [road].
+  /// 
+  /// Example: "123B" or "45". Stored as a string because house numbers often 
+  /// contain letters or hyphens.
   final String houseNumber;
 
-  /// Borough or neighborhood within a city (e.g., "Brooklyn").
+  /// A sub-division of a city, often representing a distinct neighborhood, 
+  /// district, or metropolitan borough.
+  /// 
+  /// Examples: "Brooklyn" (New York), "Shibuya" (Tokyo).
   final String borough;
 
-  /// City or municipality name (e.g., "San Francisco").
+  /// The primary municipality, town, or city name.
+  /// 
+  /// For exact geopolitical mapping, note that some APIs use `town` or `village` 
+  /// instead of `city`, though a robust backend will normalize those into this field.
   final String city;
 
-  /// ISO 3166-2 level 4 subdivision code (sometimes redundant with [isoCode]).
+  /// The strict schema-matching field for the ISO 3166-2 level 4 boundary code.
+  /// 
+  /// This field directly mirrors the raw `ISO3166-2-lvl4` JSON key required by 
+  /// Nominatim/OSM APIs. While [isoCode] is provided for UI convenience, this 
+  /// field exists to guarantee 1:1 schema serialization.
   final String iso31662Lvl4;
 
-  /// Creates an instance of [LocationData] from individual address components.
-  /// 
   /// {@macro location_data}
+  ///
+  /// Instantiates a fully-populated [LocationData] object. All parameters are 
+  /// strictly required to enforce the defensive design pattern (no nulls).
   LocationData({
     required this.road,
     required this.amenity,
@@ -86,9 +112,18 @@ class LocationData {
     required this.iso31662Lvl4,
   });
 
-  /// Creates an instance of [LocationData] from a JSON map.
+  /// Deserializes a raw JSON map into a strictly typed [LocationData] object.
   ///
-  /// Typically used when parsing API responses.
+  /// **Defensive Parsing:**
+  /// This factory heavily utilizes the null-coalescing operator (`?? ''`). 
+  /// Geocoding APIs frequently omit keys for data that doesn't exist (e.g., 
+  /// returning no `house_number` for a park). By coalescing to empty strings, 
+  /// this method guarantees UI safety and eliminates the need for cascading 
+  /// null-checks in the presentation layer.
+  ///
+  /// **Aliasing Note:**
+  /// The `ISO3166-2-lvl4` JSON key is injected into both [isoCode] (for frontend 
+  /// convenience) and [iso31662Lvl4] (for strict schema adherence).
   /// 
   /// {@macro location_data}
   factory LocationData.fromJson(Map<String, dynamic> json) {
@@ -108,9 +143,13 @@ class LocationData {
     );
   }
 
-  /// Converts the [LocationData] instance into a JSON map.
+  /// Serializes the object back into an OSM-compatible JSON map.
   ///
-  /// Useful for sending location data in API requests or storing locally.
+  /// **Serialization Asymmetry:**
+  /// Note that [isoCode] is intentionally dropped during serialization. Because 
+  /// it is simply an alias, exporting it would pollute the JSON payload. Only 
+  /// the strict `ISO3166-2-lvl4` key is written, ensuring the resulting map is 
+  /// perfectly valid for external API submission or local database caching.
   /// 
   /// {@macro location_data}
   Map<String, dynamic> toJson() {
@@ -129,9 +168,17 @@ class LocationData {
     };
   }
 
-  /// Returns a blank or default [LocationData] instance.
+  /// Constructs a safe, blank fallback state for location data.
   ///
-  /// Can be used as a fallback when no location information is available.
+  /// **Use Case:**
+  /// Utilize this factory to generate an initial state for your UI *before* 
+  /// GPS coordinates are acquired or a reverse-geocoding request completes.
+  /// 
+  /// **Note on `country`:**
+  /// The [country] field intentionally defaults to `"Regional locale"` rather 
+  /// than an empty string. This provides a sensible fallback string for UI 
+  /// elements (like a location header) when the device's actual location is 
+  /// disabled or still resolving.
   /// 
   /// {@macro location_data}
   factory LocationData.empty() {
@@ -142,7 +189,7 @@ class LocationData {
       state: '',
       isoCode: '',
       postcode: '',
-      country: "Regional locale",
+      country: "Regional locale", // Explicit fallback state
       countryCode: '',
       houseNumber: '',
       borough: '',

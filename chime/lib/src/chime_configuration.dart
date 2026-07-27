@@ -45,9 +45,26 @@ final class ChimeConfiguration {
   });
 }
 
+/// Default alignment for in-app notifications — [AlignmentDirectional.topEnd].
+///
+/// Positions notifications at the top-end corner of the screen, respecting
+/// the current text direction (right-to-left or left-to-right).
 const _defaultAlignment = AlignmentDirectional.topEnd;
+
+/// Default duration for in-app notification entry/exit animations.
+///
+/// Set to 600 milliseconds for a smooth but responsive transition.
 const _itemAnimationDuration = Duration(milliseconds: 600);
+
+/// Default width of the in-app notification widget in logical pixels.
+///
+/// Set to 400.0 to provide a comfortable reading width on most screen sizes.
 const _defaultWidth = 400.0;
+
+/// Default clip behaviour for the in-app notification container.
+///
+/// Set to [Clip.none] so the notification is not clipped at its bounds,
+/// allowing shadows and animations to extend beyond the container edge.
 const _defaultClipBehavior = Clip.none;
 
 /// A builder function for creating custom animations for in-app notifications.

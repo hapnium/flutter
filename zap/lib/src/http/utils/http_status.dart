@@ -7,7 +7,14 @@
 /// server errors, or successful responses. It also provides constants for all
 /// standard HTTP status codes.
 ///
-/// This implementation allows for Java-style usage:
+/// ## Features
+/// - All standard HTTP status codes (1xx through 5xx)
+/// - Custom status codes for connection and cancellation errors
+/// - Status range checking helpers
+/// - JSON serialization support
+/// - Equality and hashing based on status code
+///
+/// ## Example
 /// ```dart
 /// // Get the status code as a string
 /// print(HttpStatus.OK); // Prints "OK"
@@ -27,20 +34,34 @@ class HttpStatus {
   final int code;
 
   /// The HTTP status name.
+  ///
+  /// This is a human-readable identifier for the status code.
   final String name;
 
   /// The HTTP status description.
+  ///
+  /// This is a detailed description of what the status code means.
   final String description;
 
   /// Creates a new HTTP status code with the given name, numeric value, and description.
+  ///
+  /// ## Parameters
+  /// - [name]: The status name (e.g., 'OK').
+  /// - [code]: The numeric status code (e.g., 200).
+  /// - [description]: A human-readable description.
+  ///
+  /// ## Example
+  /// ```dart
+  /// final custom = HttpStatus._('CUSTOM', 999, 'Custom status');
+  /// ```
   /// 
   /// {@macro http_status}
   const HttpStatus._(this.name, this.code, this.description);
 
-  /// Static map to store all status codes for lookup
+  /// Static map to store all status codes for lookup.
   static final Map<int, HttpStatus> _statusCodes = <int, HttpStatus>{};
 
-  /// Initialize all status codes
+  /// Initialize all status codes.
   static void _initializeStatusCodes() {
     if (_statusCodes.isNotEmpty) return;
     
@@ -758,7 +779,7 @@ class HttpStatus {
     "H-Standard: Request was cancelled"
   );
 
-  /// List of all predefined status codes for initialization
+  /// List of all predefined status codes for initialization.
   static const List<HttpStatus> _allStatusCodes = [
     // 1xx Informational
     CONTINUE, SWITCHING_PROTOCOLS, PROCESSING, EARLY_HINTS,
@@ -800,29 +821,73 @@ class HttpStatus {
   // --- Custom helpers ---
 
   /// True if this represents a connection error (no valid HTTP status code).
+  ///
+  /// Status codes in the 600-699 range represent custom connection errors.
   bool get connectionError => between(600, 699);
 
   /// True if [code] is 401 Unauthorized.
+  ///
+  /// ## Example
+  /// ```dart
+  /// if (response.status.isUnauthorized) {
+  ///   // Redirect to login
+  /// }
+  /// ```
   bool get isUnauthorized => code == UNAUTHORIZED.code;
 
   /// True if [code] is 403 Forbidden.
+  ///
+  /// ## Example
+  /// ```dart
+  /// if (response.status.isForbidden) {
+  ///   print('Access denied');
+  /// }
+  /// ```
   bool get isForbidden => code == FORBIDDEN.code;
 
   /// True if [code] is 404 Not Found.
+  ///
+  /// ## Example
+  /// ```dart
+  /// if (response.status.isNotFound) {
+  ///   print('Resource not found');
+  /// }
+  /// ```
   bool get isNotFound => code == NOT_FOUND.code;
 
   /// True if [code] is between 500 and 599, indicating server-side error.
   bool get isServerError => between(500, 599);
 
   /// Checks if [code] falls inclusively between [begin] and [end].
+  ///
+  /// ## Parameters
+  /// - [begin]: The start of the range (inclusive).
+  /// - [end]: The end of the range (inclusive).
+  ///
+  /// ## Returns
+  /// `true` if the status code is within the range.
   bool between(int begin, int end) {
     return code >= begin && code <= end;
   }
 
   /// True if [code] is a 2xx success status.
+  ///
+  /// ## Example
+  /// ```dart
+  /// if (response.status.isOk) {
+  ///   // Process successful response
+  /// }
+  /// ```
   bool get isOk => between(200, 299);
 
   /// True if [code] is not successful (i.e., not 2xx).
+  ///
+  /// ## Example
+  /// ```dart
+  /// if (response.status.hasError) {
+  ///   print('Error: ${response.status.description}');
+  /// }
+  /// ```
   bool get hasError => !isOk;
 
   /// Returns true if this status code is in the 1xx range (Informational).
@@ -841,8 +906,22 @@ class HttpStatus {
   bool get isError => isClientError || isServerError;
 
   /// Get a [HttpStatus] instance from a status code.
+  ///
   /// If the status code exists in the predefined list, returns that instance.
-  /// Otherwise, creates a new instance with a generic name and description.
+  /// Otherwise, creates a new instance with a generic name and description
+  /// and caches it for future use.
+  ///
+  /// ## Parameters
+  /// - [statusCode]: The HTTP status code.
+  ///
+  /// ## Returns
+  /// The [HttpStatus] instance for the given code.
+  ///
+  /// ## Example
+  /// ```dart
+  /// final status = HttpStatus.fromCode(200);
+  /// print(status.name); // 'OK'
+  /// ```
   static HttpStatus fromCode(int statusCode) {
     _initializeStatusCodes();
     
@@ -874,12 +953,34 @@ class HttpStatus {
   }
 
   /// Get all predefined status codes as a list.
+  ///
+  /// ## Returns
+  /// An unmodifiable list of all predefined [HttpStatus] instances.
+  ///
+  /// ## Example
+  /// ```dart
+  /// final allStatuses = HttpStatus.getAllStatusCodes();
+  /// print('Total status codes: ${allStatuses.length}');
+  /// ```
   static List<HttpStatus> getAllStatusCodes() {
     _initializeStatusCodes();
     return List.unmodifiable(_statusCodes.values);
   }
 
   /// Get all status codes in a specific range.
+  ///
+  /// ## Parameters
+  /// - [start]: The start of the range (inclusive).
+  /// - [end]: The end of the range (inclusive).
+  ///
+  /// ## Returns
+  /// A list of [HttpStatus] instances within the specified range, sorted by code.
+  ///
+  /// ## Example
+  /// ```dart
+  /// final clientErrors = HttpStatus.getStatusCodesInRange(400, 499);
+  /// print('Client error codes: ${clientErrors.map((s) => s.code).toList()}');
+  /// ```
   static List<HttpStatus> getStatusCodesInRange(int start, int end) {
     _initializeStatusCodes();
     return _statusCodes.values
@@ -889,23 +990,63 @@ class HttpStatus {
   }
 
   /// Check if a status code is predefined.
+  ///
+  /// ## Parameters
+  /// - [statusCode]: The status code to check.
+  ///
+  /// ## Returns
+  /// `true` if the status code has a predefined [HttpStatus] instance.
+  ///
+  /// ## Example
+  /// ```dart
+  /// if (HttpStatus.isPredefined(200)) {
+  ///   print('Standard status code');
+  /// }
+  /// ```
   static bool isPredefined(int statusCode) {
     _initializeStatusCodes();
     return _statusCodes.containsKey(statusCode);
   }
 
+  /// Returns the string representation of this status (the status name).
+  ///
+  /// ## Example
+  /// ```dart
+  /// print(HttpStatus.OK.toString()); // 'OK'
+  /// ```
   @override
   String toString() => name;
 
+  /// Equality is based on the status code.
+  ///
+  /// Two [HttpStatus] instances are equal if they have the same [code].
+  ///
+  /// ## Example
+  /// ```dart
+  /// final a = HttpStatus.fromCode(200);
+  /// final b = HttpStatus.fromCode(200);
+  /// print(a == b); // true
+  /// ```
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
     return other is HttpStatus && other.code == code;
   }
 
+  /// Hash code based on the status code.
   @override
   int get hashCode => code.hashCode;
 
+  /// Converts this status to a JSON-compatible map.
+  ///
+  /// ## Returns
+  /// A [Map<String, dynamic>] with code, name, and description.
+  ///
+  /// ## Example
+  /// ```dart
+  /// final json = HttpStatus.OK.toJson();
+  /// // {'code': 200, 'name': 'OK', 'description': '...'}
+  /// ```
   Map<String, dynamic> toJson() {
     return {
       'code': code,

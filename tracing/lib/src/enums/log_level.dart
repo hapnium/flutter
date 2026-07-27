@@ -1,83 +1,406 @@
 /// {@template log_level}
-/// Defines various levels of logging severity for controlling logging output.
+/// Defines the severity hierarchy for log messages, controlling which
+/// messages are processed, displayed, or suppressed.
 ///
-/// This enum is used to filter or categorize log messages based on their
-/// importance, relevance, or severity. Logging frameworks and tools use these
-/// levels to determine whether a message should be processed or ignored.
+/// `LogLevel` is the primary filtering mechanism in the tracing package.
+/// Each level has an integer [value] for comparison — a message is shown
+/// only if its level's value is greater than or equal to the configured
+/// minimum level.
 ///
-/// ### Levels Overview:
+/// ### Severity hierarchy
 ///
-/// | Level   | Value | Description                                                      |
-/// |---------|-------|------------------------------------------------------------------|
-/// | `trace` | 0     | Detailed debugging or tracing info, typically very verbose.      |
-/// | `debug` | 1     | General debugging information, useful for development.           |
-/// | `info`  | 2     | General runtime events (e.g., startup, shutdown).                |
-/// | `warning` | 3   | Something unexpected, but not necessarily an error.              |
-/// | `error` | 4     | Recoverable application errors that require attention.           |
-/// | `fatal` | 5     | Critical issues that will likely cause application termination.  |
-/// | `off`   | 6     | Disables logging entirely.                                       ///
-/// 
+/// ```
+/// TRACE(0) < DEBUG(1) < INFO(2) < WARN(3) < ERROR(4) < FATAL(5) < OFF(6)
+/// ```
+///
+/// ### Filtering behavior
+///
+/// When the current level is set to, say, `INFO`, only messages with
+/// level `INFO`, `WARN`, `ERROR`, or `FATAL` are shown. `TRACE` and
+/// `DEBUG` messages are suppressed.
+///
+/// ### Example
+/// ```dart
+/// // Only show INFO and above
+/// LogConfig.currentLevel = LogLevel.INFO;
+///
+/// // Check before logging
+/// if (LogLevel.DEBUG.isEnabledFor(LogConfig.currentLevel)) {
+///   Z.debug('Variable value: $x');
+/// }
+/// ```
+///
+/// ### Comparison
+///
+/// Levels are compared by their integer [value]:
+/// ```dart
+/// print(LogLevel.WARN > LogLevel.INFO); // true
+/// print(LogLevel.ERROR >= LogLevel.ERROR); // true
+/// ```
 /// {@endtemplate}
 enum LogLevel {
-  /// The most fine-grained level. Use this for tracing function calls, loop iterations, and other
-  /// low-level, verbose details.
+  /// {@template log_level_trace}
+  /// The most fine-grained severity level. Use this for tracing function
+  /// calls, loop iterations, variable values, and other low-level details.
   ///
-  /// Typically disabled in production due to verbosity.
+  /// Trace messages are extremely verbose and intended for deep debugging
+  /// of internal control flow. They should typically be disabled in
+  /// production and even in most development scenarios.
+  ///
+  /// **Integer value:** 0
+  ///
+  /// ### When to use
+  /// - Tracing function entry/exit
+  /// - Logging loop iterations
+  /// - Recording variable values at each step
+  /// - Profiling internal algorithms
+  ///
+  /// ### Example
+  /// ```dart
+  /// Z.trace('Entering _parseJson() with input length: ${input.length}');
+  /// ```
+  ///
+  /// ### Performance note
+  ///
+  /// Trace messages can significantly impact performance due to their
+  /// frequency. Ensure they are filtered out in production by setting
+  /// the level to `DEBUG` or higher.
+  /// {@endtemplate}
   TRACE(0, 'TRACE'),
 
-  /// Debug-level messages useful for developers during active debugging sessions.
+  /// {@template log_level_debug}
+  /// General debugging information useful during active development.
   ///
-  /// Includes information like variable values, internal state, and control flow.
+  /// Debug messages provide developer-facing diagnostic information that
+  /// is valuable during development but should be hidden in production.
+  /// They are more structured than trace messages but still verbose.
+  ///
+  /// **Integer value:** 1
+  ///
+  /// ### When to use
+  /// - Logging variable values
+  /// - Recording internal state changes
+  /// - Tracking control flow decisions
+  /// - Monitoring API request/response details
+  ///
+  /// ### Example
+  /// ```dart
+  /// Z.debug('Response status: ${response.statusCode}');
+  /// Z.debug('User $userId authenticated via ${authMethod}');
+  /// ```
+  ///
+  /// ### Production behavior
+  ///
+  /// Debug messages are typically filtered out in production builds.
+  /// Use conditional compilation or runtime level checks:
+  /// ```dart
+  /// if (kDebugMode) {
+  ///   Z.debug('Cache hit for key: $cacheKey');
+  /// }
+  /// ```
+  /// {@endtemplate}
   DEBUG(1, 'DEBUG'),
 
-  /// Informational messages that indicate the application’s progress under normal conditions.
+  /// {@template log_level_info}
+  /// Informational messages indicating normal application progress.
   ///
-  /// Good for confirming that things are working as expected (e.g., "User successfully logged in").
+  /// Info messages represent expected, noteworthy events that confirm the
+  /// application is functioning correctly. They are safe to leave enabled
+  /// in production for operational visibility.
+  ///
+  /// **Integer value:** 2
+  ///
+  /// ### When to use
+  /// - Application startup/shutdown
+  /// - User authentication events
+  /// - Configuration loaded
+  /// - Service connected
+  /// - Important business events
+  ///
+  /// ### Example
+  /// ```dart
+  /// Z.info('Application started on ${Platform.operatingSystem}');
+  /// Z.info('User ${user.id} logged in successfully');
+  /// Z.info('Cache warmed: ${cache.keys.length} entries loaded');
+  /// ```
+  ///
+  /// ### Production behavior
+  ///
+  /// Info messages are the minimum recommended level for production
+  /// logging. They provide sufficient visibility for monitoring without
+  /// excessive noise.
+  /// {@endtemplate}
   INFO(2, 'INFO'),
 
-  /// Indicates a potential issue or unexpected situation, but the application can still continue safely.
+  /// {@template log_level_warn}
+  /// Warning messages for recoverable issues that may require attention.
   ///
-  /// Should be investigated but may not require immediate action (e.g., deprecated API usage).
+  /// Warning messages indicate conditions that are not errors but may
+  /// indicate potential problems. The application continues to function
+  /// normally, but the situation should be investigated.
+  ///
+  /// **Integer value:** 3
+  ///
+  /// ### When to use
+  /// - Deprecated API usage
+  /// - Automatic retries
+  /// - Fallback responses
+  /// - Configuration mismatches
+  /// - Performance thresholds exceeded
+  ///
+  /// ### Example
+  /// ```dart
+  /// Z.warn('Deprecated method called: use newMethod() instead');
+  /// Z.warn('Retry attempt #3 for request to $url');
+  /// Z.warn('Response time ${elapsed}ms exceeds threshold');
+  /// ```
+  ///
+  /// ### Production behavior
+  ///
+  /// Warnings should always be visible in production. They often indicate
+  /// issues that could escalate to errors if left unaddressed.
+  ///
+  /// ### Distinction from errors
+  ///
+  /// - **Warning:** Something unexpected happened, but the app works fine.
+  /// - **Error:** Something failed and affected functionality.
+  /// {@endtemplate}
   WARN(3, 'WARNING'),
 
-  /// An error has occurred that may impact functionality, but the app is still running.
+  /// {@template log_level_error}
+  /// Error messages for recoverable failures that impact functionality.
   ///
-  /// For example, a failed network request, missing file, or service unavailability.
+  /// Error messages indicate that something failed but the application
+  /// can still operate. These failures typically affect a single operation
+  /// and may be recoverable via retry or alternative logic.
+  ///
+  /// **Integer value:** 4
+  ///
+  /// ### When to use
+  /// - Failed network requests
+  /// - File not found
+  /// - Service unavailable
+  /// - Validation failures
+  /// - Database connection lost
+  ///
+  /// ### Example
+  /// ```dart
+  /// Z.error('POST /users failed: ${e.message}');
+  /// Z.error('File not found: $path');
+  /// Z.error('Database connection lost, attempting reconnect');
+  /// ```
+  ///
+  /// ### Production behavior
+  ///
+  /// Errors must always be visible in production. They are the primary
+  /// signal for monitoring and alerting systems.
+  ///
+  /// ### Recovery strategy
+  ///
+  /// Errors should include enough context to diagnose the issue:
+  /// - What operation failed
+  /// - What the input was
+  /// - What the expected behavior was
+  /// - What actually happened
+  /// {@endtemplate}
   ERROR(4, 'ERROR'),
 
-  /// A critical error has occurred that is likely to lead to application failure or shutdown.
+  /// {@template log_level_fatal}
+  /// Fatal messages for critical errors that may cause application failure.
   ///
-  /// Use for fatal exceptions, data corruption, or failed application bootstrapping.
+  /// Fatal messages indicate unrecoverable errors that could lead to
+  /// application instability, data corruption, or crashes. These require
+  /// immediate attention and may trigger alerting systems.
+  ///
+  /// **Integer value:** 5
+  ///
+  /// ### When to use
+  /// - Unhandled exceptions during startup
+  /// - Data corruption detected
+  /// - Security breaches
+  /// - Out-of-memory errors
+  /// - Critical service failures
+  ///
+  /// ### Example
+  /// ```dart
+  /// Z.fatal('TLS handshake failed: $error');
+  /// Z.fatal('Database migration failed: $migrationId');
+  /// Z.fatal('Out of memory: ${ProcessInfo.currentRss} bytes used');
+  /// ```
+  ///
+  /// ### Production behavior
+  ///
+  /// Fatal messages should always be visible and typically trigger
+  /// immediate alerts (PagerDuty, Slack, email). They should be rare
+  /// in a healthy system.
+  ///
+  /// ### Distinction from errors
+  ///
+  /// - **Error:** A single operation failed; the app continues.
+  /// - **Fatal:** The entire application may be compromised.
+  /// {@endtemplate}
   FATAL(5, 'FATAL'),
 
-  /// Disables all logging output.
+  /// {@template log_level_off}
+  /// Disables all logging output entirely.
   ///
-  /// Use this to suppress all logs, useful for production environments or silent modes.
+  /// When the current level is set to `OFF`, no log messages are displayed
+  /// regardless of their level. This is useful for production environments
+  /// where logging is handled externally, or for silent modes during
+  /// testing.
+  ///
+  /// **Integer value:** 6
+  ///
+  /// ### When to use
+  /// - Production environments with external logging
+  /// - Silent test modes
+  /// - Performance-critical sections
+  /// - When logging would interfere with output parsing
+  ///
+  /// ### Example
+  /// ```dart
+  /// LogConfig.currentLevel = LogLevel.OFF;
+  /// // No log messages will be displayed
+  /// ```
+  ///
+  /// ### Caveats
+  ///
+  /// - Fatal errors are still suppressed — consider carefully before
+  ///   using `OFF` in production
+  /// - Use environment-based configuration to allow override
+  /// - Some monitoring tools may depend on log output
+  /// {@endtemplate}
   OFF(6, 'OFF');
 
-  /// Constructs a log level with an associated [value] for comparison and a human-readable [name].
-  /// 
+  /// {@template log_level_constructor}
+  /// Constructs a [LogLevel] with an associated integer [value] and
+  /// human-readable [name].
+  ///
+  /// ### Parameters
+  ///
+  /// - [value]: Integer used for comparison. Lower values mean lower
+  ///   severity. Must be unique across all levels.
+  /// - [name]: Display name for the level (e.g., `'INFO'`, `'ERROR'`).
+  ///   Used in formatted output and `toString()`.
+  ///
+  /// ### Example
+  /// ```dart
+  /// // Custom level (if extended)
+  /// const LogLevel CUSTOM = LogLevel(7, 'CUSTOM');
+  /// ```
+  ///
+  /// ### Constraints
+  ///
+  /// This constructor is `const` and can only be used with compile-time
+  /// constant values.
+  /// {@endtemplate}
   /// {@macro log_level}
   const LogLevel(this.value, this.name);
 
-  /// Integer value for comparing levels. Lower values mean lower severity.
-  final int value;
-
-  /// The display name of the log level (e.g., 'INFO', 'ERROR').
-  final String name;
-
-  /// Determines if this log level is enabled given a minimum [level].
+  /// {@template log_level_value}
+  /// Integer value used for severity comparison.
   ///
-  /// Returns `true` if this log level is equal to or more severe than [level].
-  /// This is useful for checking whether a message should be logged:
+  /// Lower values indicate lower severity. The value determines whether
+  /// a message passes the current level filter:
+  ///
+  /// ```
+  /// message passes if: messageLevel.value >= currentLevel.value
+  /// ```
+  ///
+  /// ### Values
+  ///
+  /// | Level   | Value |
+  /// |---------|-------|
+  /// | TRACE   | 0     |
+  /// | DEBUG   | 1     |
+  /// | INFO    | 2     |
+  /// | WARN    | 3     |
+  /// | ERROR   | 4     |
+  /// | FATAL   | 5     |
+  /// | OFF     | 6     |
+  ///
+  /// ### Comparison
   ///
   /// ```dart
-  /// if (LogLevel.error.isEnabledFor(currentLevel)) {
-  ///   print('Something went wrong!');
+  /// LogLevel.WARN.value > LogLevel.INFO.value; // true
+  /// LogLevel.DEBUG.value < LogLevel.ERROR.value; // true
+  /// ```
+  /// {@endtemplate}
+  final int value;
+
+  /// {@template log_level_name}
+  /// Human-readable display name for the log level.
+  ///
+  /// Used in formatted log output and returned by [toString]. The name
+  /// is typically uppercase (e.g., `'INFO'`, `'ERROR'`).
+  ///
+  /// ### Example
+  /// ```dart
+  /// print(LogLevel.WARN.name); // 'WARNING'
+  /// print(LogLevel.FATAL.name); // 'FATAL'
+  /// ```
+  ///
+  /// ### Custom formatting
+  ///
+  /// For custom formatting, use the name directly:
+  /// ```dart
+  /// print('[${level.name}] $message');
+  /// ```
+  /// {@endtemplate}
+  final String name;
+
+  /// {@template log_level_isEnabledFor}
+  /// Determines whether this log level is enabled given a minimum
+  /// threshold [level].
+  ///
+  /// Returns `true` if this level's [value] is greater than or equal to
+  /// [level]'s value. This is the primary mechanism for filtering log
+  /// messages.
+  ///
+  /// ### Parameters
+  ///
+  /// - [level]: The minimum severity threshold. Messages at or above
+  ///   this level are shown.
+  ///
+  /// ### Returns
+  ///
+  /// `true` if this level passes the filter; `false` otherwise.
+  ///
+  /// ### Example
+  /// ```dart
+  /// final currentLevel = LogLevel.INFO;
+  ///
+  /// LogLevel.TRACE.isEnabledFor(currentLevel); // false
+  /// LogLevel.DEBUG.isEnabledFor(currentLevel); // false
+  /// LogLevel.INFO.isEnabledFor(currentLevel);  // true
+  /// LogLevel.WARN.isEnabledFor(currentLevel);  // true
+  /// LogLevel.ERROR.isEnabledFor(currentLevel); // true
+  /// LogLevel.FATAL.isEnabledFor(currentLevel); // true
+  /// ```
+  ///
+  /// ### Usage in logging
+  ///
+  /// ```dart
+  /// void logMessage(String message, LogLevel level) {
+  ///   if (level.isEnabledFor(LogConfig.currentLevel)) {
+  ///     print('[${level.name}] $message');
+  ///   }
   /// }
   /// ```
+  /// {@endtemplate}
   bool isEnabledFor(LogLevel level) => value >= level.value;
 
+  /// {@template log_level_toString}
+  /// Returns the [name] of this log level as a string.
+  ///
+  /// This is useful for formatting log output and debugging:
+  /// ```dart
+  /// print(LogLevel.INFO); // 'INFO'
+  /// print(LogLevel.FATAL); // 'FATAL'
+  /// ```
+  ///
+  /// The returned string is the same as the [name] field.
+  /// {@endtemplate}
   @override
   String toString() => name;
 }

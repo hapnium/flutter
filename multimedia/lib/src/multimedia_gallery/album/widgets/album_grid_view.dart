@@ -4,37 +4,59 @@ import 'package:smart/smart.dart';
 
 import 'medium_image.dart';
 
-/// A customizable grid view for displaying media items in a tiled layout.
+/// {@template album_grid_view}
+/// A customizable grid view that displays media items from a single album
+/// in a tiled layout with selection support.
 ///
-/// The `AlbumGridView` displays media in a grid layout, supporting selection,
-/// custom icons, styles, and layouts.
+/// Each grid cell shows the media thumbnail via [MediumImage], the item's
+/// filename, file size, and a type icon (video/image). When the item is
+/// selected, a colored border and selection badge are displayed. The grid
+/// density is controlled by [count] (columns), and the aspect ratio is
+/// computed from the available width.
 ///
-/// ### Example:
-/// ```dart
-/// AlbumGridView(
-///   mediums: myMedia,
-///   count: 3,
-///   selected: selectedIds,
-///   onSelected: (medium) => print(medium.id),
-/// )
-/// ```
+/// When [AlbumViewConfiguration.mediumItemBuilder] is provided, it
+/// completely replaces the default cell widget, giving the caller full
+/// control over media-item rendering. The builder receives the [Medium],
+/// its [ImageProvider], and the current selection state.
+/// {@endtemplate}
 class AlbumGridView extends StatelessWidget {
-  /// List of media items to display.
+  /// The list of media items to display in the grid.
+  ///
+  /// Each [Medium] provides an ID, filename, type, size, and thumbnail
+  /// data. The list is typically produced by [Album.listMedia] and
+  /// assigned to [_MultimediaGalleryAlbumState._mediums].
   final List<Medium> mediums;
 
-  /// Number of items per row.
+  /// The number of columns in the grid.
+  ///
+  /// Controlled by the grid-density filter buttons (e.g., "2x", "3x").
+  /// The available width is divided by this value to compute each
+  /// cell's width, which then determines the aspect ratio.
   final int count;
 
-  /// List of selected media IDs.
+  /// The list of IDs for currently selected media items.
+  ///
+  /// Used to determine whether each cell should show a selection border
+  /// and badge. Items whose ID appears in this list are rendered with
+  /// [AlbumViewConfiguration.selectedColor] and a numbered badge.
   final List<String> selected;
 
-  /// Callback when a media item is tapped.
+  /// Callback invoked when a media item is tapped.
+  ///
+  /// In multi-select mode, this toggles the item's selection state. In
+  /// single-select mode, this finalizes the selection and pops the stack.
   final MediumReceived onSelected;
 
-  /// The configuration for the grid view.
+  /// The configuration controlling grid layout, styling, and selection.
+  ///
+  /// Provides cell aspect ratio, spacing, image styling, text styling,
+  /// selection/unselected colors, and optionally a custom
+  /// [mediumItemBuilder].
   final AlbumViewConfiguration configuration;
 
-  /// Creates a responsive grid view for displaying media items.
+  /// {@macro album_grid_view}
+  ///
+  /// All parameters are required.
   const AlbumGridView({
     super.key,
     required this.mediums,

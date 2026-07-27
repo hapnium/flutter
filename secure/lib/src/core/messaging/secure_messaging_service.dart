@@ -1,53 +1,73 @@
 import 'package:secure/secure.dart';
 
-/// Abstract class defining the interface for a service handling end-to-end encryption (E2EE) operations.
+/// {@template secure_messaging_service}
+/// Abstract interface for end-to-end encryption (E2EE) messaging operations.
 ///
-/// This service provides methods for:
-///   - Generating key pairs (public and private) for secure communication.
-///   - Encrypting messages using the recipient's public key.
-///   - Decrypting messages using the user's private key.
+/// Defines the contract that all secure messaging implementations must
+/// follow. Concrete implementations ([ECSecureMessaging], [RSASecureMessaging])
+/// provide the actual cryptographic logic.
 ///
-/// Concrete implementations of this class should provide the underlying cryptographic logic.
+/// ### Lifecycle
+///
+/// 1. **Generate keys**: Call [generate] to create a public/private key pair.
+/// 2. **Encrypt**: Call [encrypt] with the recipient's public key and a plaintext
+///    message to produce ciphertext.
+/// 3. **Decrypt**: Call [decrypt] with the ciphertext and your private key to
+///    recover the original plaintext.
+///
+/// ### Example
+///
+/// ```dart
+/// final service = SecureMessaging.ec();
+/// final keys = service.generate();
+/// final cipher = service.encrypt(message: 'secret', publicKey: keys.publicKey);
+/// final plain = service.decrypt(message: cipher, privateKey: keys.privateKey);
+/// print(plain.message); // 'secret'
+/// ```
+/// {@endtemplate}
 abstract class SecureMessagingService {
-  /// Generates a new key pair (public and private).
+  /// Generates a new asymmetric key pair (public and private).
   ///
-  /// This method typically involves:
-  ///   1. Deriving a key from a secure source or generating a new key.
-  ///   2. Generating an asymmetric key pair (e.g., using RSA or ECC).
-  ///   3. Securely storing the private key locally (e.g., in a secure storage or encrypted database).
-  ///   4. Returning a `SecureKeyResponse` object containing the public key.
+  /// The generated keys are returned as PEM-formatted strings inside a
+  /// [SecureKeyResponse]. The public key can be shared freely; the
+  /// private key must be kept secret.
   ///
   /// **Returns:**
   ///
-  /// A `SecureKeyResponse` object containing the generated public key.
+  /// A [SecureKeyResponse] containing the PEM-encoded public and
+  /// private keys.
   SecureKeyResponse generate();
 
-  /// Encrypts the given `message` using the provided `publicKey` of the recipient.
+  /// Encrypts a plaintext [message] using the recipient's [publicKey].
   ///
-  /// This method typically uses an asymmetric encryption algorithm
-  /// (e.g., RSA, ElGamal) to encrypt the message.
-  ///
-  /// **Parameters:**
-  ///
-  /// * `message`: The message to be encrypted.
-  /// * `publicKey`: The recipient's public key in Base64-encoded format.
+  /// The [publicKey] must be a PEM-encoded public key matching the
+  /// algorithm used by this implementation (RSA or EC).
   ///
   /// **Returns:**
   ///
-  /// The encrypted message, typically in Base64-encoded format.
+  /// An opaque string containing the ciphertext. The format varies
+  /// by implementation (base64-encoded RSA-OAEP ciphertext for RSA,
+  /// base64-encoded JSON with ECIES wrapper for EC).
+  ///
+  /// **Throws:**
+  ///
+  /// - [SecureException] if encryption fails (invalid key, message
+  ///   too long, etc.).
   String encrypt({required String message, required String publicKey});
 
-  /// Decrypts the given `encryptedMessage` using the user's private key.
+  /// Decrypts a ciphertext [message] using the recipient's [privateKey].
   ///
-  /// This method typically uses the corresponding private key to decrypt the message.
-  ///
-  /// **Parameters:**
-  ///
-  /// * `message`: The encrypted message in Base64-encoded format.
-  /// * `privateKey`: The user's private key in Base64-encoded format.
+  /// The [privateKey] must be the PEM-encoded private key corresponding
+  /// to the public key used during encryption.
   ///
   /// **Returns:**
   ///
-  /// A `MessagingResponse` object containing the decrypted message or an error message.
+  /// A [MessagingResponse] containing the decrypted plaintext message
+  /// and metadata (encryption type, timestamp).
+  ///
+  /// **Throws:**
+  ///
+  /// - [SecureException] if decryption fails (wrong key, corrupted
+  ///   ciphertext, tampered GCM tag, etc.).
   MessagingResponse decrypt({required String message, required String privateKey});
 }

@@ -3,86 +3,145 @@ import '../exceptions/controller_advice.dart';
 import 'zap_config.dart';
 
 /// {@template flux_config}
-/// The [FluxConfig] class holds configuration options for the Flux platform,
-/// allowing customization of various behaviors such as token usage, logging, and error handling.
+/// The master orchestration blueprint for the Flux networking platform.
 ///
-/// This class provides flexible options that control how Flux interacts with different
-/// environments (like development or production) and handles sessions and failures.
+/// **Architectural Context:**
+/// While [ZapConfig] handles the low-level, raw HTTP execution rules (like TLS, 
+/// redirects, and byte decoding), [FluxConfig] operates at the application tier. 
+/// It acts as the bridge between your raw network requests and your app's global 
+/// state, managing high-level concepts like:
+/// 
+/// 1. **Automated Token Rotation:** Seamlessly intercepting `401 Unauthorized` 
+///    errors, triggering [onSessionRefreshed], and retrying the request.
+/// 2. **Global Error Interception:** Using [controllerAdvice] to catch backend 
+///    error payloads and transform them into UI-friendly exceptions, mimicking 
+///    Spring Boot's global exception handling architecture.
+/// 3. **Memory Management:** Controlling whether the underlying HTTP client is 
+///    kept alive globally ([useSingleInstance]) or destroyed immediately after 
+///    execution ([disposeOnCompleted]).
+/// 4. **Routing Hooks:** Automatically kicking the user back to a login screen 
+///    via [whenUnauthorized] if token rotation utterly fails.
 /// 
 /// {@endtemplate}
 class FluxConfig {
-  /// - **useSingleInstance**: Determines if a single instance of [Zap] should be used. Default is `true`.
+  /// Dictates the memory allocation strategy for the underlying HTTP client.
+  /// 
+  /// **Architectural Impact:**
+  /// If `true` (default), Flux acts as a Singleton, reusing the same internal 
+  /// socket connections and connection pools across multiple API calls. This is 
+  /// highly efficient for REST-heavy apps. 
+  /// If `false`, a new client is spun up for the request.
   final bool useSingleInstance;
 
-  /// - **disposeOnCompleted**: Determines if the [Flux] instance should be disposed after the request is completed. Default is `true`.
+  /// Controls aggressive memory cleanup for transient operations.
+  /// 
+  /// If `true`, the `Flux` instance (and its underlying HTTP client) is completely 
+  /// torn down and garbage collected immediately after the request finishes. 
+  /// Highly useful for background tasks or isolated one-off network calls where 
+  /// keeping a connection pool alive wastes memory. Defaults to `false`.
   final bool disposeOnCompleted;
 
-  /// - **showErrorLog**: Determines if error logs should be displayed during operations. Default is `false`.
+  /// Observability flag: Enables console logging for caught exceptions and failures.
   final bool showErrorLogs;
 
-  /// - **showResponseLogs**: Determines if response logs should be displayed during operations. Default is `false`.
+  /// Observability flag: Enables console logging for all incoming network payloads.
   final bool showResponseLogs;
 
-  /// - **showRequestLogs**: Determines if response logs should be displayed during operations. Default is `false`.
+  /// Observability flag: Enables console logging for all outbound network requests.
   final bool showRequestLogs;
 
-  /// - **zapConfig**: The configuration of the [ZapClient].
+  /// The underlying, low-level HTTP configuration.
+  /// 
+  /// This configures the engine (timeouts, SSL pinning, proxy routing) that 
+  /// actually executes the bytes on the wire. If null, Flux will instantiate 
+  /// a default `ZapClient`.
   final ZapConfig? zapConfig;
 
-  /// - **sessionFactory**: A callback function to handle session updates. Default is `null`.
+  /// A synchronous callback triggered when the session state is updated.
+  /// 
+  /// **Use Case:**
+  /// When Flux successfully rotates a token in the background, it yields the new 
+  /// session here. Your app's state management (Bloc, Riverpod, etc.) should listen 
+  /// to this callback and persist the new token to secure storage.
   final SessionCallback? sessionFactory;
 
-  /// - **onSessionRefreshed**: A callback function to handle session refresh. Called when request hits an unauthorized exception.
+  /// The asynchronous engine for token rotation and session recovery.
   /// 
-  /// Default is `null`.
+  /// **How it works:**
+  /// When a request fails with a `401 Unauthorized`, Flux pauses the request and 
+  /// triggers this callback. Your code should ping your backend's `/refresh` 
+  /// endpoint, obtain a new session, and return it. Flux will then automatically 
+  /// inject the new token and seamlessly retry the paused request.
   final AsyncSessionCallback? onSessionRefreshed;
 
-  /// - **whenUnauthorized**: A callback function to execute when removing routes. Default is `null`.
+  /// A catastrophic failure hook triggered when authentication cannot be recovered.
   /// 
-  /// This is used to remove the current route when the request hits an unauthorized exception.
+  /// **Use Case:**
+  /// If [onSessionRefreshed] fails (e.g., the refresh token itself is expired), 
+  /// Flux invokes this callback. This is the exact place to execute your router's 
+  /// navigation logic to wipe local state and force the user back to the `/login` screen.
   final Callback? whenUnauthorized;
 
-  /// - **headers**: Additional headers to send to the request processor. Default is `null`.
+  /// Global HTTP headers prepended to every request generated by Flux.
+  /// 
+  /// Useful for attaching App-IDs, global localized language headers (e.g., 
+  /// `Accept-Language: fr-FR`), or global CSRF tokens.
   final Headers? headers;
 
-  /// - **isWeb**: Whether the current platform is web.
+  /// Instructs the engine to utilize browser-specific networking policies.
+  /// 
+  /// When running on Flutter Web, setting this to `true` optimizes CORS handling 
+  /// and aligns the internal fetch mechanics with browser security sandboxes.
   final bool isWeb;
 
-  /// - **connectTimeout**: The timeout for connecting to the server. Default is [Duration(seconds: 30)].
+  /// The absolute maximum duration to wait while establishing the initial TCP/TLS handshake.
+  /// 
+  /// **Note:** This is distinct from `ZapConfig.timeout`, which measures the 
+  /// total request lifecycle. [connectTimeout] solely measures the initial connection phase.
   final Duration connectTimeout;
 
-  /// - **authHeaderName**: The name of the authentication header. Default is `'Authorization'`.
+  /// The exact string key used for the authentication header.
   /// 
-  /// Examples: `'Authorization'`, `'X-API-Key'`, `'X-Auth-Token'`, etc.
+  /// Defaults to `'Authorization'`. Can be overridden for proprietary setups 
+  /// (e.g., `'X-API-Key'`, `'X-Auth-Token'`).
   final String authHeaderName;
 
-  /// - **tokenPrefix**: The prefix to add before the token in the auth header. Default is `'Bearer'`.
+  /// The string prefix prepended to the raw access token in the header value.
   /// 
-  /// Examples: `'Bearer'`, `'Token'`, `'Goog'`, `'Basic'`, etc.
-  /// Set to empty string `''` if no prefix is needed.
+  /// Defaults to `'Bearer'`. When combined with [authHeaderName], generates:
+  /// `Authorization: Bearer <token>`. Set to `''` if the backend expects a raw string.
   final String tokenPrefix;
 
-  /// - **controllerAdvice**: A callback function to handle controller advice. Default is `null`.
+  /// A global exception interceptor for standardizing error states.
   /// 
-  /// This is used to handle controller advice when the request hits an exception.
+  /// **Architectural Benefit:**
+  /// Modeled after Spring Boot's `@ControllerAdvice`. Instead of every UI widget 
+  /// manually parsing HTTP 400 JSON payloads to find the error string, you can 
+  /// define a single [ControllerAdvice] that transforms raw backend errors into 
+  /// unified Dart Exceptions.
   final ControllerAdvice? controllerAdvice;
 
-  /// - **authHeaderBuilder**: A custom function to build authentication headers.
+  /// A powerful override for constructing complex, multi-header authentication schemes.
   /// 
-  /// This function receives the current session and should return a map of headers to add.
-  /// If provided, this takes precedence over [authHeaderName] and [tokenPrefix].
+  /// If your backend requires more than a simple Bearer token (e.g., requiring both 
+  /// the access token and a distinct organizational ID header), provide this builder. 
   /// 
-  /// Example:
+  /// **Note:** If provided, this completely overrides [authHeaderName] and [tokenPrefix].
+  /// 
+  /// **Example:**
   /// ```dart
   /// authHeaderBuilder: (session) => {
   ///   'Authorization': 'Bearer ${session.accessToken}',
   ///   'X-Refresh-Token': session.refreshToken,
-  ///   'X-User-ID': session.userId.toString(),
+  ///   'X-Tenant-ID': session.userId.toString(),
   /// }
   /// ```
   final HeaderBuilder? authHeaderBuilder;
 
   /// {@macro flux_config}
+  /// 
+  /// Initializes the high-level configuration. Sensible defaults are provided 
+  /// for singleton memory management and standard OAuth 2.0 Bearer tokens.
   FluxConfig({
     this.disposeOnCompleted = false,
     this.useSingleInstance = true,
@@ -102,8 +161,16 @@ class FluxConfig {
     this.authHeaderBuilder,
   });
 
-  /// Creates a new [FluxConfig] instance by copying existing values and
-  /// overriding specific fields with new values, if provided.
+  /// Generates a new instance of [FluxConfig] with selectively updated properties.
+  /// 
+  /// **Immutability:**
+  /// Ensures the configuration remains immutable during runtime. Useful when spawning 
+  /// a slightly altered Flux client (e.g., turning on [showRequestLogs] dynamically 
+  /// for a specific debug session) without polluting the global config.
+  /// 
+  /// *(Note: `removeAllPathsWhenRequestFails` and `reloadPageWhenRequestFails` 
+  /// in the signature are ignored by the internal constructor, maintained solely 
+  /// for API contract backward compatibility).*
   /// 
   /// {@macro flux_config}
   FluxConfig copyWith({

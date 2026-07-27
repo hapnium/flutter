@@ -53,11 +53,7 @@ class Album {
   ///
   /// Pagination can be controlled using [skip] (offset) and [take] (limit).
   /// Optionally uses a lightweight fetch mode via [lightWeight].
-  Future<MediaPage> listMedia({
-    int? skip,
-    int? take,
-    bool? lightWeight,
-  }) {
+  Future<MediaPage> listMedia({int? skip, int? take, bool? lightWeight}) {
     return Gallery._listMedia(
       album: this,
       skip: skip,
@@ -70,11 +66,7 @@ class Album {
   ///
   /// Displays the most recent medium's thumbnail in the album.
   /// Useful for preview purposes in album grids or lists.
-  Future<List<int>> getThumbnail({
-    int? width,
-    int? height,
-    bool? highQuality = false,
-  }) {
+  Future<List<int>> getThumbnail({int? width, int? height, bool? highQuality = false}) {
     return Gallery.getAlbumThumbnail(
       albumId: id,
       mediumType: mediumType,

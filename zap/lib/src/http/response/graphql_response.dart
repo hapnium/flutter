@@ -8,8 +8,16 @@ import 'response.dart';
 /// A response object specifically for GraphQL operations.
 ///
 /// Includes both the successful data payload and any GraphQL errors returned.
-/// 
-/// Example:
+/// This class extends [Response] to provide GraphQL-specific error handling
+/// and response parsing.
+///
+/// ## Features
+/// - Automatic parsing of GraphQL errors from response body
+/// - Error extraction with code and message
+/// - Factory constructors for common scenarios (from Response, from exception)
+/// - Provider set to [ZapProvider.graphql]
+///
+/// ## Example
 /// ```dart
 /// final response = await client.post(
 ///   '/graphql',
@@ -17,18 +25,51 @@ import 'response.dart';
 ///     'query': '{ hello }',
 ///   },
 /// );
+/// final graphqlResponse = GraphQLResponse.fromDynamic(response);
+/// if (graphqlResponse.graphQLErrors != null) {
+///   print('Errors: ${graphqlResponse.graphQLErrors}');
+/// }
 /// ```
 /// 
 /// {@endtemplate}
 class GraphQLResponse<T> extends Response<T> {
   /// List of GraphQL errors returned by the server.
+  ///
+  /// This is `null` if the response was successful with no errors.
+  /// Each error contains a [GraphQLError] with code and message.
+  ///
+  /// ## Example
+  /// ```dart
+  /// if (response.graphQLErrors != null) {
+  ///   for (final error in response.graphQLErrors!) {
+  ///     print('Error: ${error.message} (${error.code})');
+  ///   }
+  /// }
+  /// ```
   final List<GraphQLError>? graphQLErrors;
 
+  /// Creates a [GraphQLResponse] with the given parameters.
+  ///
+  /// ## Parameters
+  /// - [status]: The HTTP status code.
+  /// - [body]: The response body.
+  /// - [graphQLErrors]: Optional list of GraphQL errors.
+  /// - [provider]: The provider type (defaults to [ZapProvider.graphql]).
+  ///
   /// {@macro graphql_response}
   GraphQLResponse({required super.status, super.body, this.graphQLErrors, super.provider = ZapProvider.graphql});
 
   /// Constructs a [GraphQLResponse] from a standard [Response],
   /// extracting the GraphQL `data` field as the response body.
+  ///
+  /// ## Parameters
+  /// - [res]: The standard response to convert.
+  ///
+  /// ## Example
+  /// ```dart
+  /// final standardResponse = await client.post('/graphql', body: query);
+  /// final graphqlResponse = GraphQLResponse.fromResponse(standardResponse);
+  /// ```
   /// 
   /// {@macro graphql_response}
   GraphQLResponse.fromResponse(Response res) : graphQLErrors = null, super(
@@ -43,9 +84,22 @@ class GraphQLResponse<T> extends Response<T> {
   );
 
   /// Constructs a [GraphQLResponse] from a dynamic response body.
-  /// 
-  /// This factory constructor is useful when you have a [Response]
-  /// that contains a GraphQL response body.
+  ///
+  /// This factory constructor parses the response body for GraphQL errors.
+  /// If errors are present, they are extracted and returned in [graphQLErrors].
+  /// Otherwise, the `data` field is used as the response body.
+  ///
+  /// ## Parameters
+  /// - [res]: The response containing a GraphQL response body.
+  ///
+  /// ## Example
+  /// ```dart
+  /// final response = await client.post('/graphql', body: query);
+  /// final graphqlResponse = GraphQLResponse.fromDynamic(response);
+  /// if (graphqlResponse.graphQLErrors != null) {
+  ///   // Handle errors
+  /// }
+  /// ```
   /// 
   /// {@macro graphql_response}
   factory GraphQLResponse.fromDynamic(Response res) {
@@ -64,9 +118,22 @@ class GraphQLResponse<T> extends Response<T> {
   }
 
   /// Constructs a [GraphQLResponse] from an exception.
-  /// 
-  /// This factory constructor is useful when you have an exception
-  /// that you want to convert into a [GraphQLResponse].
+  ///
+  /// This factory constructor is useful when an exception occurs during
+  /// the request and you want to convert it into a structured response.
+  ///
+  /// ## Parameters
+  /// - [e]: The exception to convert.
+  ///
+  /// ## Example
+  /// ```dart
+  /// try {
+  ///   final response = await client.post('/graphql', body: query);
+  /// } catch (e) {
+  ///   final errorResponse = GraphQLResponse.fromException(e);
+  ///   print(errorResponse.graphQLErrors?.first.message);
+  /// }
+  /// ```
   /// 
   /// {@macro graphql_response}
   factory GraphQLResponse.fromException(Exception e) {

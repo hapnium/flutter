@@ -195,6 +195,38 @@ Entry: `package:smart/smart.dart`.
 
 ---
 
+## Ship script
+
+`ship.sh` is a multi-project git workflow tool at the repo root. It detects which projects have changes, runs their tests, and handles `git add` → `commit` → `push` in one step.
+
+```bash
+./ship.sh                        # Interactive — prompts for message and confirmation
+./ship.sh -m "feat: add new API" # Commit with a message
+./ship.sh -m "fix: ..." -y       # Skip confirmation prompt
+./ship.sh --skip-tests           # Skip test execution
+./ship.sh --dry-run              # Preview what would happen
+./ship.sh --status               # Show which projects have changes
+```
+
+| Option | Description |
+|--------|-------------|
+| `-m`, `--message MSG` | Commit message (auto-generated if omitted) |
+| `-y`, `--yes` | Skip confirmation prompt |
+| `--skip-tests` | Don't run tests before committing |
+| `--dry-run` | Show what would happen without doing it |
+| `--status` | Show changed projects and exit |
+
+**How it works:**
+
+1. Scans `git status` and maps changed files to project directories
+2. Runs `flutter test` (or `dart test` for pure Dart projects) on each changed project
+3. Stages all changes, prompts for a commit message (or uses `-m`)
+4. Commits and pushes to the current branch
+
+**Tracked projects:** `chime`, `device`, `gallery`, `hapnium`, `link_preview`, `multimedia`, `phosphor_flutter`, `secure`, `sedat`, `smart`, `tracing`, `zap`
+
+---
+
 ## CI and releases
 
 Under `.github/workflows/`:

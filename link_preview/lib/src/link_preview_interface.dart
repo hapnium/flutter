@@ -51,7 +51,7 @@ abstract class LinkPreviewInterface {
     Duration? requestTimeout,
     String? userAgent
   }) async {
-    LinkPreviewData? v1 = await runV1(link, proxy: proxy, cache: cacheDuration, requestTimeout: requestTimeout, userAgent: userAgent);
+    final v1 = await runV1(link, proxy: proxy, cache: cacheDuration, requestTimeout: requestTimeout, userAgent: userAgent);
 
     if(v1 != null) {
       return v1;

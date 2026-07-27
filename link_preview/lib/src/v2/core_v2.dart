@@ -18,19 +18,124 @@ import 'package:link_preview/link_preview.dart';
 
 CacheManager _manager = LinkPreview.cacheManager();
 
-/// Twitter generates meta tags client-side so it's impossible to read their
-/// values from a server request. We use this hack to fetch server-side
-/// rendered meta tags.
+/// {@template run_v2_client_side}
+/// Fetches a link preview for a URL that generates meta tags client-side.
 ///
-/// This method is useful for URLs that use client-side meta tag generation
-/// technique.
+/// This is a specialized wrapper around [runV2] that uses a browser-like
+/// user agent to work around sites (notably Twitter/X) that render meta tags
+/// via JavaScript. By spoofing the user agent, the server-side rendered
+/// response includes the meta tags that would otherwise only be available
+/// after client-side rendering.
+///
+/// ### Example
+///
+/// ```dart
+/// final preview = await runV2ClientSide('https://twitter.com/user/status/123');
+/// if (preview != null) {
+///   print(preview.title);
+///   print(preview.image?.url);
+/// }
+/// ```
+///
+/// ### Parameters
+///
+/// - [url] — The URL to fetch. Must be a valid URL recognized by
+///   [LinkPreview.isURL]. If the URL is invalid, `null` is returned.
+/// - [cache] — Duration for which the result is cached. Defaults to 24
+///   hours. Pass `null` to disable caching entirely. Pass `Duration.zero`
+///   to skip cache read but still store the result.
+/// - [headers] — Optional HTTP headers to include in the request. Useful
+///   for adding authentication tokens or custom accept headers.
+/// - [userAgent] — The user agent string sent with the request. Defaults
+///   to `'WhatsApp/2.21.12.21 A'` which triggers server-side meta tag
+///   rendering on most platforms.
+///
+/// ### Return value
+///
+/// Returns a [Future] that resolves to a [LinkPreviewData] containing the
+/// extracted metadata, or `null` if:
+/// - The URL is invalid
+/// - The request fails
+/// - The response cannot be parsed
+///
+/// ### Edge cases
+///
+/// - If the URL points directly to an image (content-type starts with
+///   `image/`), the returned [LinkPreviewData] will have an empty title
+///   and the image URL set to the original URL.
+/// - If the cache is expired or disabled, a fresh fetch is performed.
+/// - Network errors are caught and logged, returning `null`.
+/// - Redirect chains are followed automatically (up to 7 redirects).
+/// {@endtemplate}
 Future<LinkPreviewData?> runV2ClientSide(String url, {
   Duration? cache = const Duration(hours: 24),
   Map<String, String> headers = const {},
   String? userAgent = 'WhatsApp/2.21.12.21 A',
 }) => runV2(url, cache: cache, headers: headers, userAgent: userAgent);
 
-/// Fetches a [url], validates it, then returns [LinkPreviewData].
+/// {@template run_v2}
+/// Fetches a URL, extracts metadata, and returns a [LinkPreviewData].
+///
+/// This is the core function that powers the v2 link preview pipeline. It:
+/// 1. Checks the cache for a valid entry
+/// 2. Validates the URL format
+/// 3. Fetches the URL (or YouTube oembed data for YouTube URLs)
+/// 4. Parses the HTML response through a chain of parsers
+/// 5. Caches and returns the result
+///
+/// The parser chain tries OpenGraph, Twitter Cards, YouTube, JSON-LD,
+/// HTML meta tags, and finally a generic HTML parser. The first parser
+/// to populate all metadata fields wins.
+///
+/// ### Example
+///
+/// ```dart
+/// final preview = await runV2('https://example.com');
+/// if (preview != null) {
+///   print('Title: ${preview.title}');
+///   print('Description: ${preview.description}');
+///   print('Image: ${preview.image?.url}');
+/// }
+/// ```
+///
+/// ### Parameters
+///
+/// - [url] — The URL to fetch and extract metadata from. Must pass
+///   [LinkPreview.isURL] validation. If invalid, `null` is returned.
+/// - [cache] — Duration for which the result is cached. Defaults to 24
+///   hours. Pass `null` to disable caching entirely. Pass `Duration.zero`
+///   to skip cache read but still store the result for future requests.
+/// - [headers] — Optional HTTP headers to include in the request.
+/// - [userAgent] — Optional user agent string. If `null`, the server's
+///   default user agent is used. YouTube oembed requests always use the
+///   default WhatsApp user agent regardless of this parameter.
+///
+/// ### Return value
+///
+/// Returns a [Future] that resolves to a [LinkPreviewData] containing the
+/// extracted metadata (title, description, image, site name, URL), or
+/// `null` if the URL is invalid or the request fails.
+///
+/// ### Edge cases
+///
+/// - **Image URLs**: If the response content-type starts with `image/`,
+///   a minimal [LinkPreviewData] is returned with the image URL and empty
+///   title/description/siteName.
+/// - **YouTube URLs**: Automatically detected and fetched via the YouTube
+///   oembed endpoint, which returns structured JSON instead of HTML.
+/// - **Cache expiry**: Cached entries older than [cache] duration are
+///   treated as a cache miss and re-fetched.
+/// - **Cache disabled**: When `cache` is `null`, any existing cache entry
+///   is deleted and no new cache entry is stored.
+/// - **Network errors**: Caught and logged via [debugPrint], returning
+///   `null` without propagating the exception.
+/// - **Redirect chains**: Followed automatically via [fetchWithRedirects].
+/// - **Relative image URLs**: Resolved against the page URL if the parsers
+///   return relative paths.
+/// - **Non-200 responses**: [responseToDocument] returns `null`, causing
+///   this function to return the default info (domain as title, URL as
+///   description).
+/// {@endtemplate}
 Future<LinkPreviewData?> runV2(String url, {
   Duration? cache = const Duration(hours: 24),
   Map<String, String> headers = const {},
@@ -89,7 +194,47 @@ Future<LinkPreviewData?> runV2(String url, {
   }
 }
 
-/// Takes an [http.Response] and returns a [Document].
+/// {@template response_to_document}
+/// Converts an HTTP response body into an HTML [Document].
+///
+/// This function takes the raw bytes from an [http.Response], decodes
+/// them using UTF-8, and parses the result into an [html.Document] tree
+/// that can be queried by the metadata parsers.
+///
+/// ### Example
+///
+/// ```dart
+/// final response = await http.get(Uri.parse('https://example.com'));
+/// final document = responseToDocument(response);
+/// if (document != null) {
+///   final title = document.querySelector('title')?.text;
+/// }
+/// ```
+///
+/// ### Parameters
+///
+/// - [response] — The HTTP response to parse. Must have a `statusCode` of
+///   200 for parsing to proceed. The response body bytes are decoded as
+///   UTF-8 text.
+///
+/// ### Return value
+///
+/// Returns a [Document] if the response was successfully parsed, or `null`
+/// if:
+/// - The status code is not 200
+/// - The body cannot be decoded as valid UTF-8
+/// - The HTML is malformed and cannot be parsed
+///
+/// ### Edge cases
+///
+/// - **Non-200 status codes**: Returns `null` immediately without
+///   attempting to parse the body.
+/// - **Binary responses**: If the response body is binary (e.g., an image
+///   file served with a text content-type), UTF-8 decoding may produce
+///   garbage or throw. The catch block returns `null` in this case.
+/// - **Empty body**: Returns a valid but empty [Document].
+/// - **Encoding issues**: UTF-8 decode errors are caught, returning `null`.
+/// {@endtemplate}
 Document? responseToDocument(http.Response response) {
   if (response.statusCode != 200) return null;
 
@@ -103,21 +248,12 @@ Document? responseToDocument(http.Response response) {
   return document;
 }
 
-/// Returns instance of [LinkPreviewData] with data extracted from the
-/// [Document]. Provide a [url] as a fallback when there are no
-/// Document URLs extracted by the parsers.
-///
-/// Future: Can pass in a strategy, e.g.: to retrieve only OpenGraph, or
-/// OpenGraph and Json+LD only.
+/// Extracts metadata from [document] using the parser chain, with [url]
+/// as a fallback for relative image resolution.
 LinkPreviewData? _extractMetadata(Document document, {String? url}) => _parse(document, url: url);
 
-/// This is the default strategy for building our [LinkPreviewData].
-///
-/// It tries [OpenGraphParser], then [TwitterParser], then [JsonLdParser],
-/// and then falls back to [HtmlMetaParser] tags for missing data. You may
-/// optionally provide a URL to the function, used to resolve relative images
-/// or to compensate for the lack of URI identifiers from the metadata
-/// parsers.
+/// Default parser strategy: tries each parser in order and merges results.
+/// Stops early when all metadata fields are populated.
 LinkPreviewData _parse(Document? document, {String? url}) {
   final output = LinkPreviewData();
 
@@ -152,6 +288,7 @@ LinkPreviewData _parse(Document? document, {String? url}) {
   return output;
 }
 
+/// Extracts metadata from OpenGraph meta tags (og:title, og:description, etc.).
 LinkPreviewData? _openGraph(Document? document) {
   try {
     return OpenGraphParser(document).parse();
@@ -160,6 +297,7 @@ LinkPreviewData? _openGraph(Document? document) {
   }
 }
 
+/// Extracts metadata from standard HTML meta tags (title, description).
 LinkPreviewData? _htmlMeta(Document? document) {
   try {
     return HtmlMetaParser(document).parse();
@@ -168,6 +306,7 @@ LinkPreviewData? _htmlMeta(Document? document) {
   }
 }
 
+/// Extracts metadata from JSON-LD structured data scripts.
 LinkPreviewData? _jsonLdSchema(Document? document) {
   try {
     return JsonLdParser(document).parse();
@@ -176,6 +315,7 @@ LinkPreviewData? _jsonLdSchema(Document? document) {
   }
 }
 
+/// Extracts metadata from YouTube-specific meta tags.
 LinkPreviewData? _youtubeCard(Document? document) {
   try {
     return YoutubeParser(document).parse();
@@ -184,6 +324,7 @@ LinkPreviewData? _youtubeCard(Document? document) {
   }
 }
 
+/// Extracts metadata from Twitter Card meta tags (twitter:title, etc.).
 LinkPreviewData? _twitterCard(Document? document) {
   try {
     return TwitterParser(document).parse();
@@ -192,6 +333,7 @@ LinkPreviewData? _twitterCard(Document? document) {
   }
 }
 
+/// Fallback parser that extracts data from generic HTML elements.
 LinkPreviewData? _otherParser(Document? document) {
   try {
     return OtherParser(document).parse();

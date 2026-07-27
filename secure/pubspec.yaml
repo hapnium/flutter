@@ -3,7 +3,7 @@ description: "Secure Flutter is a robust package offering comprehensive encrypti
 
 publish_to: none
 
-version: 0.2.5
+version: 0.2.6
 homepage: https://github.com/Hapnium/flutter/tree/main/secure
 repository: https://github.com/Hapnium/flutter/tree/main/secure
 
@@ -18,3 +18,4 @@ dependencies:
 
 dev_dependencies:
   lints: ^6.1.0
+  test: ^1.24.0

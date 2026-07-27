@@ -1,45 +1,72 @@
 /// {@template session_response}
-/// A data model representing a session response, typically returned from an
-/// authentication endpoint. The session response includes both an access token
-/// and a refresh token.
+/// A Data Transfer Object (DTO) representing the cryptographic tokens required 
+/// to maintain an authenticated user session.
 ///
-/// JSON structure:
+/// **Architectural Context:**
+/// This class typically models the payload returned by a successful login, signup, 
+/// or token-refresh endpoint in an OAuth 2.0 or JWT-based authentication system. 
+/// It strictly separates the short-lived [accessToken] (used for authorizing 
+/// immediate API requests) from the long-lived [refreshToken] (used to quietly 
+/// negotiate a new access token in the background when the current one expires).
+///
+/// By keeping these tokens wrapped in a strongly-typed object, you can easily 
+/// pass the session state between your authentication repository, HTTP interceptors, 
+/// and local secure storage.
+///
+/// **JSON Structure:**
 /// ```json
 /// {
-///   "access_token": "string",
-///   "refresh_token": "string"
+///   "access_token": "eyJhbGciOiJIUzI1...",
+///   "refresh_token": "def50200543e4..."
 /// }
 /// ```
-/// 
 /// {@endtemplate}
 class SessionResponse {
-  /// Constructs a [SessionResponse] object with the required [accessToken]
-  /// and [refreshToken].
+  /// The primary cryptographic credential used to authorize API requests.
   ///
-  /// Both tokens are necessary for managing user sessions. The access token
-  /// is used for authenticated requests, and the refresh token is used to
-  /// obtain a new access token when the current one expires.
-  /// 
+  /// **Usage:** 
+  /// This token should be injected into the `Authorization` header of your HTTP 
+  /// requests, typically formatted as `Bearer <accessToken>`. It is usually 
+  /// short-lived (e.g., 15 minutes to 1 hour) to minimize the attack window if 
+  /// the token is intercepted.
+  final String accessToken;
+
+  /// The long-lived credential used to seamlessly negotiate a new [accessToken].
+  ///
+  /// **Usage:**
+  /// When an API request fails with a `401 Unauthorized`, your HTTP interceptor 
+  /// should catch the failure, send this [refreshToken] to the backend's refresh 
+  /// endpoint, receive a new `SessionResponse`, and seamlessly retry the failed 
+  /// request without forcing the user to log in again.
+  final String refreshToken;
+
   /// {@macro session_response}
+  ///
+  /// Instantiates a fully populated [SessionResponse] object.
+  /// 
+  /// Both tokens are strictly required. If you are initializing a state where 
+  /// the user is not yet logged in, use [SessionResponse.empty] instead of passing 
+  /// nulls.
   SessionResponse({
     required this.accessToken,
     required this.refreshToken,
   });
 
-  /// The access token used for making authenticated requests.
-  final String accessToken;
-
-  /// The refresh token used to obtain a new access token when the current one expires.
-  final String refreshToken;
-
-  /// Creates a copy of the current [SessionResponse] object with the option to
-  /// override the values of [accessToken] and [refreshToken].
+  /// Returns a new instance of [SessionResponse] with selectively updated tokens.
   ///
-  /// If a value is not provided, it defaults to the current instance's value.
+  /// **Architectural Use Case (Token Rotation):**
+  /// Some backends implement "Refresh Token Rotation", where refreshing a session 
+  /// returns both a new access token *and* a new refresh token. However, some 
+  /// backends only return a new access token. [copyWith] allows you to safely 
+  /// update the [accessToken] in your state while keeping the existing 
+  /// [refreshToken] perfectly intact.
   ///
   /// Example usage:
   /// ```dart
-  /// SessionResponse updatedResponse = sessionResponse.copyWith(accessToken: "newAccessToken");
+  /// // Only the access token updated; preserve the old refresh token.
+  /// SessionResponse updatedSession = currentSession.copyWith(
+  ///   accessToken: newPayload.accessToken,
+  /// );
   /// ```
   /// 
   /// {@macro session_response}
@@ -53,11 +80,14 @@ class SessionResponse {
     );
   }
 
-  /// A factory constructor that creates a [SessionResponse] object from a JSON map.
+  /// Deserializes a raw JSON map into a strictly typed [SessionResponse].
   ///
-  /// The [json] parameter is expected to contain keys for "access_token" and "refresh_token".
-  ///
-  /// If either token is missing from the JSON, it defaults to an empty string.
+  /// **Defensive Parsing Strategy:**
+  /// This factory utilizes the null-coalescing operator (`?? ""`) to guarantee 
+  /// that missing keys result in empty strings rather than throwing a null-pointer 
+  /// exception. While an empty string is an invalid token, it ensures the app 
+  /// fails gracefully (e.g., triggering a standard `401` logout flow) rather 
+  /// than crashing the rendering thread.
   /// 
   /// {@macro session_response}
   factory SessionResponse.fromJson(Map<String, dynamic> json) {
@@ -67,10 +97,13 @@ class SessionResponse {
     );
   }
 
-  /// Converts the current [SessionResponse] object into a JSON map that can
-  /// be serialized.
+  /// Serializes the session object back into a normalized JSON map.
   ///
-  /// The resulting JSON map contains the keys "access_token" and "refresh_token".
+  /// **Serialization Use Case:**
+  /// Highly useful for writing the session state to persistent local storage 
+  /// (like `flutter_secure_storage` or Hive). By encoding this object to a JSON 
+  /// string, you can save the user's session and re-hydrate it via [fromJson] 
+  /// the next time the app launches, keeping the user logged in.
   /// 
   /// {@macro session_response}
   Map<String, dynamic> toJson() => {
@@ -78,13 +111,20 @@ class SessionResponse {
     "refresh_token": refreshToken,
   };
 
-  /// A factory constructor that returns an empty [SessionResponse] object.
+  /// Constructs a safe, unauthenticated fallback state.
   ///
-  /// Both the access token and refresh token are set to empty strings, which
-  /// can be useful for initializing empty states.
+  /// **Architectural Fallback:**
+  /// Generates a [SessionResponse] where both tokens are empty strings. 
+  /// This is the ideal initial state for authentication managers (like a 
+  /// `StateNotifier` or `Bloc`) representing a logged-out user, preventing the 
+  /// need for nullable `SessionResponse?` types that force endless null-checks 
+  /// throughout your UI logic.
   /// 
   /// {@macro session_response}
   factory SessionResponse.empty() {
-    return SessionResponse(accessToken: "", refreshToken: "");
+    return SessionResponse(
+      accessToken: "", 
+      refreshToken: "",
+    );
   }
 }

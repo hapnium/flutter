@@ -1,21 +1,32 @@
 part of '../progress_slider.dart';
 
-/// The time label on the right hand side can be shown as the [totalTime] or as
-/// the [remainingTime]. If the choice is [remainingTime] then this will be
-/// shown as a negative number.
+/// {@template time_label_type}
+/// Determines what the right-hand time label on the [ProgressSlider]
+/// displays.
 ///
-///
+/// The left label always shows the current playback position. This
+/// enum controls only the right label. The default is
+/// [TimeLabelType.totalTime].
+/// {@endtemplate}
 enum TimeLabelType {
-  /// The time label on the right shows the total time.
+  /// The right label shows the total duration of the media.
   ///
-  /// | -------O---------------- |
-  /// | 01:23              05:00 |
+  /// ```
+  ///  | -------O---------------- |
+  ///  | 01:23              05:00 |
+  /// ```
+  ///
+  /// This is the default.
   totalTime,
 
-  /// The time label on the right shows the remaining time as a
-  /// negative number.
+  /// The right label shows the remaining time as a negative number.
   ///
-  /// | -------O---------------- |
-  /// | 01:23             -03:37 |
+  /// ```
+  ///  | -------O---------------- |
+  ///  | 01:23             -03:37 |
+  /// ```
+  ///
+  /// Useful for countdown-style UIs where the user expects to see
+  /// how much time is left rather than the total length.
   remainingTime,
 }

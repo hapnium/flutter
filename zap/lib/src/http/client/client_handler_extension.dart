@@ -1,25 +1,63 @@
 part of 'zap_client.dart';
 
+/// {@template client_handler_extension}
+/// Extension on [ClientHandler] that provides request building, execution,
+/// and exception handling logic.
+///
+/// This extension encapsulates the core HTTP request lifecycle including
+/// body processing, header management, response interception, and
+/// structured error handling.
+/// {@endtemplate}
 extension ClientHandlerExtension on ClientHandler {
+  /// Returns the controller advice, falling back to a default instance.
+  ///
+  /// This ensures that exception handling always has a notifier available,
+  /// even if no custom [ControllerAdvice] was provided.
   ControllerAdvice get _adviser => controllerAdvice ?? ControllerAdvice();
 
-  /// Create a request with body (optimized for async FormData)
+  /// Creates a request with a body (optimized for async FormData).
   /// 
   /// This method is used to create a request with a body, which is useful for
   /// making HTTP requests with a body, such as POST or PUT requests.
   /// 
-  /// Parameters:
-  /// - [url]: The target endpoint.
+  /// ## Parameters
+  /// - [url]: The target endpoint (relative or absolute).
   /// - [contentType]: MIME type of the request body (defaults to JSON).
   /// - [body]: The body payload for the request.
   /// - [method]: HTTP method (e.g., 'GET', 'POST', 'PUT', 'DELETE').
   /// - [query]: Query parameters appended to the URL.
   /// - [decoder]: Optional function to parse the response body.
   /// - [responseInterceptor]: Optional hook for inspecting or altering the response.
-  /// - [uploadProgress]: Callback for monitoring upload progress.
+  /// - [uploadProgress]: Callback for monitoring upload progress (0.0 to 100.0).
   /// 
-  /// Returns:
-  ///   A [Request] of type [T] representing the server's reply.
+  /// ## Returns
+  /// A [Request] of type [T] ready to be sent.
+  ///
+  /// ## Throws
+  /// - [ZapException] if the body type is not supported and [errorSafety] is `false`.
+  ///
+  /// ## Supported body types
+  /// - [FormData]: Multipart form data with file uploads.
+  /// - [Uint8List], [List<int>], [Iterable<int>]: Binary data.
+  /// - [BodyByteStream]: Raw byte stream.
+  /// - [Map]: JSON-encoded or form URL-encoded data.
+  /// - [List]: JSON-encoded array.
+  /// - [String]: Plain text.
+  /// - `null`: Empty body.
+  ///
+  /// ## Example
+  /// ```dart
+  /// final request = await handler.requestWithBody<User>(
+  ///   '/users',
+  ///   'application/json',
+  ///   {'name': 'John'},
+  ///   'POST',
+  ///   null,
+  ///   User.fromJson,
+  ///   null,
+  ///   null,
+  /// );
+  /// ```
   Future<Request<T>> requestWithBody<T>(
     String? url,
     String? contentType,
@@ -105,7 +143,19 @@ extension ClientHandlerExtension on ClientHandler {
     );
   }
 
-  /// Process FormData with proper progress tracking
+  /// Processes FormData with proper progress tracking.
+  ///
+  /// If no [uploadProgress] callback is provided, the FormData stream is
+  /// returned directly. Otherwise, the FormData is converted to bytes first
+  /// to enable accurate progress reporting.
+  ///
+  /// ## Parameters
+  /// - [formData]: The form data to process.
+  /// - [uploadProgress]: Optional progress callback.
+  /// - [totalLength]: The total expected byte length.
+  ///
+  /// ## Returns
+  /// A [BodyByteStream] containing the encoded form data.
   Future<BodyByteStream> _processFormDataStreamWithProgress(FormData formData, Progress? uploadProgress, int totalLength) async {
     if (uploadProgress == null) {
       return formData.finalize().cast<List<int>>();
@@ -118,6 +168,22 @@ extension ClientHandlerExtension on ClientHandler {
     return _trackProgress(formDataBytes, uploadProgress);
   }
 
+  /// Wraps a byte stream with progress tracking.
+  ///
+  /// Splits the data into 8KB chunks and reports progress at ~60fps to avoid
+  /// overwhelming the UI thread.
+  ///
+  /// ## Parameters
+  /// - [bodyBytes]: The raw bytes to track.
+  /// - [uploadProgress]: Optional progress callback receiving 0.0-100.0.
+  ///
+  /// ## Returns
+  /// A [BodyByteStream] that reports progress as data is consumed.
+  ///
+  /// ## Edge cases
+  /// - If [uploadProgress] is `null`, the bytes are wrapped in a single-value stream.
+  /// - Progress is throttled to ~16ms intervals (~60fps) to prevent UI spam.
+  /// - The stream can be cancelled, which stops progress reporting.
   BodyByteStream _trackProgress(BodyBytes bodyBytes, Progress? uploadProgress) {
     if (uploadProgress == null) {
       return Stream.value(bodyBytes);
@@ -205,12 +271,30 @@ extension ClientHandlerExtension on ClientHandler {
     return controller.stream;
   }
 
-  /// Process JSON without blocking UI
+  /// Processes JSON body asynchronously using [compute] to avoid blocking the UI.
+  ///
+  /// ## Parameters
+  /// - [body]: The JSON-encodable body (typically a `Map` or `List`).
+  ///
+  /// ## Returns
+  /// UTF-8 encoded bytes of the JSON string.
   Future<BodyBytes> _processJsonAsync(dynamic body) async {
     return await compute(_encodeJson, body);
   }
 
-  /// Process binary body payloads without mutation.
+  /// Processes binary body payloads without mutation.
+  ///
+  /// Accepts [Uint8List], [List<int>], or [Iterable<int>] and returns
+  /// a [Uint8List] without modifying the original data.
+  ///
+  /// ## Parameters
+  /// - [body]: The binary body data.
+  ///
+  /// ## Returns
+  /// A [Uint8List] containing the binary data.
+  ///
+  /// ## Edge cases
+  /// - Returns an empty [Uint8List] if the input type is not recognized.
   Future<BodyBytes> _processBinaryAsync(dynamic body) async {
     if (body is Uint8List) {
       return body;
@@ -227,17 +311,44 @@ extension ClientHandlerExtension on ClientHandler {
     return Uint8List(0);
   }
 
-  /// Process form URL encoded without blocking UI
+  /// Processes form URL encoded body asynchronously using [compute].
+  ///
+  /// ## Parameters
+  /// - [body]: The form data as a key-value map.
+  ///
+  /// ## Returns
+  /// UTF-8 encoded bytes of the form URL encoded string.
+  ///
+  /// ## Example
+  /// Input: `{'name': 'John', 'age': '30'}`
+  /// Output: `name=John&age=30`
   Future<BodyBytes> _processFormUrlEncodedAsync(RequestParam body) async {
     return await compute(_encodeFormUrlEncoded, body);
   }
 
-  /// Process string without blocking UI
+  /// Processes string body asynchronously using [compute].
+  ///
+  /// ## Parameters
+  /// - [body]: The string body.
+  ///
+  /// ## Returns
+  /// UTF-8 encoded bytes of the string.
   Future<BodyBytes> _processStringAsync(String body) async {
     return await compute(_encodeString, body);
   }
 
   /// Fallback serializer for body types outside the standard set.
+  ///
+  /// Attempts JSON encoding first, then falls back to string conversion.
+  ///
+  /// ## Parameters
+  /// - [body]: The body to serialize.
+  ///
+  /// ## Returns
+  /// UTF-8 encoded bytes of the serialized body.
+  ///
+  /// ## Throws
+  /// [ZapException] if the body cannot be serialized.
   Future<BodyBytes> _processUnknownBodyAsync(dynamic body) async {
     try {
       return await _processJsonAsync(body);
@@ -247,6 +358,12 @@ extension ClientHandlerExtension on ClientHandler {
   }
 
   /// Sets simple headers for a request.
+  ///
+  /// Applies the content type and optionally the user agent header.
+  ///
+  /// ## Parameters
+  /// - [headers]: The headers map to modify.
+  /// - [contentType]: The content type to set, or `null` to use the default.
   void _setSimpleHeaders(Headers headers, String? contentType) {
     headers[HttpHeaders.CONTENT_TYPE] = contentType ?? defaultContentType;
     if (sendUserAgent) {
@@ -256,16 +373,24 @@ extension ClientHandlerExtension on ClientHandler {
 
   /// Performs a request and returns a response.
   /// 
-  /// This method is used to perform a request and returns a response.
+  /// This method sends the request through the modifier pipeline, handles
+  /// authentication retries on 401 responses, and processes exceptions.
   /// 
-  /// Parameters:
+  /// ## Parameters
   /// - [request]: The request to perform.
-  /// - [useAuth]: Whether to use authentication.
-  /// - [requestNumber]: The number of requests made.
-  /// - [headers]: Additional HTTP headers.
+  /// - [useAuth]: Whether to apply authentication (default: `false`).
+  /// - [requestNumber]: The current retry attempt number (default: `1`).
+  /// - [headers]: Additional HTTP headers to merge into the request.
   /// 
-  /// Returns:
-  ///   A [Response] of type [T] representing the server's reply.
+  /// ## Returns
+  /// A [Response] of type [T] representing the server's reply.
+  ///
+  /// ## Edge cases
+  /// - If [useAuth] is `true` and an authenticator is configured, the
+  ///   authenticator is called before sending the request.
+  /// - On 401 responses, the request is retried with authentication if
+  ///   [requestNumber] <= [maxAuthRetries].
+  /// - If [errorSafety] is `false`, authentication errors are thrown.
   Future<Response<T>> perform<T>(Request<T> request, {bool useAuth = false, int requestNumber = 1, Headers? headers}) async {
     headers?.forEach((key, value) {
       request.headers[key] = value;
@@ -305,7 +430,16 @@ extension ClientHandlerExtension on ClientHandler {
     }
   }
 
-  /// Returns a response interceptor.
+  /// Returns a response interceptor, preferring the provided one over the default.
+  ///
+  /// If [actual] is non-null, it is returned directly. Otherwise, falls back
+  /// to [defaultResponseInterceptor], wrapping it in a typed adapter.
+  ///
+  /// ## Parameters
+  /// - [actual]: The per-request interceptor, if any.
+  ///
+  /// ## Returns
+  /// A [ResponseInterceptor<T>] or `null` if no interceptor is available.
   ResponseInterceptor<T>? _responseInterceptor<T>(ResponseInterceptor<T>? actual) {
     if (actual != null) return actual;
 
@@ -321,10 +455,11 @@ extension ClientHandlerExtension on ClientHandler {
 
   /// Returns a request with body.
   /// 
-  /// This method is used to create a request with a body, which is useful for
-  /// making HTTP requests with a body, such as POST or PUT requests.
+  /// Creates a [Request] object with the specified body, method, and
+  /// configuration. Falls back to [defaultDecoder] and [defaultResponseInterceptor]
+  /// if not explicitly provided.
   /// 
-  /// Parameters:
+  /// ## Parameters
   /// - [url]: The target endpoint.
   /// - [method]: HTTP method (e.g., 'GET', 'POST', 'PUT', 'DELETE').
   /// - [contentType]: MIME type of the request body (defaults to JSON).
@@ -334,8 +469,19 @@ extension ClientHandlerExtension on ClientHandler {
   /// - [responseInterceptor]: Optional hook for inspecting or altering the response.
   /// - [uploadProgress]: Callback for monitoring upload progress.
   /// 
-  /// Returns:
-  ///   A [Request] of type [T] representing the server's reply.
+  /// ## Returns
+  /// A [Request] of type [T] ready to be sent.
+  ///
+  /// ## Example
+  /// ```dart
+  /// final request = await handler.getRequestWithBody<User>(
+  ///   '/users',
+  ///   'POST',
+  ///   body: {'name': 'John'},
+  ///   query: null,
+  ///   contentType: 'application/json',
+  /// );
+  /// ```
   Future<Request<T>> getRequestWithBody<T>(String? url, String method, {
     String? contentType,
     required RequestBody body,
@@ -352,22 +498,31 @@ extension ClientHandlerExtension on ClientHandler {
 
   /// Returns a request without body.
   /// 
-  /// This method is used to create a request without a body, which is useful for
-  /// making HTTP requests without a body, such as GET or DELETE requests.
+  /// Creates a [Request] object for methods that do not include a body,
+  /// such as GET or DELETE requests.
   /// 
-  /// Parameters:
+  /// ## Parameters
   /// - [url]: The target endpoint.
-  /// - [method]: HTTP method (e.g., 'GET', 'POST', 'PUT', 'DELETE').
+  /// - [method]: HTTP method (e.g., 'GET', 'DELETE').
   /// - [contentType]: MIME type of the request body (defaults to JSON).
   /// - [query]: Query parameters appended to the URL.
   /// - [decoder]: Optional function to parse the response body.
   /// - [responseInterceptor]: Optional hook for inspecting or altering the response.
-  /// - [contentLength]: The length of the request body.
-  /// - [followRedirects]: Whether to follow redirects.
-  /// - [maxRedirects]: The maximum number of redirects to follow.
+  /// - [contentLength]: The length of the request body (default: 0).
+  /// - [followRedirects]: Whether to follow redirects (default: `true`).
+  /// - [maxRedirects]: The maximum number of redirects to follow (default: 5).
   /// 
-  /// Returns:
-  ///   A [Request] of type [T] representing the server's reply.
+  /// ## Returns
+  /// A [Request] of type [T] ready to be sent.
+  ///
+  /// ## Example
+  /// ```dart
+  /// final request = await handler.getRequestWithoutBody<User>(
+  ///   '/users',
+  ///   'GET',
+  ///   query: {'page': '1'},
+  /// );
+  /// ```
   Future<Request<T>> getRequestWithoutBody<T>(String? url, String method, {
     String? contentType,
     RequestParam? query,
@@ -397,14 +552,23 @@ extension ClientHandlerExtension on ClientHandler {
 
   /// Handles exceptions and returns appropriate Response objects based on exception type.
   /// 
-  /// This method is used to handle exceptions and returns appropriate Response objects based on exception type.
+  /// Converts exceptions to [ZapException] instances if needed, notifies the
+  /// controller adviser, and either rethrows or creates structured error responses
+  /// based on [errorSafety].
   /// 
-  /// Parameters:
+  /// ## Parameters
   /// - [e]: The exception to handle.
   /// - [request]: The request that caused the exception.
   /// 
-  /// Returns:
-  ///   A [Response] of type [T] representing the server's reply.
+  /// ## Returns
+  /// A [Response] of type [T] with error status and details.
+  ///
+  /// ## Throws
+  /// The exception is rethrown if [errorSafety] is `false`.
+  ///
+  /// ## Edge cases
+  /// - If [e] is already a [ZapException], it is used directly.
+  /// - The controller adviser is always notified, regardless of [errorSafety].
   Future<Response<T>> handleException<T>(Exception e, Request<T> request) async {
     ZapException zapException;
     
@@ -429,14 +593,28 @@ extension ClientHandlerExtension on ClientHandler {
 
   /// Creates appropriate Response objects based on ZapException type.
   /// 
-  /// This method is used to create appropriate Response objects based on ZapException type.
+  /// Maps each [ExceptionType] to a corresponding [HttpStatus] and error
+  /// response with descriptive headers and messages.
   /// 
-  /// Parameters:
+  /// ## Parameters
   /// - [exception]: The exception to handle.
   /// - [request]: The request that caused the exception.
   /// 
-  /// Returns:
-  ///   A [Response] of type [T] representing the server's reply.
+  /// ## Returns
+  /// A [Response] of type [T] with appropriate status, headers, and error details.
+  ///
+  /// ## Supported exception types
+  /// - [ExceptionType.timeout]: Returns 408 Request Timeout.
+  /// - [ExceptionType.network]: Returns 600 Connection Not Reachable.
+  /// - [ExceptionType.server]: Returns the server error status code.
+  /// - [ExceptionType.client]: Returns the client error status code.
+  /// - [ExceptionType.auth]: Returns 401 Unauthorized.
+  /// - [ExceptionType.ssl]: Returns 600 Connection Not Reachable.
+  /// - [ExceptionType.connection]: Returns 600 Connection Not Reachable.
+  /// - [ExceptionType.dns]: Returns 600 Connection Not Reachable.
+  /// - [ExceptionType.parsing]: Returns 422 Unprocessable Entity.
+  /// - [ExceptionType.cancelled]: Returns 601 Request Cancelled.
+  /// - Default: Returns 500 Internal Server Error.
   Response<T> _createResponseForException<T>(ZapException exception, Request<T> request) {
     switch (exception.type) {
       case ExceptionType.timeout:
@@ -593,12 +771,33 @@ extension ClientHandlerExtension on ClientHandler {
   }
 }
 
-// Isolate functions for compute()
+/// Encodes a dynamic value to JSON bytes.
+///
+/// This is a top-level function to allow execution via [compute] isolate.
+///
+/// ## Parameters
+/// - [body]: The JSON-encodable value.
+///
+/// ## Returns
+/// UTF-8 encoded bytes of the JSON string.
 BodyBytes _encodeJson(dynamic body) {
   final jsonString = json.encode(body);
   return Uint8List.fromList(utf8.encode(jsonString));
 }
 
+/// Encodes a map to form URL encoded bytes.
+///
+/// This is a top-level function to allow execution via [compute] isolate.
+///
+/// ## Parameters
+/// - [body]: The form data as a key-value map.
+///
+/// ## Returns
+/// UTF-8 encoded bytes of the form URL encoded string.
+///
+/// ## Example
+/// Input: `{'name': 'John', 'age': '30'}`
+/// Output: `name=John&age=30`
 BodyBytes _encodeFormUrlEncoded(RequestParam body) {
   final parts = <String>[];
   body.forEach((key, value) {
@@ -608,6 +807,15 @@ BodyBytes _encodeFormUrlEncoded(RequestParam body) {
   return Uint8List.fromList(utf8.encode(formData));
 }
 
+/// Encodes a string to UTF-8 bytes.
+///
+/// This is a top-level function to allow execution via [compute] isolate.
+///
+/// ## Parameters
+/// - [body]: The string to encode.
+///
+/// ## Returns
+/// UTF-8 encoded bytes.
 BodyBytes _encodeString(String body) {
   return Uint8List.fromList(utf8.encode(body));
 }

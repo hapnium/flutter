@@ -1,29 +1,63 @@
 import 'dart:convert';
 
 /// {@template messaging_metadata}
-/// Represents metadata associated with a secure message.
+/// Metadata associated with a secure message, containing encryption scheme
+/// details, signature information, and message type.
 ///
-/// This class contains key details about the encryption, signature,
-/// and type of the message. It provides methods to serialize and
-/// deserialize the metadata to and from JSON and base64-encoded strings.
-/// 
+/// This class is used internally by [MessagingResponse] to track how a
+/// message was encrypted and when it was created. The metadata is serialized
+/// alongside the message body in encrypted payloads.
+///
+/// ### Serialization formats
+///
+/// - **JSON**: [toJson] / [fromJson] for map-based serialization
+/// - **Base64**: [toString] / [fromString] for base64-encoded JSON strings
+///   (used in encrypted payload wrappers)
+///
+/// ### Example
+///
+/// ```dart
+/// final meta = MessagingMetadata(
+///   enc: 'RSA',
+///   sign: '2024-01-15T10:30:00.000',
+///   type: 'RSA',
+/// );
+///
+/// // Serialize to base64
+/// final encoded = meta.toString();
+///
+/// // Deserialize from base64
+/// final restored = MessagingMetadata.fromString(encoded);
+/// ```
 /// {@endtemplate}
 class MessagingMetadata {
-  /// The encryption scheme or related data.
+  /// The encryption scheme or ephemeral public key data.
+  ///
+  /// For RSA messages, this is the string `"RSA"`. For EC messages,
+  /// this is the base64-encoded ephemeral public key used during
+  /// ECIES key agreement.
   final String enc;
 
-  /// The type of the message (e.g., RSA, EC).
+  /// The message type identifier.
+  ///
+  /// Indicates which cryptographic algorithm was used:
+  /// - `"RSA"` for RSA-OAEP encrypted messages
+  /// - `"EC"` for ECIES + AES-256-GCM encrypted messages
   final String type;
 
-  /// The signature or related identifier.
+  /// The signature, nonce, or timestamp associated with the message.
+  ///
+  /// For EC messages, this is the base64-encoded nonce (16 bytes).
+  /// For RSA messages and decrypted EC messages, this is a timestamp
+  /// string indicating when the message was processed.
   final String sign;
 
   /// Creates a [MessagingMetadata] instance.
   ///
-  /// - [enc]: Encryption-related information.
-  /// - [sign]: Signature or identifier for validation.
-  /// - [type]: The type of the message.
-  /// 
+  /// - [enc]: Encryption-related information (scheme or ephemeral key).
+  /// - [sign]: Signature, nonce, or timestamp identifier.
+  /// - [type]: The cryptographic algorithm type (`"RSA"` or `"EC"`).
+  ///
   /// {@macro messaging_metadata}
   MessagingMetadata({
     required this.enc,
@@ -31,11 +65,17 @@ class MessagingMetadata {
     required this.type,
   });
 
-  /// Factory constructor to create a [MessagingMetadata] instance from a JSON map.
+  /// Creates a [MessagingMetadata] from a JSON map.
   ///
-  /// - [json]: The JSON map containing metadata properties.
+  /// Missing fields default to empty strings.
   ///
-  /// If any field is missing in the JSON, it defaults to an empty string.
+  /// ```dart
+  /// final meta = MessagingMetadata.fromJson({
+  ///   'enc': 'EC',
+  ///   'sign': 'nonce-data',
+  ///   'type': 'EC',
+  /// });
+  /// ```
   factory MessagingMetadata.fromJson(Map<String, dynamic> json) {
     return MessagingMetadata(
       enc: json["enc"] ?? "",
@@ -44,9 +84,10 @@ class MessagingMetadata {
     );
   }
 
-  /// Converts the [MessagingMetadata] instance to a JSON map.
+  /// Converts this metadata to a JSON map.
   ///
-  /// Returns a `Map<String, dynamic>` representing the metadata.
+  /// Returns a `Map<String, dynamic>` with keys `"enc"`, `"sign"`,
+  /// and `"type"`.
   Map<String, dynamic> toJson() {
     return {
       "enc": enc,
@@ -55,19 +96,29 @@ class MessagingMetadata {
     };
   }
 
-  /// Factory constructor to create a [MessagingMetadata] instance from a base64-encoded string.
+  /// Creates a [MessagingMetadata] from a base64-encoded JSON string.
   ///
-  /// - [source]: A base64-encoded string containing the JSON representation of metadata.
+  /// The [source] is first base64-decoded, then UTF-8-decoded, then
+  /// parsed as JSON. The resulting map is passed to [fromJson].
   ///
-  /// Decodes the string, parses it as JSON, and converts it to a [MessagingMetadata] instance.
+  /// ```dart
+  /// final meta = MessagingMetadata.fromString('eyJlbmMiOiJFQyJ9');
+  /// ```
   factory MessagingMetadata.fromString(String source) {
     final decodedJson = json.decode(utf8.decode(base64Decode(source)));
     return MessagingMetadata.fromJson(decodedJson);
   }
 
-  /// Converts the [MessagingMetadata] instance to a base64-encoded string.
+  /// Converts this metadata to a base64-encoded JSON string.
   ///
-  /// Encodes the metadata as JSON and then encodes the JSON string in base64.
+  /// The metadata is first serialized to JSON, then UTF-8-encoded,
+  /// then base64-encoded. This format is used in encrypted payload
+  /// wrappers.
+  ///
+  /// ```dart
+  /// final meta = MessagingMetadata(enc: 'RSA', sign: 'ts', type: 'RSA');
+  /// final encoded = meta.toString(); // base64-encoded JSON
+  /// ```
   @override
   String toString() {
     final jsonString = json.encode(toJson());

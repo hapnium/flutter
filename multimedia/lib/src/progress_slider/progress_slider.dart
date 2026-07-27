@@ -309,9 +309,12 @@ class ProgressSlider extends LeafRenderObjectWidget {
   }
 }
 
-// Handles all gestures so that it will always win a the gesture arena.
-// Without doing this, if you used this widget in a swipable tab layout,
-// you would cause a swipe rather than a drag when trying to move the thumb.
+/// A [HorizontalDragGestureRecognizer] that eagerly accepts all drag gestures.
+///
+/// This ensures the progress bar always wins the gesture arena, even when
+/// placed inside a parent that also handles horizontal drags (e.g., a
+/// [PageView] or swipeable tab layout). Without this, a swipe intended to
+/// move the thumb would instead trigger a page/tab transition.
 class _EagerHorizontalDragGestureRecognizer extends HorizontalDragGestureRecognizer {
   @override
   void addAllowedPointer(PointerDownEvent event) {
@@ -323,6 +326,18 @@ class _EagerHorizontalDragGestureRecognizer extends HorizontalDragGestureRecogni
   String get debugDescription => '_EagerHorizontalDragGestureRecognizer';
 }
 
+/// The render object that paints and handles gestures for [ProgressSlider].
+///
+/// This is a custom [RenderBox] that draws three layered bars (base,
+/// buffered, and progress), a draggable thumb, and optional time labels.
+/// It manages its own gesture recognition via [_EagerHorizontalDragGestureRecognizer]
+/// so that thumb drags are never stolen by ancestor scrollable widgets.
+///
+/// The render object supports three label layouts controlled by
+/// [TimeLabelLocation]:
+/// - **above/below**: Labels are stacked vertically with the bar.
+/// - **sides**: Labels flank the bar horizontally; the bar shrinks to fit.
+/// - **none**: Only the bar and thumb are painted.
 class _RenderProgressBar extends RenderBox {
   _RenderProgressBar({
     required Duration progress,
@@ -379,27 +394,32 @@ class _RenderProgressBar extends RenderBox {
     }
   }
 
-  // This is the gesture recognizer used to move the thumb.
+  /// Gesture recognizer that drives thumb dragging.
   _EagerHorizontalDragGestureRecognizer? _drag;
 
-  // This is a value between 0.0 and 1.0 used to indicate the position on
-  // the bar.
+  /// Normalized thumb position as a value between 0.0 (start) and 1.0 (end).
   late double _thumbValue;
 
-  // The thumb can move for two reasons. One is that the [progress] changed.
-  // The other is that the user is dragging the thumb. This variable keeps
-  // track of that so that while the user is dragging the thumb at the same
-  // time as a [progress] update there won't be a conflict.
+  /// Whether the user is currently dragging the thumb.
+  ///
+  /// When `true`, external [progress] updates are ignored to avoid
+  /// conflicting with the user's gesture. This prevents the thumb from
+  /// jumping between the user's touch position and the player's position.
   bool _userIsDraggingThumb = false;
 
-  // This padding is always used between the time labels and the progress bar
-  // when the time labels are on the sides. Any user defined [timeLabelPadding]
-  // is in addition to this.
+  /// Minimum horizontal padding between side labels and the bar ends.
+  ///
+  /// When [thumbCanPaintOutsideBar] is `true`, this includes the thumb
+  /// radius so labels don't overlap the thumb at the bar extremes.
   double get _defaultSidePadding {
     const minPadding = 5.0;
     return (_thumbCanPaintOutsideBar) ? thumbRadius + minPadding : minPadding;
   }
 
+  /// Handles the initial touch-down of a thumb drag.
+  ///
+  /// Sets [_userIsDraggingThumb] to `true`, snaps the thumb to the touch
+  /// position, and fires [onDragStart] with the resulting [ThumbDragDetails].
   void _onDragStart(DragStartDetails details) {
     _userIsDraggingThumb = true;
     _updateThumbPosition(details.localPosition);
@@ -410,6 +430,10 @@ class _RenderProgressBar extends RenderBox {
     ));
   }
 
+  /// Handles continued drag movement.
+  ///
+  /// Updates the thumb position and fires [onDragUpdate] with the new
+  /// [ThumbDragDetails]. Called repeatedly until the drag ends.
   void _onDragUpdate(DragUpdateDetails details) {
     _updateThumbPosition(details.localPosition);
     onDragUpdate?.call(ThumbDragDetails(
@@ -419,26 +443,32 @@ class _RenderProgressBar extends RenderBox {
     ));
   }
 
+  /// Handles the end of a drag gesture.
+  ///
+  /// Fires [onDragEnd], then [onSeek] with the final duration, and
+  /// resets [_userIsDraggingThumb].
   void _onDragEnd(DragEndDetails details) {
     onDragEnd?.call();
     onSeek?.call(_currentThumbDuration());
     _finishDrag();
   }
 
+  /// Resets drag state and triggers a repaint.
   void _finishDrag() {
     _userIsDraggingThumb = false;
     markNeedsPaint();
   }
 
+  /// Converts the normalized [_thumbValue] to a [Duration] based on [total].
   Duration _currentThumbDuration() {
     final thumbMilliseconds = _thumbValue * total.inMilliseconds;
     return Duration(milliseconds: thumbMilliseconds.round());
   }
 
-  // This needs to stay in sync with the layout. This could be a potential
-  // source of bugs if there is a layout change but we forget to update this.
-  // It might be a good idea to redesign the architecture so that there is
-  // only one place to make changes.
+  /// Maps a local pixel [Offset] to a normalized thumb position.
+  ///
+  /// Accounts for [TimeLabelLocation.sides] padding and bar-cap radius
+  /// so the thumb tracks the finger accurately regardless of layout.
   void _updateThumbPosition(Offset localPosition) {
     final dx = localPosition.dx;
     double lengthBefore = 0.0;
@@ -489,28 +519,37 @@ class _RenderProgressBar extends RenderBox {
         (first.inHours >= 10 && second.inHours < 10);
   }
 
+  /// Cached [TextPainter] for the left (current time) label.
   TextPainter? _cachedLeftLabel;
+
+  /// The measured size of the left label, computed lazily and cached.
   Size get _leftLabelSize {
     _cachedLeftLabel ??= _leftTimeLabel();
     return _cachedLeftLabel!.size;
   }
 
+  /// Cached [TextPainter] for the right (total/remaining time) label.
   TextPainter? _cachedRightLabel;
+
+  /// The measured size of the right label, computed lazily and cached.
   Size get _rightLabelSize {
     _cachedRightLabel ??= _rightTimeLabel();
     return _cachedRightLabel!.size;
   }
 
+  /// Invalidates cached label sizes so they are recomputed on next access.
   void _clearLabelCache() {
     _cachedLeftLabel = null;
     _cachedRightLabel = null;
   }
 
+  /// Builds the left time label showing the current [progress] position.
   TextPainter _leftTimeLabel() {
     final text = _getTimeString(progress);
     return _layoutText(text);
   }
 
+  /// Builds the right time label showing either [total] or remaining time.
   TextPainter _rightTimeLabel() {
     switch (timeLabelType) {
       case TimeLabelType.totalTime:
@@ -523,6 +562,8 @@ class _RenderProgressBar extends RenderBox {
     }
   }
 
+  /// Creates a [TextPainter] for the given [text] using the current
+  /// [_timeLabelTextStyle] and [textScaleFactor].
   TextPainter _layoutText(String text) {
     TextPainter textPainter = TextPainter(
       text: TextSpan(text: text, style: _timeLabelTextStyle),
@@ -563,6 +604,7 @@ class _RenderProgressBar extends RenderBox {
     markNeedsPaint();
   }
 
+  /// Clamps [value] to the range `[Duration.zero, total]`.
   Duration _clampDuration(Duration value) {
     if (value.isNegative) return Duration.zero;
     if (value.compareTo(_total) > 0) return _total;
@@ -751,7 +793,7 @@ class _RenderProgressBar extends RenderBox {
     markNeedsLayout();
   }
 
-  // The smallest that this widget would ever want to be.
+  /// Minimum width the progress bar will request during layout.
   static const _minDesiredWidth = 100.0;
 
   @override
@@ -790,8 +832,7 @@ class _RenderProgressBar extends RenderBox {
     return constraints.constrain(desiredSize);
   }
 
-  // When changing these remember to keep the gesture recognizer for the
-  // thumb in sync.
+  /// Computes the total height needed based on [TimeLabelLocation].
   double _calculateDesiredHeight() {
     switch (_timeLabelLocation) {
       case TimeLabelLocation.below:
@@ -928,6 +969,7 @@ class _RenderProgressBar extends RenderBox {
     canvas.restore();
   }
 
+  /// Draws the base bar spanning the full width.
   void _drawBaseBar(Canvas canvas, Size localSize) {
     _drawBar(
       canvas: canvas,
@@ -937,6 +979,7 @@ class _RenderProgressBar extends RenderBox {
     );
   }
 
+  /// Draws the buffered bar from start to the buffered position.
   void _drawBufferedBar(Canvas canvas, Size localSize) {
     _drawBar(
       canvas: canvas,
@@ -946,6 +989,7 @@ class _RenderProgressBar extends RenderBox {
     );
   }
 
+  /// Draws the progress bar from start to the current [progress] position.
   void _drawCurrentProgressBar(Canvas canvas, Size localSize) {
     _drawBar(
       canvas: canvas,
@@ -955,6 +999,8 @@ class _RenderProgressBar extends RenderBox {
     );
   }
 
+  /// Draws a single bar segment from the left cap to the position indicated
+  /// by [widthProportion] (0.0–1.0), using the given [color].
   void _drawBar(
       {required Canvas canvas,
         required Size availableSize,
@@ -975,6 +1021,10 @@ class _RenderProgressBar extends RenderBox {
     canvas.drawLine(startPoint, endPoint, baseBarPaint);
   }
 
+  /// Draws the draggable thumb circle at the current [_thumbValue] position.
+  ///
+  /// If the user is dragging, a glow circle is drawn behind the thumb
+  /// at [thumbGlowRadius] with [thumbGlowColor].
   void _drawThumb(Canvas canvas, Size localSize) {
     final thumbPaint = Paint()..color = thumbColor;
     final barCapRadius = _barHeight / 2;
@@ -991,6 +1041,7 @@ class _RenderProgressBar extends RenderBox {
     canvas.drawCircle(center, thumbRadius, thumbPaint);
   }
 
+  /// Returns the fraction of [total] that [duration] represents (0.0–1.0).
   double _proportionOfTotal(Duration duration) {
     if (total.inMilliseconds == 0) {
       return 0.0;
@@ -998,6 +1049,7 @@ class _RenderProgressBar extends RenderBox {
     return duration.inMilliseconds / total.inMilliseconds;
   }
 
+  /// Formats a [Duration] as `"M:SS"` or `"H:MM:SS"` when hours > 0.
   String _getTimeString(Duration time) {
     final minutes =
     time.inMinutes.remainder(Duration.minutesPerHour).toString();
@@ -1030,10 +1082,10 @@ class _RenderProgressBar extends RenderBox {
     config.decreasedValue = '${((decreased).clamp(0.0, 1.0) * 100).round()}%';
   }
 
-  // This is how much to move the thumb if the move is triggered by a
-  // semantic action rather than a touch event.
+  /// Percentage of the bar to move per semantic increase/decrease action (5%).
   static const double _semanticActionUnit = 0.05;
 
+  /// Moves the thumb forward by [_semanticActionUnit] (5%) and seeks.
   void increaseAction() {
     final newValue = _thumbValue + _semanticActionUnit;
     _thumbValue = (newValue).clamp(0.0, 1.0);
@@ -1042,6 +1094,7 @@ class _RenderProgressBar extends RenderBox {
     markNeedsSemanticsUpdate();
   }
 
+  /// Moves the thumb backward by [_semanticActionUnit] (5%) and seeks.
   void decreaseAction() {
     final newValue = _thumbValue - _semanticActionUnit;
     _thumbValue = (newValue).clamp(0.0, 1.0);

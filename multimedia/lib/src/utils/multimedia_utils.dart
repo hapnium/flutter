@@ -24,7 +24,7 @@ import 'package:smart/smart.dart';
 /// );
 /// ```
 /// {@endtemplate}
-class MultimediaUtils {
+final class MultimediaUtils {
   /// {@macro multimedia_utils}
   const MultimediaUtils._();
 

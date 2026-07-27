@@ -24,10 +24,45 @@ import '../utils/http_status.dart';
 
 /// {@template html_http_request}
 /// A `dart:web` implementation of [HttpRequestInterface] with comprehensive error handling.
-/// 
+///
+/// This class provides HTTP request functionality for web (browser) platforms
+/// using the `XMLHttpRequest` API. It handles CORS, timeouts, authentication,
+/// and response parsing.
+///
+/// ## Features
+/// - Full XMLHttpRequest lifecycle management
+/// - Comprehensive error classification (CORS, network, auth, timeout)
+/// - Automatic response header parsing
+/// - Binary and text response handling
+/// - Request cancellation support
+///
+/// ## Limitations
+/// - Some headers may be restricted by CORS or browser security policies.
+/// - Response interception is not yet implemented for web.
+/// - The `withCredentials` flag controls cookie and auth header inclusion.
+///
+/// ## Example
+/// ```dart
+/// final impl = HttpRequestImplementation(
+///   allowAutoSignedCert: false,
+///   withCredentials: true,
+/// );
+/// final response = await impl.send(request);
+/// ```
 /// {@endtemplate}
 class HttpRequestImplementation implements HttpRequestInterface {
-  /// Creates a [HttpRequestImplementation]
+  /// Creates a [HttpRequestImplementation] for web platforms.
+  /// 
+  /// ## Parameters
+  /// - [allowAutoSignedCert]: Whether to allow auto-signed certificates (unused on web).
+  /// - [trustedCertificates]: List of trusted certificates (unused on web).
+  /// - [withCredentials]: Whether to include credentials in CORS requests.
+  /// - [findProxy]: Proxy finder callback (unused on web).
+  /// 
+  /// ## Example
+  /// ```dart
+  /// final impl = HttpRequestImplementation(withCredentials: true);
+  /// ```
   /// 
   /// {@macro html_http_request}
   HttpRequestImplementation({
@@ -37,9 +72,33 @@ class HttpRequestImplementation implements HttpRequestInterface {
     ProxyFinder? findProxy,
   });
 
+  /// Set of active XMLHttpRequest instances for cancellation on close.
   final _xhrs = <XMLHttpRequest>{};
+
+  /// Whether to include credentials (cookies, auth headers) in CORS requests.
+  ///
+  /// When `true`, the browser will include cookies and HTTP auth information
+  /// in cross-origin requests. The server must also set appropriate CORS headers.
   final bool withCredentials;
 
+  /// Sends an HTTP request and returns the response.
+  ///
+  /// ## Parameters
+  /// - [request]: The configured request to send.
+  ///
+  /// ## Returns
+  /// A [Response] of type [T] with the server's reply.
+  ///
+  /// ## Throws
+  /// - [ZapException] with type [ExceptionType.connection] if the client is closed.
+  /// - [ZapException] with type [ExceptionType.network] for connection failures.
+  /// - [ZapException] with type [ExceptionType.timeout] for request timeouts.
+  /// - [ZapException] with type [ExceptionType.cancelled] for aborted requests.
+  ///
+  /// ## Edge cases
+  /// - If the client is closed, the request is immediately rejected.
+  /// - Headers that cannot be set due to CORS restrictions are logged but not thrown.
+  /// - The XHR is removed from the tracking set after completion.
   @override
   Future<Response<T>> send<T>(Request<T> request) async {
     if (_isClosed) {
@@ -144,6 +203,16 @@ class HttpRequestImplementation implements HttpRequestInterface {
     }
   }
 
+  /// Handles XMLHttpRequest error events.
+  ///
+  /// Classifies errors based on the XHR state and status code, providing
+  /// more specific error types for common scenarios like CORS issues,
+  /// authentication failures, and server errors.
+  ///
+  /// ## Parameters
+  /// - [xhr]: The XMLHttpRequest that encountered an error.
+  /// - [request]: The original request.
+  /// - [completer]: The completer to resolve with the error.
   void _handleError(XMLHttpRequest xhr, Request request, Completer completer) {
     String errorMessage;
     ExceptionType errorType;
@@ -192,6 +261,20 @@ class HttpRequestImplementation implements HttpRequestInterface {
     );
   }
 
+  /// Handles successful XMLHttpRequest onload events.
+  ///
+  /// Processes the response body (binary or text), parses headers,
+  /// decodes the response, and completes the completer with a [Response].
+  ///
+  /// ## Parameters
+  /// - [xhr]: The completed XMLHttpRequest.
+  /// - [request]: The original request.
+  /// - [completer]: The completer to resolve with the response.
+  ///
+  /// ## Edge cases
+  /// - If the status code is >= 400, the error handler is invoked instead.
+  /// - If no response data is received, an empty byte list is used.
+  /// - Response interception is not yet implemented for web.
   void _handleResponse<T>(XMLHttpRequest xhr, Request<T> request, Completer<Response<T>> completer) async {
     try {
       // Check for HTTP error status codes even in onload
@@ -273,6 +356,21 @@ class HttpRequestImplementation implements HttpRequestInterface {
     }
   }
 
+  /// Parses response headers from the XMLHttpRequest.
+  ///
+  /// Splits the raw header string by CRLF and extracts key-value pairs.
+  /// Duplicate header names are combined with commas.
+  ///
+  /// ## Parameters
+  /// - [xhr]: The XMLHttpRequest to parse headers from.
+  ///
+  /// ## Returns
+  /// A map of lowercase header names to their values.
+  ///
+  /// ## Edge cases
+  /// - Empty header lines are skipped.
+  /// - Headers without a colon separator are skipped.
+  /// - Duplicate headers are combined with ', '.
   Headers _parseResponseHeaders(XMLHttpRequest xhr) {
     var headers = <String, String>{};
     try {
@@ -301,6 +399,15 @@ class HttpRequestImplementation implements HttpRequestInterface {
     return headers;
   }
 
+  /// Closes the HTTP client and aborts all in-flight requests.
+  ///
+  /// After calling this method, the client should not be used for further requests.
+  /// All pending XMLHttpRequests are aborted and removed from tracking.
+  ///
+  /// ## Example
+  /// ```dart
+  /// impl.close(); // Aborts all pending requests
+  /// ```
   @override
   void close() {
     _isClosed = true;
@@ -310,7 +417,15 @@ class HttpRequestImplementation implements HttpRequestInterface {
     _xhrs.clear();
   }
 
+  /// The timeout duration for HTTP requests.
+  ///
+  /// If `null`, no timeout is enforced. On web, this sets the
+  /// XMLHttpRequest timeout property in milliseconds.
   @override
   Duration? timeout;
+
+  /// Whether the client has been closed.
+  ///
+  /// Once `true`, no further requests can be sent.
   bool _isClosed = false;
 }

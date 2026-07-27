@@ -1,12 +1,67 @@
 part of 'multimedia_gallery_album.dart';
 
+/// {@template multimedia_gallery_album_state}
+/// State for [MultimediaGalleryAlbum] that manages media fetching, selection,
+/// grid density, and layout toggle.
+///
+/// On initialization, this state fetches all [Medium] items from the
+/// album via [Album.listMedia] and populates [_mediums]. Selection is
+/// managed through [_selected], which tracks selected items by their ID.
+/// The grid density is controlled by [_gridCount], which is updated
+/// when the user taps a filter button (e.g., "2x" or "3x").
+///
+/// The layout can be toggled between grid and list via [_onLayoutChanged],
+/// and the final selection is delivered either through the
+/// [MultimediaGalleryAlbum.onMediumReceived] callback or by popping
+/// the navigation stack with the selected items.
+/// {@endtemplate}
 class _MultimediaGalleryAlbumState extends State<MultimediaGalleryAlbum> {
+  /// Whether the current view is grid mode (`true`) or list mode (`false`).
+  ///
+  /// Toggled by the app bar action button via [_onLayoutChanged]. When
+  /// `true`, [AlbumGridView] is rendered; when `false`,
+  /// [AlbumListView] is rendered instead.
   bool _isGrid = true;
+
+  /// All media items fetched from the album.
+  ///
+  /// Populated asynchronously in [_fetch] after the widget initializes.
+  /// Each [Medium] contains an ID, filename, type, size, and thumbnail
+  /// data that is rendered by the grid/list views.
   List<Medium> _mediums = <Medium>[];
+
+  /// The list of currently selected media items.
+  ///
+  /// Items are added/removed by [_handleSelectedMedium] when the user
+  /// taps a medium in multi-select mode. In single-select mode, this
+  /// list is never populated — the selection is immediately forwarded
+  /// to [_send].
   List<Medium> _selected = [];
+
+  /// The current number of columns in the grid view.
+  ///
+  /// Defaults to `2`. Updated by [_onGridChanged] when the user taps a
+  /// filter button. The value is extracted from the filter label using
+  /// a regex that matches the first numeric substring (e.g., "3x" → 3).
   int _gridCount = 2;
+
+  /// The label of the currently selected grid-density filter button.
+  ///
+  /// Used to highlight the active filter button in [_buildFilters].
+  /// Updated by [_onGridChanged] whenever the user selects a new
+  /// grid density.
   String _selectedGrid = "";
+
+  /// Whether media items are currently being fetched from the album.
+  ///
+  /// While `true`, a loading indicator is shown. Cleared after [_fetch]
+  /// completes, regardless of whether the result is empty.
   bool _isFetching = true;
+
+  /// The resolved [MultimediaGalleryAlbumConfiguration] from the parent widget.
+  ///
+  /// Cached in [initState] and updated in [didUpdateWidget] when the
+  /// parent provides a new configuration.
   late MultimediaGalleryAlbumConfiguration parent;
 
   @override
@@ -18,6 +73,12 @@ class _MultimediaGalleryAlbumState extends State<MultimediaGalleryAlbum> {
     super.initState();
   }
 
+  /// Fetches all media items from the album asynchronously.
+  ///
+  /// Calls [Album.listMedia] to obtain a [MediaPage] containing the
+  /// album's items, then assigns the items to [_mediums] and sets
+  /// [_isFetching] to `false`. The UI re-renders after each state
+  /// update to show the loading indicator, then the media grid/list.
   void _fetch() async {
     MediaPage page = await widget.album.listMedia();
     setState(() {
@@ -41,52 +102,114 @@ class _MultimediaGalleryAlbumState extends State<MultimediaGalleryAlbum> {
     super.didUpdateWidget(oldWidget);
   }
 
+  /// The list of available grid-density filter options.
+  ///
+  /// Each option is a [ButtonView] with a label like "2x" or "3x".
+  /// Defaults to `["2x", "3x"]` when
+  /// [MultimediaGalleryAlbumConfiguration.grids] is null. The first
+  /// option is selected by default in [initState].
   @protected
   List<ButtonView> get grids => (parent.grids ?? ["2x", "3x"]).asMap().entries.map((MapEntry<int, String> item) {
     return ButtonView(header: item.value, index: item.key);
   }).toList();
 
+  /// Whether the user can select multiple media items.
+  ///
+  /// Mirrors [MultimediaGalleryAlbum.multipleAllowed]. Used by
+  /// [_handleSelectedMedium] to decide between toggling selection
+  /// and immediately forwarding a single selection.
   @protected
   bool get multipleAllowed => widget.multipleAllowed;
 
+  /// The list of IDs for all currently selected media items.
+  ///
+  /// Derived from [_selected] by mapping each [Medium] to its [Medium.id]
+  /// and deduplicating. Used by [AlbumGridView] and [AlbumListView]
+  /// to highlight selected items.
   @protected
   List<String> get selectedIds => _selected.map((m) => m.id).toSet().toList();
 
+  /// The resolved [AlbumViewConfiguration] for the media grid/list.
+  ///
+  /// Falls back to a default [AlbumViewConfiguration] when the parent
+  /// does not provide one. Controls cell styling, selection indicators,
+  /// image sizing, and custom item builders.
   @protected
   AlbumViewConfiguration get configuration => parent.configuration ?? AlbumViewConfiguration();
 
+  /// The resolved [MultimediaIconConfiguration] for the grid/list toggle icon.
+  ///
+  /// Falls back to a default [MultimediaIconConfiguration] when the
+  /// parent does not provide one. Controls the icon data, color, and
+  /// size of the layout-toggle button in the app bar.
   @protected
   MultimediaIconConfiguration get iconConfig => parent.iconConfiguration ?? MultimediaIconConfiguration();
 
+  /// The resolved [MultimediaLayoutConfiguration] for the page scaffold.
+  ///
+  /// Falls back to a default [MultimediaLayoutConfiguration] when the
+  /// parent does not provide one. Controls background color, app bar
+  /// styling, floating buttons, drawers, and loading indicators.
   @protected
   MultimediaLayoutConfiguration get layoutConfig => parent.layoutConfiguration ?? MultimediaLayoutConfiguration();
 
+  /// The resolved [MultimediaNoItemConfiguration] for the empty-state view.
+  ///
+  /// Falls back to a default [MultimediaNoItemConfiguration] when the
+  /// parent does not provide one. Controls the message, icon, and
+  /// styling shown when the album contains no media items.
   @protected
   MultimediaNoItemConfiguration get noItemConfig => parent.noItemConfiguration ?? MultimediaNoItemConfiguration();
 
+  /// The resolved [MultimediaGridFilterConfiguration] for the grid-density filter buttons.
+  ///
+  /// Falls back to a default [MultimediaGridFilterConfiguration] when
+  /// the parent does not provide one. Controls button styling, spacing,
+  /// padding, and shape for the grid-density selection buttons.
   @protected
   MultimediaGridFilterConfiguration get gridFilterConfig => parent.gridFilterConfiguration ?? MultimediaGridFilterConfiguration();
 
+  /// The resolved [MultimediaDoneButtonConfiguration] for the "Done" button.
+  ///
+  /// Falls back to a default [MultimediaDoneButtonConfiguration] when
+  /// the parent does not provide one. Controls the button text, color,
+  /// font weight, padding, and shape.
   @protected
   MultimediaDoneButtonConfiguration get doneButtonConfig => parent.doneButtonConfiguration ?? MultimediaDoneButtonConfiguration();
 
+  /// Finalizes the selection and delivers the result.
+  ///
+  /// Called when the user taps the "Done" button in the app bar.
+  /// Delegates to [_send] with the current [_selected] list.
   void _onCompleted() => _send(_selected);
 
+  /// Delivers the selected media items to the parent or pops the stack.
+  ///
+  /// If [MultimediaGalleryAlbum.onMediumReceived] is provided, the
+  /// [selected] list is forwarded to it directly. Otherwise, the method
+  /// pops the navigation stack. When
+  /// [MultimediaGalleryAlbumConfiguration.popAllWhileGoingBack] is `true`,
+  /// two pops are performed — the first returns to the album list, and
+  /// the second returns the selected items to the calling screen.
   void _send(List<Medium> selected) {
     if(widget.onMediumReceived.isNotNull) {
       widget.onMediumReceived!(selected);
     } else if(parent.popAllWhileGoingBack) {
-      // First pop returns to the album page
       Navigator.pop(context);
-      // Delay the second pop until the current pop completes
       Future.delayed(Duration.zero, () {
-        Navigator.pop(context, selected); // Pop album page with result
+        Navigator.pop(context, selected);
       });
     } else {
       Navigator.pop(context, selected);
     }
   }
 
+  /// Toggles between grid and list layout modes.
+  ///
+  /// Flips [_isGrid] and, if the parent provided a
+  /// [MultimediaGalleryAlbumConfiguration.onLayoutChanged] callback,
+  /// invokes it with the new boolean value so the parent can react
+  /// to the change (e.g., persisting the user's layout preference).
   void _onLayoutChanged() {
     setState(() => _isGrid = !_isGrid);
 
@@ -95,6 +218,13 @@ class _MultimediaGalleryAlbumState extends State<MultimediaGalleryAlbum> {
     }
   }
 
+  /// Updates the grid column count based on the selected filter label.
+  ///
+  /// Parses the first numeric substring from [value] using a regex
+  /// (e.g., "3x" → 3) and sets [_gridCount] to that value. If no
+  /// numeric substring is found, falls back to 2 columns. Also updates
+  /// [_selectedGrid] to highlight the active filter button, and invokes
+  /// [MultimediaGalleryAlbumConfiguration.onGridChanged] if provided.
   void _onGridChanged(String value) {
     final match = RegExp(r'\d+').firstMatch(value);
     if(match != null) {
@@ -115,6 +245,14 @@ class _MultimediaGalleryAlbumState extends State<MultimediaGalleryAlbum> {
     }
   }
 
+  /// Handles a tap on a medium item, toggling selection or finalizing.
+  ///
+  /// First validates the medium's file size against
+  /// [MultimediaGalleryAlbumConfiguration.maxSize] and [minSize],
+  /// invoking [MultimediaGalleryAlbum.onErrorReceived] if the size
+  /// is outside the allowed range. In multi-select mode, toggles the
+  /// medium's presence in [_selected]. In single-select mode, calls
+  /// [_send] immediately with the tapped medium.
   void _handleSelectedMedium(Medium medium) {
     if(parent.maxSize != null && medium.size != null && medium.size!.isGreaterThan(parent.maxSize!)) {
       parent.onErrorReceived?.call("Selected asset exceeds the maximum desired size ${parent.maxSize?.toFileSize}", false);
@@ -219,6 +357,13 @@ class _MultimediaGalleryAlbumState extends State<MultimediaGalleryAlbum> {
     );
   }
 
+  /// Builds the main content area based on the current album state.
+  ///
+  /// Returns one of: (1) a loading indicator while [_isFetching] is
+  /// `true`, (2) an empty-state view when [_mediums] is empty, (3) a
+  /// column containing filter buttons and [AlbumGridView] when in grid
+  /// mode, or (4) [AlbumListView] when in list mode. Each state can be
+  /// overridden by providing the corresponding builder in the configuration.
   Widget _build() {
     if(_isFetching) {
       return parent.loadingBuilder.isNotNull ? parent.loadingBuilder!(context) : Center(
@@ -266,6 +411,13 @@ class _MultimediaGalleryAlbumState extends State<MultimediaGalleryAlbum> {
     }
   }
 
+  /// Builds the grid-density filter buttons as a [Wrap] layout.
+  ///
+  /// Each filter option from [grids] is rendered as a [TextButton]
+  /// with a highlighted background when its label matches [_selectedGrid].
+  /// The button colors are derived from [MultimediaGridFilterConfiguration.buttonColor]
+  /// with lighten/darken adjustments based on selection state. Tapping
+  /// a button calls [_onGridChanged] to update the grid column count.
   Widget _buildFilters(BuildContext context) {
     return Wrap(
       runAlignment: gridFilterConfig.runAlignment ?? WrapAlignment.spaceBetween,

@@ -1,6 +1,5 @@
 import 'package:flutter/foundation.dart' show Uint8List;
 
-
 import '../core/zap_inst.dart';
 import '../definitions.dart';
 import '../models/location/location_information.dart';
@@ -10,25 +9,42 @@ import '../core/zap.dart';
 import '../core/zap_interface.dart';
 
 /// {@template zap_utils}
-/// Utility class providing helper methods for interacting with external APIs,
-/// including image fetching, IP address retrieval, and Google Maps distance matrix calculations.
+/// A centralized singleton facade providing utility methods for common third-party 
+/// API integrations (Geolocation, Distance Matrix, IP Resolution, and Binary Asset fetching).
+///
+/// **Architectural Context:**
+/// Modern applications frequently need to communicate with external services outside 
+/// of their primary backend (e.g., Google Maps, OpenStreetMap, Ipify). Instead of 
+/// littering the presentation or domain layers with raw HTTP calls and ad-hoc 
+/// configurations, [ZapUtils] encapsulates these operations. 
 /// 
-/// This class uses Zap HTTP client for all network requests, providing consistent
-/// error handling, logging, and configuration across the application.
-/// 
+/// It utilizes an isolated [ZapClient] configured specifically for external, 
+/// potentially slow third-party APIs (featuring extended 30-second timeouts and 
+/// automated redirect following) while ensuring unified error handling and logging.
 /// {@endtemplate}
 final class ZapUtils {
   /// {@macro zap_utils}
-  /// Singleton instance of the [ZapUtils] class
+  /// 
+  /// The internal singleton instance.
   static final ZapUtils _instance = ZapUtils._internal();
 
-  /// Private constructor to prevent instantiation from outside the class
+  /// Private constructor enforcing the singleton pattern.
   ZapUtils._internal();
 
-  /// Returns the singleton instance of the [ZapUtils] class
+  /// Access point for the [ZapUtils] singleton.
+  /// 
+  /// **Usage:**
+  /// ```dart
+  /// final ip = await ZapUtils.instance.fetchIpAddress();
+  /// ```
   static ZapUtils get instance => _instance;
   
-  /// Gets the Zap HTTP client, initializing it if necessary
+  /// Generates a [ZapInterface] tailored for external utility requests.
+  /// 
+  /// **Configuration Notes:**
+  /// - Extended `timeout` (30 seconds) accommodates slow 3rd-party APIs.
+  /// - `followRedirects` is enabled, as public CDNs (for images) and mapping APIs 
+  ///   frequently utilize `301/302` redirects for load balancing.
   ZapInterface get _client => Zap(
     zapConfig: ZapConfig(
       timeout: const Duration(seconds: 30),
@@ -37,26 +53,22 @@ final class ZapUtils {
     ),
   );
 
-  /// Fetches the public IP address of the user.
+  /// Resolves the current public IPv4 address of the device.
   ///
-  /// This method makes a network request to a public IP API to retrieve the current public IP address of the user.
-  /// Returns the IP address as a string if successful, or an empty string if the request fails.
+  /// **Architectural Use Case:**
+  /// Useful for audit logging, fraud prevention (detecting unexpected geo-hops), 
+  /// or providing localized defaults before full GPS permissions are granted.
+  /// 
+  /// This method queries the `api64.ipify.org` service. It is designed to fail 
+  /// gracefully: if the network is down or the API is unreachable, it swallows 
+  /// the exception and returns an empty string, preventing app crashes.
+  ///
+  /// - [log]: If `true`, network failures are printed to the console.
   ///
   /// ### Returns:
-  /// A `Future<String>` containing the public IP address or an empty string on failure.
-  ///
-  /// ### Example Usage:
-  /// ```dart
-  /// String ip = await ZapUtils.instance.fetchIpAddress();
-  /// if (ip.isNotEmpty) {
-  ///   print("Public IP: $ip");
-  /// } else {
-  ///   print("Failed to fetch IP address");
-  /// }
-  /// ```
+  /// A `Future<String>` containing the IP (e.g., `"192.168.1.1"`), or `""` on failure.
   Future<String> fetchIpAddress([bool log = true]) async {
     try {
-      // Make a GET request to a public IP API
       final response = await _client.get<Map<String, dynamic>>(
         "https://api64.ipify.org?format=json",
         decoder: (data) => data as Map<String, dynamic>,
@@ -74,31 +86,20 @@ final class ZapUtils {
     return "";
   }
 
-  /// Fetches image data from the specified [url].
+  /// Downloads raw binary image data from a remote [url] via a callback-driven flow.
   ///
-  /// This method performs a network request to the given [url] to retrieve image data in byte format.
-  /// If the request is successful (HTTP status code HttpStatus.OK), the [onSuccess] callback is invoked with
-  /// the image data (as a `Uint8List`). If the request fails, the [onError] callback is invoked with an
-  /// error message.
+  /// **Use Case:**
+  /// Ideal for legacy integration patterns or reactive streams where `onSuccess` 
+  /// and `onError` callbacks are preferred over `async/await` Futures. Useful 
+  /// when caching images to the local file system or passing raw bytes to a 
+  /// native platform channel.
   ///
   /// ### Parameters:
-  ///
-  /// - [url]: The URL of the image to fetch.
-  /// - [onSuccess]: The callback function to be called with the image data upon a successful fetch.
-  /// - [onError]: The callback function to be called with an error message if the fetch fails.
-  ///
-  /// ### Example Usage:
-  /// ```dart
-  /// ZapUtils.instance.fetchImageData(
-  ///   url: 'https://example.com/image.png',
-  ///   onSuccess: (data) {
-  ///     // Handle image data (Uint8List)
-  ///   },
-  ///   onError: (errorMessage) {
-  ///     // Handle error
-  ///   },
-  /// );
-  /// ```
+  /// - [url]: The absolute URL of the image asset.
+  /// - [onSuccess]: Triggered with the raw `Uint8List` byte array upon HTTP 200.
+  /// - [onError]: Triggered with a descriptive string if the network, decoding, 
+  ///   or HTTP status fails.
+  /// - [log]: If `true`, exceptions are piped to the console logger.
   Future<void> fetchImageData({
     required String url,
     required Function(Uint8List) onSuccess,
@@ -106,14 +107,14 @@ final class ZapUtils {
     bool log = true,
   }) async {
     try {
-      // Make a GET request expecting binary data
       final response = await _client.get<BodyBytes>(
         url,
         decoder: (data) {
           if (data is BodyBytes) {
             return data;
           } else if (data is String) {
-            // Handle case where data might be base64 encoded
+            // Defensive fallback: The server might incorrectly return an image 
+            // payload as a Base64 string or raw string stream instead of binary bytes.
             return data.codeUnits;
           }
           throw Exception('Unexpected response type for image data');
@@ -121,7 +122,6 @@ final class ZapUtils {
       );
 
       if (response.status == HttpStatus.OK && response.body != null) {
-        // Convert the response data to a Uint8List (byte array)
         Uint8List imageData = Uint8List.fromList(response.body!);
         onSuccess.call(imageData);
       } else {
@@ -131,26 +131,22 @@ final class ZapUtils {
       if (log) {
         Z.log('ZapUtils: Error fetching image: $error');
       }
-      // Invoke the error callback with the error message in case of an exception
       onError.call('Error fetching image: $error');
     }
   }
 
-  /// Alternative method to fetch image data that returns a Future instead of using callbacks.
+  /// Downloads raw binary image data from a remote [url] via modern `async/await`.
   ///
-  /// ### Parameters:
-  /// - [url]: The URL of the image to fetch.
+  /// **Architectural Use Case:**
+  /// The preferred modern alternative to [fetchImageData]. It returns a nullable 
+  /// `Uint8List?`, allowing the caller to handle failures cleanly using standard 
+  /// control flow (e.g., displaying a local placeholder asset if this returns null).
   ///
+  /// - [url]: The absolute URL of the image asset.
+  /// - [log]: If `true`, network/decoding exceptions are logged.
+  /// 
   /// ### Returns:
-  /// A `Future<Uint8List?>` containing the image data or null if the fetch fails.
-  ///
-  /// ### Example Usage:
-  /// ```dart
-  /// Uint8List? imageData = await ZapUtils.instance.fetchImageDataAsync('https://example.com/image.png');
-  /// if (imageData != null) {
-  ///   // Handle image data
-  /// }
-  /// ```
+  /// The binary image data, or `null` if the request fails or times out.
   Future<Uint8List?> fetchImageDataAsync(String url, [bool log = true]) async {
     try {
       final response = await _client.get<BodyBytes>(
@@ -176,41 +172,24 @@ final class ZapUtils {
     return null;
   }
 
-  /// Calculates the total distance and travel time between two geographic coordinates using the Google Maps Distance Matrix API.
+  /// Calculates the routing distance and estimated travel time between two coordinates.
   ///
-  /// This method performs a request to the Google Maps Distance Matrix API to calculate the distance and
-  /// travel time between an origin (specified by [originLatitude] and [originLongitude]) and a destination
-  /// (specified by [destinationLatitude] and [destinationLongitude]). The request requires a valid [googleMapApiKey].
-  ///
-  /// ### Parameters:
-  ///
-  /// - [originLatitude]: The latitude of the starting point (origin).
-  /// - [originLongitude]: The longitude of the starting point (origin).
-  /// - [destinationLatitude]: The latitude of the destination point.
-  /// - [destinationLongitude]: The longitude of the destination point.
-  /// - [googleMapApiKey]: The Google Maps API key used for authentication with the API.
+  /// **External Dependency:** 
+  /// Queries the Google Maps Distance Matrix API. This requires a highly privileged, 
+  /// billing-enabled [googleMapApiKey].
+  /// 
+  /// **Note on Units:**
+  /// This method is hardcoded to request `'imperial'` units (miles/feet). The 
+  /// returned JSON elements will reflect this metric system.
   ///
   /// ### Returns:
-  /// - A `Future<List<dynamic>>` containing the distance and duration elements between the origin and destination.
+  /// A `Future<List<dynamic>>` containing the routing `elements` array from the 
+  /// Google Maps response. This typically contains `distance` (text/value) and 
+  /// `duration` (text/value) objects.
   ///
   /// ### Throws:
-  /// - Throws an exception if the API request fails or returns an error.
-  ///
-  /// ### Example Usage:
-  /// ```dart
-  /// try {
-  ///   var result = await ZapUtils.instance.getTotalDistanceAndTime(
-  ///     originLatitude: 40.7128,
-  ///     originLongitude: -74.0060,
-  ///     destinationLatitude: 34.0522,
-  ///     destinationLongitude: -118.2437,
-  ///     googleMapApiKey: 'YOUR_API_KEY',
-  ///   );
-  ///   print(result);  // Output: List containing distance and time elements
-  /// } catch (e) {
-  ///   print('Error calculating distance: $e');
-  /// }
-  /// ```
+  /// Explicitly throws an [Exception] if the network drops, the API key is invalid 
+  /// (`REQUEST_DENIED`), or if no routable path exists between the coordinates.
   Future<List<dynamic>> getTotalDistanceAndTime({
     required double originLatitude,
     required double originLongitude,
@@ -222,16 +201,14 @@ final class ZapUtils {
     String origin = "$originLatitude,$originLongitude";
     String destinations = "$destinationLatitude,$destinationLongitude";
 
-    // Prepare the query parameters for the distance matrix request
     final queryParams = {
-      'units': 'imperial',
+      'units': 'imperial', // Hardcoded to Imperial (Miles)
       'origins': origin,
       'destinations': destinations,
       'key': googleMapApiKey,
     };
 
     try {
-      // Perform the GET request to the Google Maps Distance Matrix API
       final response = await _client.get<Map<String, dynamic>>(
         "https://maps.googleapis.com/maps/api/distancematrix/json",
         query: queryParams,
@@ -241,12 +218,10 @@ final class ZapUtils {
       if (response.status == HttpStatus.OK && response.body != null) {
         final responseData = response.body!;
         
-        // Check if the API returned an error
         if (responseData['status'] != 'OK') {
           throw Exception('Google Maps API error: ${responseData['status']}');
         }
 
-        // Return the distance and duration elements from the response
         final rows = responseData['rows'] as List<dynamic>;
         if (rows.isNotEmpty) {
           final elements = rows[0]['elements'] as List<dynamic>;
@@ -265,36 +240,27 @@ final class ZapUtils {
     }
   }
 
-  /// Retrieves location information for a given latitude and longitude.
+  /// Performs a reverse-geocode to convert raw GPS coordinates into a human-readable address.
   ///
-  /// This method makes a network request to the Nominatim OpenStreetMap API to retrieve
-  /// detailed address information for the specified geographic coordinates. If the API call
-  /// is successful, it returns a [LocationInformation] object containing the details.
-  /// In case of an error or failure, it falls back to returning a [LocationInformation]
-  /// object with only the latitude and longitude.
+  /// **External Dependency:**
+  /// Queries the OpenStreetMap (OSM) Nominatim API. 
+  /// 
+  /// **Compliance Note:**
+  /// Nominatim heavily enforces a strict Acceptable Use Policy. This method explicitly 
+  /// injects a `User-Agent: ZapUtils/1.0` header to comply with their requirement 
+  /// that all requests identify the client application.
+  ///
+  /// **Defensive Fallback:**
+  /// Reverse-geocoding is prone to failure (e.g., device offline, API rate limits hit). 
+  /// Instead of throwing an error or returning null, this method intercepts failures 
+  /// and returns a fallback `LocationInformation` object constructed solely from the 
+  /// provided latitude and longitude. This ensures the UI always has a non-null 
+  /// location object to render.
   ///
   /// ### Parameters:
-  /// - [latitude]: The latitude of the location to retrieve information for.
-  /// - [longitude]: The longitude of the location to retrieve information for.
-  ///
-  /// ### Returns:
-  /// A `Future<LocationInformation>` containing the retrieved location details or
-  /// a fallback with only latitude and longitude.
-  ///
-  /// ### Example Usage:
-  /// ```dart
-  /// LocationInformation info = await ZapUtils.instance.getLocationInformation(9.0562, 7.4985);
-  /// print(info.displayName);  // Outputs the address or a fallback value.
-  /// ```
-  ///
-  /// ### Notes:
-  /// - This method uses the Zap HTTP client for requests.
-  /// - The fallback ensures the app remains functional even if the API call fails.
-  /// - Includes proper User-Agent header as required by Nominatim API.
-  ///
-  /// ### API Details:
-  /// - Endpoint: `https://nominatim.openstreetmap.org/reverse`
-  /// - Response: JSON format
+  /// - [latitude]: The mathematical latitude (e.g., `6.1481`).
+  /// - [longitude]: The mathematical longitude (e.g., `6.7845`).
+  /// - [log]: Flags whether network/parsing failures should be printed to the console.
   Future<LocationInformation> getLocationInformation(double latitude, double longitude, [bool log = true]) async {
     try {
       final queryParams = {
@@ -303,7 +269,7 @@ final class ZapUtils {
         'format': 'json',
       };
 
-      // Nominatim requires a User-Agent header
+      // Mandatory compliance header for the Nominatim OSM API
       final headers = {
         'User-Agent': 'ZapUtils/1.0',
       };
@@ -328,14 +294,16 @@ final class ZapUtils {
       }
     }
 
-    // Fallback to basic location information with just coordinates
+    // Graceful degradation: Return an empty but structurally valid location object
     return LocationInformation.fromLatLng(latitude, longitude);
   }
 
-  /// Disposes the Zap client and cleans up resources.
+  /// Disposes the underlying Zap HTTP client, severing any open socket connections.
   /// 
-  /// Call this method when the ZapUtils instance is no longer needed
-  /// to properly clean up network resources.
+  /// **Architectural Note:** 
+  /// Because [ZapUtils] is a singleton, calling `dispose()` is rarely required 
+  /// during normal app execution. It is primarily useful during complete app 
+  /// teardown or within test suites to ensure garbage collection of network ports.
   void dispose() {
     _client.dispose();
   }

@@ -1,11 +1,63 @@
 part of 'multimedia_gallery.dart';
 
+/// {@template multimedia_gallery_state}
+/// Manages the full lifecycle of the [MultimediaGallery] widget.
+///
+/// This state class coordinates three sequential phases: (1) permission
+/// checking via the user-supplied [MultimediaGalleryConfiguration.hasPermission]
+/// callback, (2) album fetching from the device gallery using the
+/// [Gallery] plugin, and (3) rendering the appropriate view — either a
+/// grid of albums, a list of albums, or an empty/permission-denied
+/// placeholder. The grid/list toggle is controlled by [_isGrid] and
+/// can be switched at runtime via the app bar action button.
+///
+/// Media selection is handled by [_handleSelectedMedium], which resolves
+/// each selected [Medium] into a [SelectedMedia] object containing the
+/// file path, size, type, and raw bytes. The resolved list is then
+/// forwarded to the parent through the configured callback or popped
+/// from the navigation stack.
+/// {@endtemplate}
 class _MultimediaGalleryState extends SmartState<MultimediaGallery> {
+  /// The complete list of albums fetched from the device gallery.
+  ///
+  /// Populated after a successful permission check and album fetch.
+  /// Each [Album] contains a name, cover thumbnail, media count, and
+  /// whether it is the newest album on the device.
   List<Album> _albums = <Album>[];
+
+  /// Controls whether the gallery displays albums in a grid or list layout.
+  ///
+  /// Toggled by the app bar action button via [_onLayoutChanged]. When
+  /// `true`, [GalleryGridView] is rendered; when `false`,
+  /// [GalleryListView] is rendered instead.
   bool _isGrid = true;
+
+  /// Indicates whether the gallery has been granted access to device media.
+  ///
+  /// Set after the asynchronous permission check completes. When `false`,
+  /// the gallery displays a permission-denied placeholder with a retry
+  /// button that re-invokes [_initializeGallery].
   bool _hasPermission = false;
+
+  /// Whether the gallery is currently fetching albums from the device.
+  ///
+  /// While `true`, a loading indicator is shown. This flag is cleared
+  /// after [_fetchAlbums] completes, regardless of whether the result
+  /// is empty or non-empty.
   bool _isInitializing = false;
+
+  /// Whether a permission check is currently in progress.
+  ///
+  /// While `true`, the gallery shows a permission-checking indicator.
+  /// This is the first phase of initialization and must complete before
+  /// album fetching can begin.
   bool _isCheckingPermission = false;
+
+  /// The resolved [MultimediaGalleryConfiguration] from the parent widget.
+  ///
+  /// Cached in [initState] and updated in [didUpdateWidget] when the
+  /// parent provides a new configuration. All derived getters
+  /// (e.g., [configuration], [iconConfig]) read from this field.
   late MultimediaGalleryConfiguration parent;
 
   @override
@@ -27,30 +79,80 @@ class _MultimediaGalleryState extends SmartState<MultimediaGallery> {
     super.didUpdateWidget(oldWidget);
   }
 
+  /// The display label for the current media type filter.
+  ///
+  /// Returns "Video" when [MultimediaGalleryConfiguration.showOnlyVideo]
+  /// is `true`, "Photo" when [MultimediaGalleryConfiguration.showOnlyPhoto]
+  /// is `true`, or "Media" when neither filter is active. This label is
+  /// shown in the app bar header as "Gallery {header} Albums".
   @protected
   String get header => parent.showOnlyVideo ? "Video" : parent.showOnlyPhoto ? "Photo" : "Media";
 
+  /// Whether the gallery allows selecting more than one media item at a time.
+  ///
+  /// Mirrors [MultimediaGalleryConfiguration.allowMultipleSelection]. When
+  /// `true`, tapping a medium toggles its selection state; when `false`,
+  /// tapping a medium immediately finalizes the selection and pops.
   @protected
   bool get multipleAllowed => parent.allowMultipleSelection;
 
+  /// The resolved [GalleryViewConfiguration] for the album grid/list.
+  ///
+  /// Falls back to a default [GalleryViewConfiguration] when the parent
+  /// does not provide one. Controls display count, aspect ratio, spacing,
+  /// image styling, and custom item builders for the album views.
   @protected
   GalleryViewConfiguration get configuration => parent.configuration ?? GalleryViewConfiguration();
 
+  /// The resolved [MultimediaIconConfiguration] for the grid/list toggle icon.
+  ///
+  /// Falls back to a default [MultimediaIconConfiguration] when the parent
+  /// does not provide one. Controls the icon data, color, and size of the
+  /// layout-toggle button in the app bar.
   @protected
   MultimediaIconConfiguration get iconConfig => parent.iconConfiguration ?? MultimediaIconConfiguration();
 
+  /// The resolved [MultimediaLayoutConfiguration] for the page scaffold.
+  ///
+  /// Falls back to a default [MultimediaLayoutConfiguration] when the
+  /// parent does not provide one. Controls background color, app bar
+  /// styling, floating buttons, drawers, and loading indicators.
   @protected
   MultimediaLayoutConfiguration get layoutConfig => parent.layoutConfiguration ?? MultimediaLayoutConfiguration();
 
+  /// The resolved [MultimediaNoItemConfiguration] for the empty-state view.
+  ///
+  /// Falls back to a default [MultimediaNoItemConfiguration] when the
+  /// parent does not provide one. Controls the message, icon, and
+  /// styling shown when no albums are found on the device.
   @protected
   MultimediaNoItemConfiguration get noItemConfig => parent.noItemConfiguration ?? MultimediaNoItemConfiguration();
 
+  /// The resolved [MultimediaNoPermissionConfiguration] for the permission-denied view.
+  ///
+  /// Falls back to a default [MultimediaNoPermissionConfiguration] when
+  /// the parent does not provide one. Controls the message, icon, retry
+  /// button, and styling shown when gallery access is denied.
   @protected
   MultimediaNoPermissionConfiguration get noPermitConfig => parent.noPermissionConfiguration ?? MultimediaNoPermissionConfiguration();
 
+  /// The resolved [MultimediaFileManagerConfiguration] for the file-manager picker.
+  ///
+  /// Falls back to a default [MultimediaFileManagerConfiguration] when
+  /// the parent does not provide one. Controls the label, icon, callback,
+  /// and size constraints for the "Select from file manager" button.
   @protected
   MultimediaFileManagerConfiguration get fileManagerConfig => parent.fileManagerConfiguration ?? MultimediaFileManagerConfiguration();
 
+  /// Performs the two-phase gallery initialization sequence.
+  ///
+  /// Phase 1: Sets [_isCheckingPermission] to `true` and awaits the
+  /// [MultimediaGalleryConfiguration.hasPermission] callback. If the
+  /// callback is null, permission is assumed denied. Phase 2: If
+  /// permission is granted, sets [_isInitializing] to `true` and calls
+  /// [_fetchAlbums] to load all albums from the device. Each phase
+  /// updates its respective flag via [setState] so the UI re-renders
+  /// at the correct loading stage.
   void _initializeGallery() async {
     setState(() => _isCheckingPermission = true);
     bool hasPermission = parent.hasPermission.isNotNull ? await parent.hasPermission!() : false;
@@ -70,6 +172,13 @@ class _MultimediaGalleryState extends SmartState<MultimediaGallery> {
     }
   }
 
+  /// Queries the device gallery for albums, filtered by media type.
+  ///
+  /// If [MultimediaGalleryConfiguration.showOnlyVideo] is `true`, only
+  /// video albums are returned. If [MultimediaGalleryConfiguration.showOnlyPhoto]
+  /// is `true`, only image albums are returned. Otherwise, all albums
+  /// (images and videos) are returned. The returned list is assigned
+  /// to [_albums] by the caller.
   Future<List<Album>> _fetchAlbums() async {
     if(parent.showOnlyVideo) {
       return await Gallery.listAlbums(mediumType: MediumType.video);
@@ -80,6 +189,12 @@ class _MultimediaGalleryState extends SmartState<MultimediaGallery> {
     }
   }
 
+  /// Toggles between grid and list layout modes.
+  ///
+  /// Flips [_isGrid] and, if the parent provided an
+  /// [MultimediaGalleryConfiguration.onLayoutChanged] callback, invokes
+  /// it with the new boolean value so the parent can react to the change
+  /// (e.g., persisting the user's layout preference).
   void _onLayoutChanged() {
     setState(() => _isGrid = !_isGrid);
 
@@ -88,12 +203,31 @@ class _MultimediaGalleryState extends SmartState<MultimediaGallery> {
     }
   }
 
+  /// Forwards media selected from the file manager to the parent callback.
+  ///
+  /// Called by [MultimediaUtils.pickFromFile] after the user selects files
+  /// through the system file picker. The [files] list contains fully
+  /// resolved [SelectedMedia] objects, while [mediums] contains the raw
+  /// gallery [Medium] entries in the same order. Both are passed to
+  /// [MultimediaGalleryConfiguration.onMediaReceived].
   void handleSelectedListMedia(List<SelectedMedia> files, List<Medium> mediums) {
     if(parent.onMediaReceived.isNotNull) {
       parent.onMediaReceived!(files, mediums);
     }
   }
 
+  /// Resolves selected [Medium] items into [SelectedMedia] objects and delivers them.
+  ///
+  /// For each [Medium], this method: (1) calls [Medium.getFile] to obtain
+  /// the platform file, (2) determines the [MediaType] by checking the
+  /// medium's type or falling back to the file extension, (3) reads the
+  /// file bytes, and (4) constructs a [SelectedMedia] with path, size,
+  /// type, and data. After all items are resolved, the result is either
+  /// forwarded to [MultimediaGalleryConfiguration.onMediaReceived] or
+  /// popped from the navigation stack. When
+  /// [MultimediaGalleryConfiguration.popAllWhileGoingBack] is `true`,
+  /// two pops are performed — the first returns to the album page, and
+  /// the second returns the result to the calling screen.
   Future<void> _handleSelectedMedium(List<Medium> medium) async {
     List<Future<SelectedMedia>> list = medium.map((medium) async {
       final file = await medium.getFile();
@@ -117,11 +251,9 @@ class _MultimediaGalleryState extends SmartState<MultimediaGallery> {
     if(parent.onMediaReceived.isNotNull) {
       parent.onMediaReceived!(files, medium);
     } else if(parent.popAllWhileGoingBack) {
-      // First pop returns to the album page
       Navigator.pop(context);
-      // Delay the second pop until the current pop completes
       Future.delayed(Duration.zero, () {
-        Navigator.pop(context, files); // Pop album page with result
+        Navigator.pop(context, files);
       });
     }else {
       Navigator.pop(context, files);
@@ -238,6 +370,16 @@ class _MultimediaGalleryState extends SmartState<MultimediaGallery> {
     );
   }
 
+  /// Builds the main content area based on the current gallery state.
+  ///
+  /// The widget tree follows a priority order: (1) if permission is being
+  /// checked, show the permission-checking indicator or custom builder;
+  /// (2) if permission is denied, show the permission-denied view or
+  /// custom builder; (3) if albums are loading, show the loading indicator
+  /// or custom builder; (4) if no albums exist, show the empty-state view
+  /// or custom builder; (5) otherwise, show [GalleryGridView] or
+  /// [GalleryListView] depending on [_isGrid]. Each state can be
+  /// overridden by providing the corresponding builder in the configuration.
   Widget _build() {
     if(_isCheckingPermission) {
       if (parent.permissionCheckBuilder case WidgetBuilder builder?) {

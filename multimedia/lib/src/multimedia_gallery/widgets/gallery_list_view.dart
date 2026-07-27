@@ -5,61 +5,66 @@ import 'package:smart/smart.dart';
 import '../album/multimedia_gallery_album.dart';
 import 'album_information.dart';
 
-/// A scrollable list view for displaying photo/video albums.
+/// {@template gallery_list_view}
+/// A scrollable list view that displays media albums as horizontal rows.
 ///
-/// The `GalleryListView` widget shows a list of `Album` objects, each
-/// rendered with a thumbnail, name, and count. It allows customization of layout,
-/// styling, and selection behavior.
+/// Each row shows the album's cover thumbnail on the left, the album
+/// name and item count in the center, and an [AlbumInformation] badge
+/// on the right. Tapping a row navigates to [MultimediaGalleryAlbum]
+/// via the [Animated] page-route widget, providing a smooth transition
+/// from the album list to the album detail view.
 ///
-/// It supports navigation into a detailed album view using the `Animated` widget,
-/// or full customization via a user-provided `albumItemBuilder`.
-///
-/// ### Example usage:
-/// ```dart
-/// GalleryListView(
-///   albums: albums,
-///   onSelected: handleSelection,
-///   multipleAllowed: true,
-///   maxSelection: 5,
-/// )
-/// ```
+/// The list uses [ListView.separated] for consistent spacing between
+/// rows, and wraps in a [Scrollbar] for visual feedback during scrolling.
+/// When [GalleryViewConfiguration.albumItemBuilder] is provided, it
+/// completely replaces the default row widget, giving the caller full
+/// control over album rendering.
+/// {@endtemplate}
 class GalleryListView extends StatelessWidget {
-  /// The parent route name of the screen
+  /// The parent route name used for constructing nested navigation routes.
+  ///
+  /// Each album's route is derived as `"$parentRoute/$albumRoute"` where
+  /// `albumRoute` comes from [GalleryViewConfiguration.route] or defaults
+  /// to `"?album=${album.id}"`.
   final String parentRoute;
 
-  /// List of albums to be displayed.
+  /// The list of albums to display in the scrollable list.
+  ///
+  /// Each [Album] provides a name, cover thumbnail, media count, and
+  /// recency flag. The list is typically produced by
+  /// [_MultimediaGalleryState._fetchAlbums].
   final List<Album> albums;
 
-  /// Callback when media is selected from an album.
+  /// Whether the user can select multiple media items within each album.
+  ///
+  /// Passed through to [MultimediaGalleryAlbum] when navigating into
+  /// an album. When `true`, the album view shows a "Done" button and
+  /// allows toggling individual media selections.
   final bool multipleAllowed;
 
-  /// Optional limit on how many media items can be selected.
+  /// Callback invoked when the user finalizes their media selection.
+  ///
+  /// Receives the list of selected [Medium] items from the album view.
+  /// This callback is forwarded to [MultimediaGalleryAlbum] and
+  /// ultimately to [_MultimediaGalleryState._handleSelectedMedium].
   final MediumListReceived onSelected;
 
-  /// Whether multiple selections are allowed.
+  /// Optional maximum number of media items the user can select.
+  ///
+  /// When `null`, selection is unlimited (subject to the device's
+  /// storage). When set, the album view enforces the cap and disables
+  /// further selections once reached.
   final int? maxSelection;
 
-  /// The configuration for the gallery view.
+  /// The configuration controlling list layout, styling, and navigation.
+  ///
+  /// Provides padding, separator style, image dimensions, text styling,
+  /// and optionally a custom [albumItemBuilder] to replace the default row.
   final GalleryViewConfiguration configuration;
 
-  /// A scrollable list view for displaying photo/video albums.
+  /// {@macro gallery_list_view}
   ///
-  /// The `GalleryListView` widget shows a list of `Album` objects, each
-  /// rendered with a thumbnail, name, and count. It allows customization of layout,
-  /// styling, and selection behavior.
-  ///
-  /// It supports navigation into a detailed album view using the `Animated` widget,
-  /// or full customization via a user-provided `albumItemBuilder`.
-  ///
-  /// ### Example usage:
-  /// ```dart
-  /// GalleryListView(
-  ///   albums: albums,
-  ///   onSelected: handleSelection,
-  ///   multipleAllowed: true,
-  ///   maxSelection: 5,
-  /// )
-  /// ```
+  /// All parameters are required.
   const GalleryListView({
     super.key,
     required this.albums,

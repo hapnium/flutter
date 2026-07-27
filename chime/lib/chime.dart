@@ -1,8 +1,17 @@
 /// {@template chime_library}
-/// Public entry point for Chime.
+/// Public entry point for Chime — a Flutter notification management SDK.
+///
+/// Chime provides a unified API for handling three notification types:
+///
+/// - **Device notifications** — push and local notifications via
+///   `flutter_local_notifications`
+/// - **In-app notifications** — overlay toasts and banners via `toastification`
+///   and `fluttertoast`
+/// - **Scheduled notifications** — future-delivery notifications with
+///   timezone support
 ///
 /// This library exposes the [Chime] registry, which acts as a singleton-style
-/// access point for Chime services. It keeps a reference to the active
+/// access point for all Chime services. It keeps a reference to the active
 /// [ChimeController] and [ChimeInAppNotification] instances and supplies
 /// defaults when nothing has been configured.
 ///
@@ -10,7 +19,7 @@
 /// (usually through `ChimeApplication`) and then access them from any layer
 /// without needing to pass dependencies through constructors.
 ///
-/// ### Example
+/// ### Quick Start
 /// ```dart
 /// void main() {
 ///   final controller = DefaultChimeController();
@@ -19,6 +28,31 @@
 ///
 ///   runApp(const MyApp());
 /// }
+/// ```
+///
+/// ### Accessing Services
+/// ```dart
+/// // Get the controller for stream subscriptions and event publishing
+/// final controller = Chime.getController();
+///
+/// // Get the in-app notification handler
+/// final inApp = Chime.getInAppNotification();
+/// inApp.showInAppSuccessNotification(message: 'Saved!');
+///
+/// // Get the push notification handler
+/// final push = Chime.getPushNotification();
+/// await push.requestPermission();
+/// ```
+///
+/// ### Event System
+/// ```dart
+/// controller.getTappedChimeNotificationStream().listen((notification) {
+///   // Handle notification tap
+/// });
+///
+/// await controller.publishEvent(
+///   NotificationReceivedEvent(notification, response: response),
+///   );
 /// ```
 /// {@endtemplate}
 library;

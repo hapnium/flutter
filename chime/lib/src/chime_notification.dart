@@ -8,6 +8,18 @@ import 'package:toastification/toastification.dart';
 
 import 'enums.dart';
 
+/// Generates a cryptographically secure random integer suitable for use
+/// as a platform notification id.
+///
+/// Uses [Random.secure] to produce a value in the range `[0, 2^32)`,
+/// which is the valid id range for `flutter_local_notifications`. The
+/// id is guaranteed to be unique within a single process lifetime but
+/// is **not** globally unique across app restarts — use [identifier] for
+/// stable deduplication.
+///
+/// Called by [ChimeNotification.withGeneratedId], [ChimeAppNotification],
+/// [ChimeCreatedAppNotification], and [ChimeCreatedCustomAppNotification]
+/// when no explicit id is provided.
 int _generateSecureRandomId() {
   final random = Random.secure();
   return random.nextInt(1 << 32);

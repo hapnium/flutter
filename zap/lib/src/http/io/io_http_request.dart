@@ -16,17 +16,56 @@ import 'io_http_response.dart';
 
 /// {@template io_http_request}
 /// A `dart:io` implementation of [HttpRequestInterface] with comprehensive error handling.
-/// 
-/// This class is used to send an HTTP [Request] and returns a [Response].
-/// 
+///
+/// This class provides HTTP request functionality for mobile and desktop platforms
+/// using the `dart:io` [io.HttpClient]. It handles SSL/TLS certificates, proxies,
+/// timeouts, and various network error conditions.
+///
+/// ## Features
+/// - SSL/TLS certificate pinning and custom trust stores
+/// - Proxy configuration
+/// - Automatic redirect following
+/// - Comprehensive error classification (socket, HTTP, SSL, timeout)
+/// - Response interception support
+///
+/// ## Example
+/// ```dart
+/// final impl = HttpRequestImplementation(
+///   allowAutoSignedCert: false,
+///   trustedCertificates: [cert1, cert2],
+/// );
+/// final response = await impl.send(request);
+/// impl.close();
+/// ```
 /// {@endtemplate}
 class HttpRequestImplementation extends HttpRequestInterface {
   /// The HTTP client.
   io.HttpClient? _httpClient;
 
-  /// The security context.
+  /// The security context for custom certificate trust.
   io.SecurityContext? _securityContext;
 
+  /// Creates an [HttpRequestImplementation] for IO platforms.
+  ///
+  /// ## Parameters
+  /// - [allowAutoSignedCert]: Whether to allow self-signed certificates.
+  ///   Defaults to `true`. Should be `false` in production.
+  /// - [trustedCertificates]: Optional list of certificates to trust explicitly.
+  /// - [withCredentials]: Whether to include credentials (unused on IO).
+  /// - [findProxy]: Optional function to determine the proxy server.
+  ///
+  /// ## Example
+  /// ```dart
+  /// final impl = HttpRequestImplementation(
+  ///   allowAutoSignedCert: false,
+  ///   findProxy: (uri) => 'PROXY proxy.example.com:8080',
+  /// );
+  /// ```
+  ///
+  /// ## Edge cases
+  /// - If [trustedCertificates] is provided, a custom [io.SecurityContext] is created.
+  /// - The [allowAutoSignedCert] flag is applied via `badCertificateCallback`.
+  /// 
   /// {@macro io_http_request}
   HttpRequestImplementation({
     bool allowAutoSignedCert = true,
@@ -47,6 +86,26 @@ class HttpRequestImplementation extends HttpRequestInterface {
     _httpClient!.findProxy = findProxy;
   }
 
+  /// Sends an HTTP request and returns the response.
+  ///
+  /// ## Parameters
+  /// - [request]: The configured request to send.
+  ///
+  /// ## Returns
+  /// A [Response] of type [T] with the server's reply.
+  ///
+  /// ## Throws
+  /// - [ZapException] with type [ExceptionType.timeout] for request timeouts.
+  /// - [ZapException] with type [ExceptionType.connection] for connection refused.
+  /// - [ZapException] with type [ExceptionType.network] for network errors.
+  /// - [ZapException] with type [ExceptionType.dns] for DNS resolution failures.
+  /// - [ZapException] with type [ExceptionType.ssl] for SSL/TLS errors.
+  /// - [ZapException] with type [ExceptionType.parsing] for invalid data formats.
+  ///
+  /// ## Edge cases
+  /// - The request is aborted on timeout to prevent resource leaks.
+  /// - Socket errors are classified by their OS error code for specific diagnostics.
+  /// - HTTP exceptions are classified based on their message content.
   @override
   Future<Response<T>> send<T>(Request<T> request) async {
     var stream = request.bodyBytes.asBroadcastStream();
@@ -119,6 +178,24 @@ class HttpRequestImplementation extends HttpRequestInterface {
     }
   }
 
+  /// Handles socket exceptions by classifying them based on OS error codes.
+  ///
+  /// Provides specific error types for common scenarios like connection refused,
+  /// host unreachable, DNS failure, and connection timeout.
+  ///
+  /// ## Parameters
+  /// - [e]: The socket exception to handle.
+  /// - [uri]: The request URI.
+  ///
+  /// ## Returns
+  /// A [ZapException] with the appropriate error type.
+  ///
+  /// ## Supported error codes
+  /// - 61/10061: Connection refused
+  /// - 64/10064: Host unreachable
+  /// - 65/10065: No route to host
+  /// - 8/11001: DNS resolution failed
+  /// - 60/10060: Connection timed out
   Exception _handleSocketException(io.SocketException e, Uri? uri) {
     Map<String, dynamic> details = {
       'osError': e.osError?.toString(),
@@ -147,6 +224,14 @@ class HttpRequestImplementation extends HttpRequestInterface {
     }
   }
 
+  /// Handles HTTP exceptions by classifying them based on message content.
+  ///
+  /// ## Parameters
+  /// - [e]: The HTTP exception to handle.
+  /// - [uri]: The request URI.
+  ///
+  /// ## Returns
+  /// A [ZapException] with the appropriate error type.
   Exception _handleHttpException(io.HttpException e, Uri? uri) {
     Map<String, dynamic> details = {'originalMessage': e.message};
     
@@ -159,7 +244,15 @@ class HttpRequestImplementation extends HttpRequestInterface {
     }
   }
 
-  /// Closes the HttpClient.
+  /// Closes the HttpClient and releases resources.
+  ///
+  /// Forces all connections to be closed. After calling this method,
+  /// the client should not be used for further requests.
+  ///
+  /// ## Example
+  /// ```dart
+  /// impl.close(); // Forces connection closure
+  /// ```
   @override
   void close() {
     if (_httpClient != null) {

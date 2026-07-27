@@ -7,7 +7,7 @@ import 'generator.dart';
 Future<dynamic> mockMethodCallHandler(MethodCall call) async {
   if (call.method == "listAlbums") {
     MediumType? mediumType = jsonToMediumType(call.arguments['mediumType']);
-    bool newest = call.arguments['newest'];
+    bool newest = call.arguments['newest'] ?? true;
     dynamic albums = Generator.generateAlbumsJson(
       mediumType: mediumType,
       newest: newest,

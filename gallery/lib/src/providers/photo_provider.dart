@@ -26,10 +26,7 @@ class PhotoProvider extends ImageProvider<PhotoProvider> {
   final String? mimeType;
 
   /// {@macro photo_provider}
-  PhotoProvider({
-    required this.mediumId,
-    this.mimeType,
-  });
+  PhotoProvider({required this.mediumId, this.mimeType});
 
   @override
   ImageStreamCompleter loadImage(key, decode) {

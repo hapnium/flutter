@@ -1,32 +1,64 @@
 /// {@template api_response}
-/// A generic class to handle API responses. This class encapsulates the
-/// structure of a standard API response, including a status, code, message,
-/// and optional data of type [T].
+/// A universal Data Transfer Object (DTO) that implements the "Envelope Pattern" 
+/// for standardized REST API communication.
 ///
-/// This class can be used for both successful and error responses, and it
-/// includes utility methods for checking response status and parsing JSON data.
+/// **Architectural Context:**
+/// Modern backend APIs typically wrap their raw payloads in a consistent JSON envelope. 
+/// Instead of every repository in the app manually checking HTTP status codes and 
+/// parsing nested data fields, this class acts as a single, unified boundary between 
+/// the raw HTTP client (like Dio or http) and your domain-specific repositories.
+///
+/// By keeping the [data] field as `dynamic`, a single `ApiResponse` class can represent 
+/// the result of *any* endpoint. The specific repositories then use [resolvedAs] or 
+/// [resolvedListAs] to strongly type the payload at the exact moment it's needed.
+///
+/// **Example Usage:**
+/// ```dart
+/// // 1. Parse the generic envelope
+/// final response = ApiResponse.fromJson(jsonDecode(responseBody));
 /// 
+/// // 2. Check network success
+/// if (response.isOk) {
+///   // 3. Strongly type the dynamic payload
+///   final user = response.resolvedAs<User>((json) => User.fromJson(json));
+///   return user;
+/// } else {
+///   throw Exception(response.message);
+/// }
+/// ```
 /// {@endtemplate}
 class ApiResponse {
-  /// The status of the API response, typically a string that describes the
-  /// outcome (e.g., "success", "error").
+  /// The business-logic status of the response.
+  /// 
+  /// Typically conforms to the JSend specification (e.g., `"success"`, `"fail"`, 
+  /// or `"error"`). While [code] represents the network-level status, this field 
+  /// represents the application-level status.
   final String status;
 
-  /// The HTTP status code returned by the API (e.g., 200 for OK, 404 for Not Found).
+  /// The standard HTTP status code (e.g., `200` for OK, `404` for Not Found).
+  /// 
+  /// Used to dictate control flow (e.g., navigating to a login screen on `401`, 
+  /// or showing a retry button on `500`).
   final int code;
 
-  /// A message providing more details about the response, such as an error
-  /// description or success message.
+  /// A human-readable message provided by the server.
+  /// 
+  /// In a successful response, this might be `"Profile updated successfully"`.
+  /// In an error response, this contains the localized error string (e.g., `"Invalid password"`), 
+  /// making it safe to directly pipe into a UI Snackbar or Toast.
   final String message;
 
-  /// The actual data returned by the API. The type of this data is determined by [T].
-  /// It can be `null` if no data is returned or in case of an error.
+  /// The raw, unparsed payload returned by the server.
+  /// 
+  /// This is kept as `dynamic` (usually a `Map<String, dynamic>` or `List<dynamic>`) 
+  /// so that the HTTP interceptor doesn't need to know about your domain models. 
+  /// It is strongly typed later via [resolvedAs] or [resolvedListAs].
   final dynamic data;
 
-  /// Constructor for creating an [ApiResponse] instance with the provided
-  /// [status], [code], [message], and optional [data].
-  /// 
   /// {@macro api_response}
+  /// 
+  /// Instantiates a completely populated response. Usually called internally by 
+  /// the factory constructors.
   ApiResponse({
     required this.status,
     required this.code,
@@ -34,19 +66,29 @@ class ApiResponse {
     this.data,
   });
 
-  /// Returns `true` if the HTTP status code is 200, indicating a successful response.
+  /// Evaluates whether the network request was successful.
+  /// 
+  /// Returns `true` if the HTTP status code is `200` (OK) or `201` (Created). 
+  /// This is the primary gatekeeper property used before attempting to parse [data].
   bool get isOk => code == 200 || isCreated;
 
-  /// Returns `true` if the HTTP status code is 201, indicating that a resource
-  /// has been successfully created.
+  /// Evaluates whether a new resource was successfully generated on the server.
+  /// 
+  /// Returns `true` strictly for HTTP `201`. Useful for POST requests where you 
+  /// need to verify creation rather than just a successful read.
   bool get isCreated => code == 201;
 
-  /// A factory method to create an [ApiResponse] object from a JSON map.
+  /// Deserializes a raw JSON envelope into an [ApiResponse].
   ///
-  /// The [json] parameter is expected to contain the keys `status`, `code`,
-  /// `message`, and optionally `data`.
-  ///
-  /// Returns an [ApiResponse] instance with parsed fields from the map.
+  /// **Defensive Parsing:**
+  /// If the server returns a malformed response (e.g., an HTML error page instead 
+  /// of JSON, or missing keys), this factory provides strict fallbacks:
+  /// - Status defaults to an empty string.
+  /// - Code defaults to `400` (Bad Request).
+  /// - Message defaults to `"Couldn't validate request"`.
+  /// 
+  /// This ensures the app can always gracefully handle the object without throwing 
+  /// a late-initialization or null-pointer error.
   /// 
   /// {@macro api_response}
   factory ApiResponse.fromJson(Map<String, dynamic> json) {
@@ -58,12 +100,12 @@ class ApiResponse {
     );
   }
 
-  /// Creates a copy of this [ApiResponse] with the specified properties replaced.
+  /// Returns a new instance of [ApiResponse] with selectively updated fields.
   ///
-  /// This method is useful for creating a modified copy of an existing response
-  /// without altering the original instance.
-  ///
-  /// Returns a new [ApiResponse] instance with updated fields where provided.
+  /// **Architectural Use Case:**
+  /// Highly useful in middleware or HTTP interceptors. For example, you might 
+  /// intercept a response, mutate the [message] to a localized string based on 
+  /// the [code], and pass the copied response down to the repository.
   /// 
   /// {@macro api_response}
   ApiResponse copyWith({
@@ -80,29 +122,31 @@ class ApiResponse {
     );
   }
 
-  /// Creates an [ApiResponse] instance representing an error.
+  /// A convenience factory for generating a standardized, local error response.
   ///
-  /// This is a convenience factory for quickly returning a generic error response.
-  ///
-  /// - [message]: A description of the error.
+  /// **Why mock an API response locally?**
+  /// If a request fails *before* reaching the server (e.g., no internet connection, 
+  /// or a timeout), you can use this factory to return a uniform [ApiResponse] 
+  /// object to your repository. This prevents your repository from having to write 
+  /// separate logic for `catch (SocketException)` vs a server-side 400 error.
   /// 
   /// {@macro api_response}
   factory ApiResponse.error(String message) =>
       ApiResponse(status: "error", code: 400, message: message);
 
-  /// Creates an [ApiResponse] instance representing an unauthorized access attempt.
-  ///
-  /// This is a convenience factory for returning an unauthorized error response (HTTP 401).
-  ///
-  /// - [message]: A message indicating the unauthorized access.
+  /// A convenience factory for locally generating a `401` Unauthorized response.
+  /// 
+  /// Typically used by authentication interceptors when a local JWT token is 
+  /// verified to be expired before the network request is even sent.
   /// 
   /// {@macro api_response}
   factory ApiResponse.unauthorized(String message) =>
       ApiResponse(status: "unauthorized", code: 401, message: message);
 
-  /// Converts the [ApiResponse] object into a JSON map.
+  /// Serializes the envelope back into a JSON map.
   ///
-  /// Returns a `Map<String, dynamic>` suitable for encoding into JSON.
+  /// Useful for caching the raw response to local storage (like Hive or SharedPreferences) 
+  /// to implement offline-first capabilities, or for unit testing API mocks.
   Map<String, dynamic> toJson() {
     return {
       'status': status,
@@ -112,14 +156,14 @@ class ApiResponse {
     };
   }
 
-  /// Parses and returns the `data` field using a custom parser function.
+  /// Transforms the `dynamic` [data] payload into a strongly-typed object of type `T`.
   ///
-  /// This is useful when you expect the `data` to be of a specific type [T] and
-  /// want to transform it accordingly.
+  /// **How it works:**
+  /// Instead of making the entire `ApiResponse` generic (which complicates HTTP 
+  /// interceptors), you pass a [parser] function that knows how to convert the 
+  /// dynamic JSON map into your specific domain model.
   ///
-  /// - [parser]: A function that takes a `dynamic` value and returns a value of type [T].
-  ///
-  /// Example:
+  /// **Example:**
   /// ```dart
   /// final user = response.resolvedAs<User>((json) => User.fromJson(json));
   /// ```
@@ -127,13 +171,15 @@ class ApiResponse {
     return parser(data);
   }
 
-  /// Parses and returns the `data` field as a list of items of type [T].
+  /// Transforms a `dynamic` list payload into a strictly typed `List<T>`.
   ///
-  /// If the `data` is not a list, an empty list is returned.
+  /// **Defensive Design:**
+  /// If the server promises a list but returns `null` or a Map (due to an API bug), 
+  /// this method safely intercepts the type mismatch and returns an empty list `[]`. 
+  /// This completely eliminates `type 'String' is not a subtype of type 'List<dynamic>'` 
+  /// crashes in production.
   ///
-  /// - [parser]: A function that takes a `dynamic` item and returns an item of type [T].
-  ///
-  /// Example:
+  /// **Example:**
   /// ```dart
   /// final users = response.resolvedListAs<User>((json) => User.fromJson(json));
   /// ```

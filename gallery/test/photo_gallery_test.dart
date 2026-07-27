@@ -8,7 +8,7 @@ import 'utils/generator.dart';
 import 'utils/mock_handler.dart';
 
 void main() {
-  const MethodChannel channel = MethodChannel('gallery');
+  const MethodChannel channel = MethodChannel('smart_hap_gallery');
 
   TestWidgetsFlutterBinding.ensureInitialized();
 

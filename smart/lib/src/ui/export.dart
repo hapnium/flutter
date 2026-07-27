@@ -102,6 +102,8 @@ export 'layouts/models/permission_consent.dart';
 /// PAGED
 export 'pageable/controller/pageable_controller.dart';
 export 'pageable/controller/extensions.dart';
+export 'pageable/controller/interleave_strategy.dart';
+export 'pageable/controller/interleavable_pageable_controller.dart';
 
 export 'pageable/builders/pageable_builder.dart';
 export 'pageable/builders/pageable_layout_builder.dart';
@@ -119,6 +121,8 @@ export 'pageable/models/pageable.dart';
 export 'pageable/models/page_result.dart';
 export 'pageable/models/pageable_status.dart';
 export 'pageable/models/pageable_builder_delegate.dart';
+export 'pageable/models/pageable_source.dart';
+export 'pageable/models/interleaved_source_state.dart';
 
 export 'pageable/pull_to_refresh/pull_to_refresh.dart';
 export 'pageable/pull_to_refresh/pull_to_refresh_type.dart';

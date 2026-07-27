@@ -10,17 +10,66 @@ import 'chime_sound.dart';
 import 'chime_notification.dart';
 import 'enums.dart';
 
+/// {@template chime_background_forwarder}
+/// User-provided callback forwarded from [DefaultChimePushNotification.initialize].
+///
+/// When a background notification response arrives, this callback is invoked
+/// with the raw [NotificationResponse]. It allows consumers to handle
+/// background taps (e.g., deep-link navigation, analytics) without
+/// going through the Chime event pipeline.
+///
+/// Set by [DefaultChimePushNotification.initialize] via the
+/// `onBackgroundNotificationReceived` parameter.
+/// {@endtemplate}
 NotificationResponseCallback? _chimeBackgroundForwarder;
+
+/// {@template chime_background_publisher}
+/// Internal callback that converts a background [NotificationResponse] into
+/// a [NotificationReceivedEvent] and publishes it through the Chime event
+/// pipeline.
+///
+/// This is set by [DefaultChimePushNotification.initialize] and is invoked
+/// by [chimeBackgroundNotificationDispatcher] before the user-provided
+/// forwarder. It ensures background notifications flow through the same
+/// stream infrastructure as foreground notifications.
+/// {@endtemplate}
 Future<void> Function(NotificationResponse details)? _chimeBackgroundPublisher;
 
+/// {@template chime_background_notification_dispatcher}
+/// Top-level entry point for handling background notification responses.
+///
+/// Registered with `flutter_local_notifications` as the
+/// `onDidReceiveBackgroundNotificationResponse` callback. When a notification
+/// is tapped while the app is in the background or terminated, the platform
+/// invokes this function in an isolate.
+///
+/// The function performs two actions in order:
+/// 1. Calls [_chimeBackgroundPublisher] (if set) to publish a
+///    [NotificationReceivedEvent] through the Chime event pipeline.
+/// 2. Calls [_chimeBackgroundForwarder] (if set) to forward the raw
+///    [NotificationResponse] to the user-provided callback.
+///
+/// Annotated with `@pragma('vm:entry-point')` to prevent the Dart compiler
+/// from tree-shaking this function, which is referenced by name from
+/// platform-native code.
+///
+/// ### Example
+/// This function is not called directly. It is registered automatically
+/// during [DefaultChimePushNotification.initialize]:
+/// ```dart
+/// await plugin.initialize(
+///   settings: settings,
+///   onDidReceiveBackgroundNotificationResponse:
+///     chimeBackgroundNotificationDispatcher,
+/// );
+/// ```
+/// {@endtemplate}
 @pragma('vm:entry-point')
 void chimeBackgroundNotificationDispatcher(NotificationResponse details) async {
-  // Keep Chime event publishing
   if (_chimeBackgroundPublisher case final publisher?) {
     await publisher(details);
   }
 
-  // Keep user-provided background callback
   if (_chimeBackgroundForwarder case final forwarder?) {
     forwarder(details);
   }

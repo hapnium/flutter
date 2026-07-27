@@ -4,7 +4,6 @@ import 'package:pointycastle/export.dart';
 import '../enums/pem_mode.dart';
 import 'pem.dart';
 
-
 /// {@template rsa_utils}
 /// A utility class for encoding and decoding RSA public and private keys
 /// to and from PEM (Privacy Enhanced Mail) format using ASN.1 structure.

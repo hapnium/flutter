@@ -15,26 +15,75 @@ import '../secure_key_service.dart';
 import 'secure_key.dart';
 
 /// {@template secure_key_factory}
-/// Default implementation of the [SecureKeyService] interface.
+/// Default implementation of [SecureKeyService] that provides deterministic
+/// EC key generation from a string identifier, plus EC-based encrypt/decrypt.
 ///
-/// Provides methods to:
-/// - Generate elliptic curve key pairs deterministically from an identifier
-/// - Encrypt messages using EC public key
-/// - Decrypt messages using EC private key
+/// Unlike [SecureMessaging.generate] which produces random keys on each call,
+/// [generate] derives keys **deterministically** from the [identifier] string.
+/// The same identifier always produces the same key pair. This is useful for:
 ///
-/// Utilizes PointyCastle for cryptographic operations.
+/// - Generating keys from a user ID or device ID
+/// - Reproducing keys without storing them
+/// - Key derivation from a shared secret
+///
+/// ### Key derivation process
+///
+/// 1. The [identifier] is UTF-8 encoded to bytes
+/// 2. The bytes are expanded to 32 bytes by cycling
+/// 3. Each byte is XORed with a shifted neighbor for diffusion
+/// 4. The result seeds a [FortunaRandom] PRNG
+/// 5. An EC key pair is generated on the secp128r1 curve
+///
+/// ### Encryption/decryption
+///
+/// Delegates to [SecureMessaging.ec] for actual encryption and decryption,
+/// using the standard ECIES + AES-256-GCM scheme.
+///
+/// ### Example
+///
+/// ```dart
+/// final factory = SecureKeyFactory();
+/// final keys = factory.generate('user-123');
+/// // Same identifier always produces the same keys
+/// final keys2 = factory.generate('user-123');
+/// assert(keys.publicKey == keys2.publicKey);
+/// ```
 /// {@endtemplate}
 class SecureKeyFactory extends SecureKey implements SecureKeyService {
+  /// Decrypts an EC-encrypted [message] using the recipient's [privateKey].
+  ///
+  /// Delegates to [SecureMessaging.ec] and returns only the plaintext
+  /// message string (discarding the metadata).
+  ///
+  /// Throws [SecureException] if decryption fails.
   @override
   String decrypt({required String message, required String privateKey}) {
     return SecureMessaging.ec().decrypt(message: message, privateKey: privateKey).message;
   }
 
+  /// Encrypts a [message] using the recipient's EC [publicKey].
+  ///
+  /// Delegates to [SecureMessaging.ec].encrypt. The returned ciphertext
+  /// is a base64-encoded JSON wrapper containing the ECIES-encrypted
+  /// payload, ephemeral public key, and nonce.
+  ///
+  /// Throws [SecureException] if encryption fails.
   @override
   String encrypt({required String message, required String publicKey}) {
     return SecureMessaging.ec().encrypt(message: message, publicKey: publicKey);
   }
 
+  /// Generates an EC key pair deterministically from [identifier].
+  ///
+  /// The same [identifier] always produces the same key pair because
+  /// the PRNG seed is derived deterministically from the identifier
+  /// bytes. The identifier can be any string (user ID, device ID,
+  /// passphrase, etc.).
+  ///
+  /// Returns a [SecureKeyResponse] with PEM-encoded EC public and
+  /// private keys.
+  ///
+  /// Throws [SecureException] if key generation fails.
   @override
   SecureKeyResponse generate(String identifier) {
     try {
@@ -50,7 +99,7 @@ class SecureKeyFactory extends SecureKey implements SecureKeyService {
 
       final seed = Uint8List.fromList(expandedBytes);
 
-      // Generate RSA key pair
+      // Generate EC key pair
       final secureRandom = _createSecureRandom(Uint8List.fromList(seed));
       ECKeyGeneratorParameters genParams = ECKeyGeneratorParameters(ECUtils.parameters);
       ParametersWithRandom<ECKeyGeneratorParameters> params = ParametersWithRandom(genParams, secureRandom,);
@@ -68,6 +117,11 @@ class SecureKeyFactory extends SecureKey implements SecureKeyService {
     }
   }
 
+  /// Creates a [FortunaRandom] PRNG seeded with the given [seed].
+  ///
+  /// The seed is used as a [KeyParameter] to initialize the Fortuna
+  /// generator. The resulting PRNG produces cryptographically secure
+  /// random bytes suitable for key generation.
   SecureRandom _createSecureRandom(Uint8List seed) {
     final secureRandom = FortunaRandom();
     secureRandom.seed(KeyParameter(seed));

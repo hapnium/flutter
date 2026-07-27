@@ -54,12 +54,10 @@ class AlbumThumbnailProvider extends ImageProvider<AlbumThumbnailProvider> {
     );
   }
 
-  Future<ui.Codec> _loadAsync(
-    AlbumThumbnailProvider key,
-    ImageDecoderCallback decode,
-  ) async {
+  Future<ui.Codec> _loadAsync(AlbumThumbnailProvider key, ImageDecoderCallback decode) async {
     assert(key == this);
     late ui.ImmutableBuffer buffer;
+
     try {
       final data = await Gallery.getAlbumThumbnail(
         albumId: album.id,
@@ -71,10 +69,9 @@ class AlbumThumbnailProvider extends ImageProvider<AlbumThumbnailProvider> {
       );
       buffer = await ui.ImmutableBuffer.fromUint8List(Uint8List.fromList(data));
     } catch (e) {
-      buffer = await ui.ImmutableBuffer.fromAsset(
-        "packages/gallery/images/grey.bmp",
-      );
+      buffer = await ui.ImmutableBuffer.fromAsset("packages/gallery/images/grey.bmp");
     }
+    
     return decode(buffer);
   }
 

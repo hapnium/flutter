@@ -5,55 +5,67 @@ import 'package:smart/smart.dart';
 import '../album/multimedia_gallery_album.dart';
 import 'album_information.dart';
 
-/// A responsive grid view for displaying media albums in a tiled layout.
+/// {@template gallery_grid_view}
+/// A responsive grid view that displays media albums in a tiled layout.
 ///
-/// The `GalleryGridView` shows `Album` objects in a grid. Each item includes
-/// an image thumbnail and metadata. The layout adapts based on provided size
-/// or screen constraints. Navigation and selection are built in, or can be customized.
+/// Each grid cell shows the album's cover thumbnail, name, item count,
+/// and an [AlbumInformation] badge indicating recency. Tapping a cell
+/// navigates to [MultimediaGalleryAlbum] via the [Animated] page-route
+/// widget, which provides a shared-axis transition between the album
+/// list and album detail views.
 ///
-/// ### Example:
-/// ```dart
-/// GalleryGridView(
-///   albums: albums,
-///   onSelected: (media) => print(media),
-///   multipleAllowed: false,
-///   displayCount: 3,
-/// )
-/// ```
+/// The grid adapts to screen width using [LayoutBuilder]: the number of
+/// columns is controlled by [GalleryViewConfiguration.displayCount]
+/// (default `2`), and each cell's aspect ratio is computed from the
+/// available width. When [GalleryViewConfiguration.albumItemBuilder] is
+/// provided, it completely replaces the default cell widget, giving the
+/// caller full control over album rendering.
+/// {@endtemplate}
 class GalleryGridView extends StatelessWidget {
-  /// The parent route name of the screen
+  /// The parent route name used for constructing nested navigation routes.
+  ///
+  /// Each album's route is derived as `"$parentRoute/$albumRoute"` where
+  /// `albumRoute` comes from [GalleryViewConfiguration.route] or defaults
+  /// to `"?album=${album.id}"`.
   final String parentRoute;
 
-  /// List of albums to be displayed.
+  /// The list of albums to display in the grid.
+  ///
+  /// Each [Album] provides a name, cover thumbnail, media count, and
+  /// recency flag. The list is typically produced by
+  /// [_MultimediaGalleryState._fetchAlbums].
   final List<Album> albums;
 
-  /// Tells if multiple selection is allowed.
+  /// Whether the user can select multiple media items within each album.
+  ///
+  /// Passed through to [MultimediaGalleryAlbum] when navigating into
+  /// an album. When `true`, the album view shows a "Done" button and
+  /// allows toggling individual media selections.
   final bool multipleAllowed;
 
-  /// Callback when media is selected from an album.
+  /// Callback invoked when the user finalizes their media selection.
+  ///
+  /// Receives the list of selected [Medium] items from the album view.
+  /// This callback is forwarded to [MultimediaGalleryAlbum] and
+  /// ultimately to [_MultimediaGalleryState._handleSelectedMedium].
   final MediumListReceived onSelected;
 
-  /// Optional limit on how many media items can be selected.
+  /// Optional maximum number of media items the user can select.
+  ///
+  /// When `null`, selection is unlimited (subject to the device's
+  /// storage). When set, the album view enforces the cap and disables
+  /// further selections once reached.
   final int? maxSelection;
 
-  /// The configuration for the gallery view.
+  /// The configuration controlling grid layout, styling, and navigation.
+  ///
+  /// Provides display count, aspect ratio, spacing, image styling, and
+  /// optionally a custom [albumItemBuilder] to replace the default cell.
   final GalleryViewConfiguration configuration;
 
-  /// A responsive grid view for displaying media albums in a tiled layout.
+  /// {@macro gallery_grid_view}
   ///
-  /// The `GalleryGridView` shows `Album` objects in a grid. Each item includes
-  /// an image thumbnail and metadata. The layout adapts based on provided size
-  /// or screen constraints. Navigation and selection are built in, or can be customized.
-  ///
-  /// ### Example:
-  /// ```dart
-  /// GalleryGridView(
-  ///   albums: albums,
-  ///   onSelected: (media) => print(media),
-  ///   multipleAllowed: false,
-  ///   displayCount: 3,
-  /// )
-  /// ```
+  /// All parameters are required.
   const GalleryGridView({
     super.key,
     required this.albums,

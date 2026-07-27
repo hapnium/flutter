@@ -3,31 +3,51 @@ import 'dart:collection';
 import '../../definitions.dart';
 
 /// {@template header_value}
-/// The header value
-/// 
-/// This is used to parse and handle the header value
-/// 
-/// Example:
+/// Parses and represents an HTTP header value with optional parameters.
+///
+/// This class handles the parsing of header values like
+/// `'text/html; charset=utf-8'` into a structured format with the main
+/// value and associated parameters.
+///
+/// ## Features
+/// - Full HTTP header value parsing with parameters
+/// - Support for quoted parameter values
+/// - Backslash preservation option
+/// - Unmodifiable parameter map
+/// - Case-insensitive parameter names
+///
+/// ## Example
 /// ```dart
 /// final headerValue = HeaderValue.parse('text/html; charset=utf-8');
+/// print(headerValue.value); // 'text/html'
+/// print(headerValue.parameters); // {'charset': 'utf-8'}
 /// ```
-/// 
+///
+/// ## Edge cases
+/// - Quoted values with escaped characters are handled correctly.
+/// - Backslash preservation mode keeps backslashes before non-quote characters.
+/// - Charset parameters are automatically lowercased.
 /// {@endtemplate}
 class HeaderValue {
-  /// The value of the header
+  /// The raw value of the header.
   String _value;
 
-  /// The parameters of the header value
+  /// The parameters of the header value.
   Map<String, String?>? _parameters;
 
-  /// The unmodifiable parameters of the header value
+  /// The unmodifiable parameters of the header value.
   Map<String, String?>? _unmodifiableParameters;
 
-  /// Create a [HeaderValue]
-  /// 
-  /// Args:
-  ///   value: The header value
-  ///   parameters: The parameters of the header value
+  /// Creates a [HeaderValue] with the given value and parameters.
+  ///
+  /// ## Parameters
+  /// - [value]: The header value (default: empty string).
+  /// - [parameters]: Optional map of parameters.
+  ///
+  /// ## Example
+  /// ```dart
+  /// final hv = HeaderValue('text/html', {'charset': 'utf-8'});
+  /// ```
   /// 
   /// {@macro header_value}
   HeaderValue([this._value = '', Headers? parameters]) {
@@ -36,13 +56,29 @@ class HeaderValue {
     }
   }
 
-  /// Parse a header value
-  /// 
-  /// Args:
-  ///   value: The header value
-  ///   parameterSeparator: The separator of parameters
-  ///   valueSeparator: The separator of values
-  ///   preserveBackslash: When true, the backslash will be preserved
+  /// Parse a header value string into a [HeaderValue].
+  ///
+  /// This method parses header values like `'text/html; charset=utf-8'`
+  /// into structured components.
+  ///
+  /// ## Parameters
+  /// - [value]: The header value string to parse.
+  /// - [parameterSeparator]: The separator between parameters (default: `;`).
+  /// - [valueSeparator]: Optional separator between values.
+  /// - [preserveBackslash]: When `true`, backslashes are preserved in quoted values.
+  ///
+  /// ## Returns
+  /// A parsed [HeaderValue] instance.
+  ///
+  /// ## Throws
+  /// [StateError] if the header value format is invalid.
+  ///
+  /// ## Example
+  /// ```dart
+  /// final hv = HeaderValue.parse('text/html; charset=utf-8');
+  /// print(hv.value); // 'text/html'
+  /// print(hv.parameters); // {'charset': 'utf-8'}
+  /// ```
   /// 
   /// {@macro header_value}
   static HeaderValue parse(String value, {
@@ -55,21 +91,48 @@ class HeaderValue {
     return result;
   }
 
-  /// The value of the header
+  /// The main value of the header (without parameters).
+  ///
+  /// ## Example
+  /// ```dart
+  /// final hv = HeaderValue.parse('text/html; charset=utf-8');
+  /// print(hv.value); // 'text/html'
+  /// ```
   String get value => _value;
 
+  /// Ensures the parameters map is initialized.
   void _ensureParameters() {
     _parameters ??= HashMap<String, String>();
   }
 
-  /// The parameters of the header value
+  /// The parameters of the header value.
+  ///
+  /// Returns an unmodifiable view of the parameters map.
+  /// Parameter names are lowercase.
+  ///
+  /// ## Example
+  /// ```dart
+  /// final hv = HeaderValue.parse('text/html; charset=utf-8');
+  /// print(hv.parameters); // {'charset': 'utf-8'}
+  /// ```
   Map<String, String?>? get parameters {
     _ensureParameters();
     _unmodifiableParameters ??= UnmodifiableMapView(_parameters!);
     return _unmodifiableParameters;
   }
 
-  /// Convert this [HeaderValue] to a string
+  /// Convert this [HeaderValue] to a string.
+  ///
+  /// The format is: `value; param1=value1; param2=value2`
+  ///
+  /// ## Returns
+  /// The string representation of the header value.
+  ///
+  /// ## Example
+  /// ```dart
+  /// final hv = HeaderValue.parse('text/html; charset=utf-8');
+  /// print(hv.toString()); // 'text/html; charset=utf-8'
+  /// ```
   @override
   String toString() {
     var stringBuffer = StringBuffer();
@@ -86,13 +149,16 @@ class HeaderValue {
     return stringBuffer.toString();
   }
 
-  /// Parse the header value
-  /// 
-  /// Args:
-  ///   value: The header value
-  ///   parameterSeparator: The separator of parameters
-  ///   valueSeparator: The separator of values
-  ///   preserveBackslash: When true, the backslash will be preserved
+  /// Parse the header value string.
+  ///
+  /// ## Parameters
+  /// - [value]: The header value string to parse.
+  /// - [parameterSeparator]: The separator between parameters.
+  /// - [valueSeparator]: Optional separator between values.
+  /// - [preserveBackslash]: When `true`, backslashes are preserved in quoted values.
+  ///
+  /// ## Throws
+  /// [StateError] if the header value format is invalid.
   void _parse(String value, String parameterSeparator, String? valueSeparator, bool preserveBackslash) {
     var index = 0;
 

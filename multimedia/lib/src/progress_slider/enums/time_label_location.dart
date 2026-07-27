@@ -1,27 +1,48 @@
 part of '../progress_slider.dart';
 
-/// This is where the current time and total time labels should appear in
-/// relation to the progress bar.
+/// {@template time_label_location}
+/// Controls where the current-time and total-time text labels are
+/// positioned relative to the [ProgressSlider] bar.
+///
+/// The default is [TimeLabelLocation.below]. Set to [TimeLabelLocation.none]
+/// to hide labels entirely.
+/// {@endtemplate}
 enum TimeLabelLocation {
-  ///  The time is displayed above the progress bar.
+  /// Labels appear above the progress bar.
   ///
+  /// ```
   ///  | 01:23              05:00 |
   ///  | -------O---------------- |
+  /// ```
   above,
 
-  ///  The time is displayed below the progress bar.
+  /// Labels appear below the progress bar.
   ///
+  /// ```
   ///  | -------O---------------- |
   ///  | 01:23              05:00 |
+  /// ```
+  ///
+  /// This is the default.
   below,
 
-  ///  The time is displayed on the sides of the progress bar.
+  /// Labels appear on the left and right sides of the progress bar.
   ///
+  /// ```
   ///  | 01:23 -------O---------------- 05:00 |
+  /// ```
+  ///
+  /// The bar shrinks horizontally to make room for the labels. Extra
+  /// spacing is controlled by [ProgressSlider.timeLabelPadding].
   sides,
 
-  ///  The time is not displayed.
+  /// No time labels are displayed.
   ///
+  /// ```
   ///  | -------O---------------- |
+  /// ```
+  ///
+  /// Useful when the slider is embedded in a context where time
+  /// information is shown elsewhere (e.g., a separate timestamp widget).
   none,
 }

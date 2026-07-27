@@ -9,28 +9,69 @@ import 'widgets/album_list_view.dart';
 
 part 'multimedia_gallery_album_state.dart';
 
-/// A widget that displays all media from a single album in a grid layout,
-/// supporting filtering, selection, and custom styling options.
+/// {@template multimedia_gallery_album}
+/// A widget that displays all media items from a single album, supporting
+/// grid/list toggle, media selection, and configurable grid density.
+///
+/// This is the detail view navigated to when the user taps an album in
+/// [GalleryGridView] or [GalleryListView]. It fetches all [Medium] items
+/// from the provided [Album], renders them in either [AlbumGridView] or
+/// [AlbumListView], and manages the selection state. When multiple
+/// selection is enabled, a "Done" button appears in the app bar that
+/// finalizes the selection and returns the result.
+///
+/// Grid density is controlled by filter buttons (e.g., "2x", "3x")
+/// rendered in a [Wrap] below the app bar. The user can switch between
+/// grid and list layouts using the app bar action button. Selection
+/// respects [maxSelection] and [MultimediaGalleryAlbumConfiguration.maxSize] /
+/// [minSize] constraints, rejecting items that fall outside the allowed
+/// size range.
+/// {@endtemplate}
 class MultimediaGalleryAlbum extends StatefulWidget {
-  /// The parent route name of the screen
+  /// The parent route name used for constructing nested navigation routes.
+  ///
+  /// Passed down to child views so that route names can be composed
+  /// hierarchically (e.g., "/gallery/My Photos/12345").
   final String parentRoute;
 
-  /// The album to display.
+  /// The album whose media items to display.
+  ///
+  /// Provides the album name, ID, cover thumbnail, media count, and the
+  /// [Album.listMedia] method used to fetch all items in the album.
   final Album album;
 
-  /// Whether multiple media selection is allowed.
+  /// Whether the user can select multiple media items.
+  ///
+  /// When `true`, tapping a medium toggles its selection state and a
+  /// "Done" button appears in the app bar. When `false`, tapping a
+  /// medium immediately finalizes the selection and pops.
   final bool multipleAllowed;
 
-  /// Callback triggered when media is selected.
+  /// Callback invoked when media items are selected.
+  ///
+  /// Receives the list of selected [Medium] items. When `null`, the
+  /// selected items are returned via [Navigator.pop] instead. This
+  /// allows the widget to work both as a callback-driven component
+  /// and as a navigation-based component.
   final MediumListReceived? onMediumReceived;
 
-  /// Maximum number of items that can be selected.
+  /// Optional maximum number of media items the user can select.
+  ///
+  /// When `null`, selection is unlimited. When set, the "Done" button
+  /// only appears after at least one item is selected, and further
+  /// selections are disabled once the cap is reached.
   final int? maxSelection;
 
-  /// Configuration object for customizing the album screen.
+  /// Configuration object for customizing the album screen's appearance
+  /// and behavior.
+  ///
+  /// Controls app bar styling, grid density options, filter visibility,
+  /// layout toggle icons, done-button styling, and empty/loading states.
   final MultimediaGalleryAlbumConfiguration configuration;
 
-  /// Creates a [MultimediaGalleryAlbum] widget.
+  /// {@macro multimedia_gallery_album}
+  ///
+  /// All parameters are required.
   const MultimediaGalleryAlbum({
     super.key,
     required this.album,

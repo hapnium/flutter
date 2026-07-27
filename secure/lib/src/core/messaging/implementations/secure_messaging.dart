@@ -5,38 +5,59 @@ import 'rsa_secure_messaging.dart';
 import '../secure_messaging_service.dart';
 
 /// {@template secure_messaging}
-/// Abstract class to provide a unified interface for secure messaging.
+/// Abstract base class providing a unified interface for secure messaging.
 ///
-/// This class acts as a facade, delegating secure messaging operations to the
-/// appropriate implementation ([RSASecureMessaging] or [ECSecureMessaging])
-/// based on the provided [PemStyle].
-/// 
+/// Acts as a facade that delegates cryptographic operations to either
+/// [RSASecureMessaging] or [ECSecureMessaging] based on the key type.
+///
+/// ### Usage
+///
+/// ```dart
+/// // Create an EC-based messaging instance
+/// final ec = SecureMessaging.ec();
+/// final ecKeys = ec.generate();
+/// final encrypted = ec.encrypt(message: 'hello', publicKey: ecKeys.publicKey);
+/// final decrypted = ec.decrypt(message: encrypted, privateKey: ecKeys.privateKey);
+///
+/// // Create an RSA-based messaging instance
+/// final rsa = SecureMessaging.rsa();
+/// final rsaKeys = rsa.generate();
+/// final encrypted = rsa.encrypt(message: 'hello', publicKey: rsaKeys.publicKey);
+/// final decrypted = rsa.decrypt(message: encrypted, privateKey: rsaKeys.privateKey);
+/// ```
+///
+/// ### Cross-algorithm transparency
+///
+/// Both [encrypt] and [decrypt] automatically detect the key type and
+/// delegate to the correct implementation. For example, calling
+/// `SecureMessaging.ec().encrypt(...)` with an RSA public key will
+/// transparently use RSA encryption instead.
 /// {@endtemplate}
 abstract class SecureMessaging implements SecureMessagingService {
-  /// Specifies the style of key (RSA or EC) to use.
+  /// The PEM style (RSA or EC) that this messaging instance uses.
+  ///
+  /// This value is set by the subclass constructor and determines
+  /// which cryptographic algorithm is used for key generation,
+  /// encryption, and decryption.
   final PemStyle style;
 
-  /// Private constructor to prevent direct instantiation.
+  /// Creates a [SecureMessaging] instance with the given [style].
   ///
-  /// This constructor is intended to be used by subclasses and factory constructors.
-  /// 
+  /// This constructor is protected — callers should use the
+  /// [SecureMessaging.ec] or [SecureMessaging.rsa] factory constructors
+  /// instead of subclassing directly.
+  ///
   /// {@macro secure_messaging}
   SecureMessaging(this.style);
 
   /// Factory method to dynamically resolve the appropriate implementation.
   ///
-  /// This method is `deprecated`. Please use `SecureMessaging.ec()` or
-  /// `SecureMessaging.rsa()` instead.
+  /// This method is **deprecated**. Use [SecureMessaging.ec] or
+  /// [SecureMessaging.rsa] instead.
   ///
-  /// **Parameters:**
+  /// Returns an [ECSecureMessaging] when [style] is [PemStyle.EC],
+  /// or an [RSASecureMessaging] when [style] is [PemStyle.RSA].
   ///
-  /// * `style`: The [PemStyle] to use for resolving the implementation.
-  ///
-  /// **Returns:**
-  ///
-  /// An instance of either [RSASecureMessaging] or [ECSecureMessaging] based
-  /// on the provided [PemStyle].
-  /// 
   /// {@macro secure_messaging}
   @Deprecated("`resolve` is now deprecated and will be removed. Use `SecureMessaging.ec or SecureMessaging.rsa")
   static SecureMessaging resolve(PemStyle style) {
@@ -47,29 +68,21 @@ abstract class SecureMessaging implements SecureMessagingService {
     }
   }
 
-  /// Factory constructor to create the [ECSecureMessaging] implementation.
+  /// Creates an EC (Elliptic Curve) messaging instance.
   ///
-  /// This method returns an instance of [ECSecureMessaging], which provides
-  /// Elliptic Curve (EC) based secure messaging functionalities.
+  /// Returns an [ECSecureMessaging] that uses ECIES with AES-256-GCM
+  /// for encryption and ECDH + HKDF for key agreement.
   ///
-  /// **Returns:**
-  ///
-  /// An instance of [ECSecureMessaging].
-  /// 
   /// {@macro ec_secure_messaging}
   factory SecureMessaging.ec() {
     return ECSecureMessaging();
   }
 
-  /// Factory constructor to create the [RSASecureMessaging] implementation.
+  /// Creates an RSA messaging instance.
   ///
-  /// This method returns an instance of [RSASecureMessaging], which provides
-  /// RSA-based secure messaging functionalities.
+  /// Returns an [RSASecureMessaging] that uses RSA-OAEP with SHA-256
+  /// for encryption.
   ///
-  /// **Returns:**
-  ///
-  /// An instance of [RSASecureMessaging].
-  /// 
   /// {@macro rsa_secure_messaging}
   factory SecureMessaging.rsa() {
     return RSASecureMessaging();
