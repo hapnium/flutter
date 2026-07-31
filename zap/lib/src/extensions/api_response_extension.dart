@@ -5,7 +5,7 @@ import '../models/error.dart';
 import '../models/response/api_response.dart';
 
 /// {@template api_response_extension}
-/// Extension on `Response<ApiResponse>` that provides convenient accessors
+/// Extension on `Response<ApiResponse?>` that provides convenient accessors
 /// for common properties used in API response handling.
 ///
 /// This extension eliminates the need to manually check multiple levels
@@ -15,7 +15,7 @@ import '../models/response/api_response.dart';
 ///
 /// ### Response hierarchy
 ///
-/// ```
+/// ```text
 /// Response<ApiResponse>
 ///   ├── .message          (top-level HTTP message)
 ///   ├── .status           (HTTP status code)
@@ -43,12 +43,12 @@ import '../models/response/api_response.dart';
 /// - Building error handling middleware
 /// - Creating notification systems
 /// {@endtemplate}
-extension ApiResponseExtension on Response<ApiResponse> {
+extension ApiResponseExtension on Response<ApiResponse?> {
   /// {@template api_response_extension_detailedMessage}
   /// Retrieves the most relevant message from the API response.
   ///
   /// This getter prioritizes the `message` field inside the [ApiResponse]
-  /// body. If the body is `null` or does not contain a message, it falls
+  /// body. If the body is `null` or the body's message is `null`, it falls
   /// back to the top-level `message` property of the [Response] object.
   ///
   /// ### Resolution order
@@ -59,17 +59,18 @@ extension ApiResponseExtension on Response<ApiResponse> {
   /// ### Example
   ///
   /// ```dart
-  /// // Scenario 1: Body has a message
+  /// // Scenario 1: Body has a non-null message
   /// // Response: { body: { message: "User created" } }
   /// response.detailedMessage; // "User created"
   ///
   /// // Scenario 2: Body is null
   /// // Response: { body: null, message: "OK" }
   /// response.detailedMessage; // "OK"
-  ///
-  /// // Scenario 3: Body has empty message
+  /// 
+  /// // Scenario 3: Body has an empty string message
   /// // Response: { body: { message: "" }, message: "Success" }
-  /// response.detailedMessage; // "Success"
+  /// // Note: The ?? operator only checks for null, not emptiness.
+  /// response.detailedMessage; // "" 
   /// ```
   ///
   /// ### Usage in UI
@@ -88,11 +89,6 @@ extension ApiResponseExtension on Response<ApiResponse> {
   /// ```dart
   /// Z.info('API Response: ${response.detailedMessage}');
   /// ```
-  ///
-  /// ### Null safety
-  ///
-  /// This getter always returns a non-null string. If both the body
-  /// message and response message are null, an empty string is returned.
   /// {@endtemplate}
   String get detailedMessage => body?.message ?? message;
 
@@ -132,7 +128,8 @@ extension ApiResponseExtension on Response<ApiResponse> {
   ///
   /// Returns a list of structured [ValidationError] objects if the server 
   /// returned field-level validation failures (e.g., form submission errors). 
-  /// If the body is null or no validation errors exist, it safely returns an empty list `[]`.
+  /// If the body is null, is not an [ApiResponse], or no validation errors exist, 
+  /// it safely returns an empty list `[]`.
   List<ValidationError> retrieveValidationErrors() {
     if (body case ApiResponse apiResponse?) {
       return apiResponse.retrieveValidationErrors();
@@ -147,7 +144,7 @@ extension ApiResponseExtension on Response<ApiResponse> {
   /// error information from the response hierarchy. It is the recommended method 
   /// for grabbing a user-facing error string to display on screen.
   ///
-  /// **Resolution order:**
+  /// ### Resolution order:
   /// 1. If structured validation errors exist in the body, it returns a formatted, 
   ///    multi-line string of those errors via [ApiResponse.retrieveValidationErrorsPrettyMessage].
   /// 2. If no validation errors exist but a body is present, it returns [getMessage].
