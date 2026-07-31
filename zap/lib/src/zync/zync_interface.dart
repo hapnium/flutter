@@ -3,8 +3,8 @@ import 'dart:async';
 import '../definitions.dart';
 import '../enums/socket_type.dart';
 import '../enums/zync_state.dart';
-import '../models/zync_error_response.dart';
-import '../models/zync_response.dart';
+import '../models/zync/zync_error_response.dart';
+import '../models/zync/zync_response.dart';
 
 /// {@template zync_interface}
 /// A foundational contract defining the architecture for real-time WebSocket 

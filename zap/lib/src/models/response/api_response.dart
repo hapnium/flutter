@@ -1,3 +1,7 @@
+import 'package:hapnium/hapnium.dart';
+
+import '../error.dart';
+
 /// {@template api_response}
 /// A universal Data Transfer Object (DTO) that implements the "Envelope Pattern" 
 /// for standardized REST API communication.
@@ -188,5 +192,104 @@ class ApiResponse {
       return (data as List).map((e) => parser(e)).toList();
     }
     return [];
+  }
+
+  /// Parses and extracts structured field-level validation errors from [data].
+  ///
+  /// **Validation Envelope Expectations:**
+  /// Assumes [data] contains a `Map<String, dynamic>` mapping field names (points 
+  /// of contact) to either a single error string or a list of error strings.
+  /// 
+  /// Example input in [data]:
+  /// ```json
+  /// {
+  ///   "email": ["Must be a valid email address", "Cannot be empty"],
+  ///   "password": "Password is too short"
+  /// }
+  /// ```
+  ///
+  /// Safely sanitizes the payload by stripping empty whitespace strings and 
+  /// ignores non-map payload formats, returning an empty list `[]` if validation 
+  /// data is invalid or missing.
+  List<ValidationError> retrieveValidationErrors() {
+    if (data is! Map<String, dynamic>) {
+      return const [];
+    }
+
+    final validations = <ValidationError>[];
+
+    (data as Map<String, dynamic>).forEach((key, value) {
+      if (value is List) {
+        final errors = value
+          .whereType<String>()
+          .map((e) => e.trim())
+          .where((e) => e.isNotEmpty)
+          .map((e) => ErrorMessage(e))
+          .toList();
+
+        if (errors.isNotEmpty) {
+          validations.add(ValidationError(pointOfContact: key, errors: errors));
+        }
+      } else if (value is String && value.trim().isNotEmpty) {
+        validations.add(ValidationError(
+          pointOfContact: key,
+          errors: [ErrorMessage(value.trim())],
+        ));
+      }
+    });
+
+    return validations;
+  }
+
+  /// Formats all extracted field-level validation errors into a clean, human-readable 
+  /// string formatted for end-user display (e.g., alert dialogs or snackbars).
+  ///
+  /// **Features:**
+  /// - Automatically converts `snake_case` or `camelCase` field names into Title Case 
+  ///   (e.g., `first_name` or `firstName` becomes `"First Name"`).
+  /// - Automatically adapts its output layout based on whether a single field or 
+  ///   multiple fields failed validation.
+  /// - Formats multi-field failures into a neat bulleted list.
+  ///
+  /// **Parameters:**
+  /// - [preface]: The header text rendered at the top when multiple validation fields fail.
+  /// - [singleErrorPreface]: The descriptive phrase appended before a single field name 
+  ///   when that field has multiple error messages.
+  ///
+  /// Returns an empty string `""` if no validation errors are present.
+  String retrieveValidationErrorsPrettyMessage({
+    String preface = "Please review the following and try again:",
+    String singleErrorPreface = "These are failing for ", 
+  }) {
+    final errors = retrieveValidationErrors();
+    if (errors.isEmpty) {
+      return "";
+    }
+
+    String prettifyPointOfContact(String input) {
+      final base = input
+        .replaceAll("_", " ")
+        .replaceAllMapped(RegExp(r'([a-z])([A-Z])'), (m) => "${m.group(1)} ${m.group(2)}")
+        .toLowerCase();
+
+      return base.capitalizeEach;
+    }
+
+    if (errors.length == 1) {
+      if (errors.first.errors.length == 1) {
+        return errors.first.errors.first.value.capitalizeFirst;
+      } else {
+        final result = errors.first.errors.map((e) => e.value).join(" ").capitalizeFirst;
+        return "$singleErrorPreface ${prettifyPointOfContact(errors.first.pointOfContact)}\n$result";
+      }
+    } else {
+      final lines = errors.map((validation) {
+        final target = prettifyPointOfContact(validation.pointOfContact);
+        final joined = validation.errors.map((e) => e.value).join(" ").capitalizeFirst;
+        return "• $target: $joined";
+      }).join("\n");
+
+      return "$preface\n$lines";
+    }
   }
 }

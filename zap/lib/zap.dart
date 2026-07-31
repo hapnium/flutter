@@ -164,13 +164,14 @@ export 'src/models/response/api_response.dart';
 export 'src/models/response/session_response.dart';
 export 'src/models/location/location_data.dart';
 export 'src/models/location/location_information.dart';
+export 'src/models/zync/zync_config.dart';
+export 'src/models/zync/zync_error_response.dart';
+export 'src/models/zync/zync_response.dart';
+export 'src/models/zap_page.dart';
 export 'src/models/cancel_token.dart';
 export 'src/models/zap_config.dart';
 export 'src/models/flux_config.dart';
-export 'src/models/zync_config.dart';
-export 'src/models/zync_error_response.dart';
-export 'src/models/zync_response.dart';
-export 'src/models/zap_page.dart';
+export 'src/models/error.dart';
 export 'src/models/socket_messenger.dart';
 
 /// --- FLUX SYSTEM ---

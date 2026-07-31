@@ -1,4 +1,7 @@
+import 'package:hapnium/hapnium.dart';
+
 import '../http/response/response.dart';
+import '../models/error.dart';
 import '../models/response/api_response.dart';
 
 /// {@template api_response_extension}
@@ -92,4 +95,74 @@ extension ApiResponseExtension on Response<ApiResponse> {
   /// message and response message are null, an empty string is returned.
   /// {@endtemplate}
   String get detailedMessage => body?.message ?? message;
+
+  /// Retrieves the most relevant message and capitalizes its first letter.
+  ///
+  /// This is a convenience wrapper around [detailedMessage] that ensures the 
+  /// resulting string is properly formatted for UI presentation (e.g., 
+  /// in snackbars or alert dialogs) where sentence-case is typically preferred.
+  String getMessage() => (body?.message ?? message).capitalizeFirst;
+
+  /// Evaluates whether the response represents a `403 Forbidden` / Permission Denied error.
+  ///
+  /// If a [reason] is provided, it additionally checks whether the server's 
+  /// error message contains that specific reason string (case-insensitive). 
+  /// This is useful for distinguishing between different types of 403 errors 
+  /// (e.g., "Account suspended" vs. "Feature locked").
+  ///
+  /// Returns `true` only if the HTTP code is `403` and the [reason] 
+  /// (if provided) matches a substring in the response message.
+  bool isPermissionDenied([String? reason]) {
+    if (body case ApiResponse apiResponse?) {
+      if (apiResponse.code != 403) {
+        return false;
+      }
+
+      if (reason == null || reason.trim().isEmpty) {
+        return true;
+      }
+
+      return apiResponse.message.toLowerCase().contains(reason.trim().toLowerCase());
+    }
+
+    return false;
+  }
+
+  /// Safely proxies to [ApiResponse.retrieveValidationErrors] if the response body exists.
+  ///
+  /// Returns a list of structured [ValidationError] objects if the server 
+  /// returned field-level validation failures (e.g., form submission errors). 
+  /// If the body is null or no validation errors exist, it safely returns an empty list `[]`.
+  List<ValidationError> retrieveValidationErrors() {
+    if (body case ApiResponse apiResponse?) {
+      return apiResponse.retrieveValidationErrors();
+    }
+
+    return const [];
+  }
+
+  /// Generates a comprehensive, UI-ready error description.
+  ///
+  /// This method acts as a smart fallback mechanism to extract the best possible 
+  /// error information from the response hierarchy. It is the recommended method 
+  /// for grabbing a user-facing error string to display on screen.
+  ///
+  /// **Resolution order:**
+  /// 1. If structured validation errors exist in the body, it returns a formatted, 
+  ///    multi-line string of those errors via [ApiResponse.retrieveValidationErrorsPrettyMessage].
+  /// 2. If no validation errors exist but a body is present, it returns [getMessage].
+  /// 3. If the body is `null`, it returns the provided [fallback] string.
+  /// 4. If no [fallback] is provided, it defaults to the top-level [message].
+  String getErrorDescription([String? fallback]) {
+    if (body case ApiResponse apiResponse?) {
+      final validationErrors = retrieveValidationErrors();
+      if (validationErrors.isNotEmpty) {
+        return apiResponse.retrieveValidationErrorsPrettyMessage();
+      }
+
+      return getMessage();
+    }
+
+    return fallback ?? message;
+  }
 }

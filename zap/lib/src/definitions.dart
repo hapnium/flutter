@@ -1,6 +1,6 @@
 import 'enums/zync_state.dart';
 import 'models/response/session_response.dart';
-import 'models/zync_response.dart';
+import 'models/zync/zync_response.dart';
 
 /// {@template realtime_callback}
 /// Signature for a callback function that handles real-time socket responses.

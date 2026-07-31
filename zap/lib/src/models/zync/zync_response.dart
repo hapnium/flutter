@@ -1,5 +1,5 @@
-import '../definitions.dart';
-import '../enums/socket_type.dart';
+import '../../definitions.dart';
+import '../../enums/socket_type.dart';
 
 /// {@template zync_response}
 /// A standardized Data Transfer Object (DTO) representing an incoming message 

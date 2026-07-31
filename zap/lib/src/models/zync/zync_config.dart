@@ -1,5 +1,5 @@
-import '../definitions.dart';
-import 'response/session_response.dart';
+import '../../definitions.dart';
+import '../response/session_response.dart';
 
 /// {@template zync_config}
 /// A comprehensive, centralized configuration blueprint for establishing and 
