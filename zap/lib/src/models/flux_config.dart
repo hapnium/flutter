@@ -1,5 +1,6 @@
 import '../definitions.dart';
 import '../exceptions/controller_advice.dart';
+import '../http/modifier/zap_modifier.dart';
 import 'zap_config.dart';
 
 /// {@template flux_config}
@@ -138,6 +139,18 @@ class FluxConfig {
   /// ```
   final HeaderBuilder? authHeaderBuilder;
 
+  /// Global request modifiers applied to every request.
+  ///
+  /// These are registered on the underlying ZapClient during initialization.
+  /// Modifiers are applied in the order they are added.
+  final List<RequestModifier>? requestModifiers;
+
+  /// Global response modifiers applied to every response.
+  ///
+  /// These are registered on the underlying ZapClient during initialization.
+  /// Modifiers are applied in the order they are added.
+  final List<ResponseModifier>? responseModifiers;
+
   /// {@macro flux_config}
   /// 
   /// Initializes the high-level configuration. Sensible defaults are provided 
@@ -159,6 +172,8 @@ class FluxConfig {
     this.tokenPrefix = 'Bearer',
     this.controllerAdvice,
     this.authHeaderBuilder,
+    this.requestModifiers,
+    this.responseModifiers,
   });
 
   /// Generates a new instance of [FluxConfig] with selectively updated properties.
@@ -192,6 +207,8 @@ class FluxConfig {
     String? tokenPrefix,
     ControllerAdvice? controllerAdvice,
     HeaderBuilder? authHeaderBuilder,
+    List<RequestModifier>? requestModifiers,
+    List<ResponseModifier>? responseModifiers,
   }) {
     return FluxConfig(
       disposeOnCompleted: disposeOnCompleted ?? this.disposeOnCompleted,
@@ -210,6 +227,8 @@ class FluxConfig {
       tokenPrefix: tokenPrefix ?? this.tokenPrefix,
       controllerAdvice: controllerAdvice ?? this.controllerAdvice,
       authHeaderBuilder: authHeaderBuilder ?? this.authHeaderBuilder,
+      requestModifiers: requestModifiers ?? this.requestModifiers,
+      responseModifiers: responseModifiers ?? this.responseModifiers,
     );
   }
 }

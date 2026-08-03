@@ -1,3 +1,4 @@
+import '../http/modifier/zap_modifier.dart';
 import '../http/request/request.dart';
 import '../core/zap_interface.dart';
 import '../models/flux_config.dart';
@@ -54,7 +55,7 @@ import 'extension.dart';
 /// building custom Flux integrations.
 /// {@endtemplate}
 ZapInterface fluxClient(FluxConfig config, [bool useAuth = false]) {
-  if(config.useSingleInstance) {
+  if (config.useSingleInstance) {
     return Zap(zapConfig: config.zapConfig);
   } else {
     return _Connect(config, useAuth);
@@ -150,24 +151,41 @@ class _Connect extends Zap {
   /// Later modifiers can overwrite earlier ones if keys conflict.
   @override
   void onInit() {
-    if(fx.headers != null) {
+    // Existing header modifier
+    if (fx.headers != null) {
       client.addRequestModifier<void>((Request request) async {
         request.headers.addAll(fx.buildHeaders());
-        
         return request;
       });
     }
 
-    if(useAuth) {
+    // Existing auth modifier
+    if (useAuth) {
       fx.checkAuth(useAuth);
-
       client.addRequestModifier<void>((Request request) async {
         if (fx.currentSession != null) {
           request.headers.addAll(fx.buildHeadersWithAuth());
         }
-        
         return request;
       });
+    }
+
+    // Register global request modifiers from config
+    if (fx.requestModifiers case List<RequestModifier> modifiers? when modifiers.isNotEmpty) {
+      for (final modifier in modifiers) {
+        client.addRequestModifier<void>((Request request) async {
+          return await modifier(request);
+        });
+      }
+    }
+
+    // Register global response modifiers from config
+    if (fx.responseModifiers case List<ResponseModifier> modifiers? when modifiers.isNotEmpty) {
+      for (final modifier in modifiers) {
+        client.addResponseModifier<void>((request, response) async {
+          return await modifier(request, response);
+        });
+      }
     }
 
     super.onInit();

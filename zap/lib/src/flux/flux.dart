@@ -1,5 +1,6 @@
 import '../definitions.dart';
 import '../exceptions/zap_exception.dart';
+import '../http/modifier/zap_modifier.dart';
 import '../http/utils/http_method.dart';
 import '../models/response/api_response.dart';
 import '../core/zap_interface.dart';
@@ -265,6 +266,51 @@ final class Flux implements FluxInterface {
   /// {@endtemplate}
   static void cancelAllRequests([String reason = 'All requests cancelled']) {
     _instance?._client().cancelAllRequests(reason);
+  }
+
+  /// Registers a global request modifier that applies to every request.
+  ///
+  /// This modifier is added to the underlying ZapClient and will be
+  /// called before each request is sent.
+  ///
+  /// ## Example
+  /// ```dart
+  /// Flux.instance.addRequestModifier<void>((request) async {
+  ///   request.headers['X-Request-ID'] = uuid();
+  ///   return request;
+  /// });
+  /// ```
+  void addRequestModifier<T>(RequestModifier<T> modifier) {
+    _client().client.addRequestModifier<T>(modifier);
+  }
+
+  /// Registers a global response modifier that applies to every response.
+  ///
+  /// This modifier is added to the underlying ZapClient and will be
+  /// called after each response is received.
+  ///
+  /// ## Example
+  /// ```dart
+  /// Flux.instance.addResponseModifier<void>((request, response) async {
+  ///   final newToken = response.headers?['x-new-access-token'];
+  ///   if (newToken != null && newToken.isNotEmpty) {
+  ///     // Update stored token
+  ///   }
+  ///   return response;
+  /// });
+  /// ```
+  void addResponseModifier<T>(ResponseModifier<T> modifier) {
+    _client().client.addResponseModifier<T>(modifier);
+  }
+
+  /// Removes a previously registered global request modifier.
+  void removeRequestModifier<T>(RequestModifier<T> modifier) {
+    _client().client.removeRequestModifier<T>(modifier);
+  }
+
+  /// Removes a previously registered global response modifier.
+  void removeResponseModifier<T>(ResponseModifier<T> modifier) {
+    _client().client.removeResponseModifier<T>(modifier);
   }
 
   /// Gets the underlying Zap HTTP client.
