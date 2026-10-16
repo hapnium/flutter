@@ -3,12 +3,14 @@ description: "A comprehensive logging library for Flutter applications."
 
 publish_to: none
 
+resolution: workspace
+
 version: 0.1.8
 homepage: https://github.com/Hapnium/flutter/tree/main/tracing
 repository: https://github.com/Hapnium/flutter/tree/main/tracing
 
 environment:
-  sdk: ^3.0.0
+  sdk: ^3.6.0
 
 dev_dependencies:
   test: ^1.31.0

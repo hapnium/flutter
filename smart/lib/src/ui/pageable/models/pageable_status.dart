@@ -12,9 +12,11 @@
 /// - [LOADING_FIRST_PAGE]: The first page is currently loading.
 /// - [LOADED_PAGE]: The first page has loaded successfully with items.
 /// - [LOADING_NEW_PAGE]: Additional pages are currently loading.
+/// - [LOADING_PREVIOUS_PAGE]: Earlier pages are currently loading.
 /// - [NO_ITEMS_FOUND]: The first page loaded but contained no items.
 /// - [FIRST_PAGE_ERROR]: An error occurred while loading the first page.
 /// - [NEW_PAGE_ERROR]: An error occurred while loading additional pages.
+/// - [PREVIOUS_PAGE_ERROR]: An error occurred while loading earlier pages.
 /// - [COMPLETED]: All pages have been loaded, no more data available.
 ///
 /// Example usage:
@@ -37,6 +39,9 @@ enum PageableStatus {
   /// Loading additional pages
   LOADING_NEW_PAGE,
 
+  /// Loading earlier pages (see [PageableController.fetchPreviousPage])
+  LOADING_PREVIOUS_PAGE,
+
   /// No items found on the first page
   NO_ITEMS_FOUND,
 
@@ -46,9 +51,12 @@ enum PageableStatus {
   /// Error occurred while loading more pages
   NEW_PAGE_ERROR,
 
+  /// Error occurred while loading earlier pages
+  PREVIOUS_PAGE_ERROR,
+
   /// All pages loaded - no more data available
   COMPLETED,
-  
+
   /// Refreshing - no need to change ui since it will still contain existing data
   REFRESHING,
 }
@@ -64,6 +72,9 @@ extension PageableStatusExtension on PageableStatus {
   /// Whether additional pages are currently loading.
   bool get isLoadingMore => this == PageableStatus.LOADING_NEW_PAGE;
 
+  /// Whether earlier pages are currently loading.
+  bool get isLoadingPreviousPage => this == PageableStatus.LOADING_PREVIOUS_PAGE;
+
   /// Whether the page loaded but no items were found.
   bool get isNoItemsFound => this == PageableStatus.NO_ITEMS_FOUND;
 
@@ -73,18 +84,27 @@ extension PageableStatusExtension on PageableStatus {
   /// Whether an error occurred while loading more pages.
   bool get isLoadingMoreError => this == PageableStatus.NEW_PAGE_ERROR;
 
+  /// Whether an error occurred while loading earlier pages.
+  bool get isPreviousPageError => this == PageableStatus.PREVIOUS_PAGE_ERROR;
+
   /// Whether all pages have been loaded and no more data is available.
   bool get isCompleted => this == PageableStatus.COMPLETED;
 
+  /// Whether the pageable is refreshing its first page.
+  bool get isRefreshing => this == PageableStatus.REFRESHING;
+
   /// Whether any loading operation is currently in progress.
-  bool get isLoading => isLoadingFirstPage || isLoadingMore;
+  bool get isLoading => isLoadingFirstPage || isLoadingMore || isLoadingPreviousPage || isRefreshing;
 
   /// Whether the pageable has successfully loaded some data.
-  bool get hasData => isLoaded || isLoadingMore || isLoadingMoreError || isCompleted;
+  bool get hasData => isLoaded || isLoadingMore || isLoadingPreviousPage || isLoadingMoreError || isPreviousPageError || isCompleted;
 
   /// Whether the pageable has encountered an error.
-  bool get hasError => isFirstPageError || isLoadingMoreError;
+  bool get hasError => isFirstPageError || isLoadingMoreError || isPreviousPageError;
 
   /// Whether more pages can be loaded (i.e., not completed and no blocking errors).
   bool get canLoadMore => isLoaded || isLoadingMoreError;
+
+  /// Whether earlier pages can be loaded.
+  bool get canLoadPrevious => isLoaded || isLoadingMoreError || isPreviousPageError;
 }

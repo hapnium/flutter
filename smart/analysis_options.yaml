@@ -13,6 +13,8 @@ analyzer:
     invalid_use_of_protected_member: ignore
     library_private_types_in_public_api: ignore
     non_constant_identifier_names: ignore
+  exclude:
+    - build/**
 include: package:lints/recommended.yaml
 
 linter:

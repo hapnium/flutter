@@ -110,6 +110,29 @@ class PageableBuilderDelegate<Item> {
   /// ```
   final WidgetBuilder? newPageErrorIndicatorBuilder;
 
+  /// Builds a loading indicator shown when earlier pages are being fetched.
+  ///
+  /// Appears inline with the list while previous items are loading
+  /// (see [PageableController.fetchPreviousPage]).
+  ///
+  /// Return `null` to show nothing.
+  ///
+  /// Example:
+  /// ```dart
+  /// previousPageProgressIndicatorBuilder: (context) => Center(child: CupertinoActivityIndicator()),
+  /// ```
+  final WidgetBuilder? previousPageProgressIndicatorBuilder;
+
+  /// Builds a widget shown when loading an earlier page fails.
+  ///
+  /// Return `null` to skip the error widget.
+  ///
+  /// Example:
+  /// ```dart
+  /// previousPageErrorIndicatorBuilder: (context) => Center(child: Text("Could not load earlier items")),
+  /// ```
+  final WidgetBuilder? previousPageErrorIndicatorBuilder;
+
   /// Builds a widget shown when the data source returns no items.
   ///
   /// This is only called if the first page returns an empty list.
@@ -151,8 +174,10 @@ class PageableBuilderDelegate<Item> {
     this.invisibleItemsThreshold = 3,
     this.firstPageProgressIndicatorBuilder,
     this.newPageProgressIndicatorBuilder,
+    this.previousPageProgressIndicatorBuilder,
     this.firstPageErrorIndicatorBuilder,
     this.newPageErrorIndicatorBuilder,
+    this.previousPageErrorIndicatorBuilder,
     this.noItemsFoundIndicatorBuilder,
     this.noMoreItemsIndicatorBuilder,
     this.animateTransitions = true,

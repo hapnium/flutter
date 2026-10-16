@@ -1,0 +1,21 @@
+name: hapnium_workspace
+description: Workspace root for the Hapnium Flutter package monorepo.
+publish_to: none
+version: 0.0.0
+
+environment:
+  sdk: ^3.6.0
+
+workspace:
+  - chime
+  - device
+  - gallery
+  - hapnium
+  - link_preview
+  - multimedia
+  - phosphor_flutter
+  - secure
+  - sedat
+  - smart
+  - tracing
+  - zap

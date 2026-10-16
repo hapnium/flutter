@@ -148,6 +148,14 @@ class InterleavablePageableController<Item> extends PageableController<int, Item
     /// The initial list of data sources to interleave. Defaults to empty.
     /// Sources can be added later via [addSource].
     List<PageableSource<dynamic, Item>> sources = const [],
+    super.getPreviousPageKey,
+    super.enabled,
+    super.reloadKey,
+    super.resetOnReloadKeyChange,
+    super.pollInterval,
+    super.pausePollingWhenHidden,
+    super.cacheKey,
+    super.cache,
     super.useSafeMode,
     super.showLog,
     super.logger,
@@ -198,10 +206,11 @@ class InterleavablePageableController<Item> extends PageableController<int, Item
 
   /// Whether the controller can fetch the next page.
   ///
-  /// Returns `true` only when no fetches are active AND at least one source
-  /// has a non-null `nextPageKey` (i.e., it can still load more data).
+  /// Returns `true` only when the controller is [enabled], no fetches are
+  /// active AND at least one source has a non-null `nextPageKey` (i.e., it
+  /// can still load more data).
   @override
-  bool get canFetchNextPage => !_isFetching && _anySourceCanLoadMore;
+  bool get canFetchNextPage => enabled && !_isFetching && _anySourceCanLoadMore;
 
   /// Initiates the first fetch cycle across all registered sources concurrently.
   ///
@@ -608,9 +617,11 @@ class InterleavablePageableController<Item> extends PageableController<int, Item
       pages: [pageResult],
       status: status,
       nextPageKey: hasMore ? _syntheticPageKey : null,
+      clearNextPageKey: !hasMore,
       clearError: _sourceErrors.isEmpty,
       error: _sourceErrors.isNotEmpty ? _sourceErrors.values.last : null,
     );
+    persistCacheSnapshot();
 
     _log('Re-interleaved: ${interleaved.length} items, status=$status, hasMore=$hasMore');
   }

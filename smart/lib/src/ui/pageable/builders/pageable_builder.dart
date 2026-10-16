@@ -185,6 +185,14 @@ class _PageableBuilderState<PageKey, Item> extends State<PageableBuilder<PageKey
   WidgetBuilder get newPageProgressBuilder => delegate.newPageProgressIndicatorBuilder ?? (_) => NewPageProgressIndicator();
 
   @protected
+  WidgetBuilder get previousPageProgressBuilder => delegate.previousPageProgressIndicatorBuilder ?? (_) => NewPageProgressIndicator();
+
+  @protected
+  WidgetBuilder get previousPageErrorBuilder => delegate.previousPageErrorIndicatorBuilder ?? (_) => NewPageErrorIndicator(
+    onTap: widget.retry,
+  );
+
+  @protected
   WidgetBuilder get noItemsFoundBuilder => delegate.noItemsFoundIndicatorBuilder ?? (_) => NoItemsFoundIndicator();
 
   @protected
@@ -220,7 +228,7 @@ class _PageableBuilderState<PageKey, Item> extends State<PageableBuilder<PageKey
       final newItemCount = value.itemCount;
       
       // Reset flag when we get new items or status changes significantly
-      if (newItemCount > oldItemCount || newStatus.isCompleted || newStatus.isLoadingMoreError || newStatus.isFirstPageError || newStatus.isLoaded) {
+      if (newItemCount > oldItemCount || newStatus.isCompleted || newStatus.isLoadingMoreError || newStatus.isPreviousPageError || newStatus.isFirstPageError || newStatus.isLoadingPreviousPage || newStatus.isLoaded) {
         _hasRequestedNextPage = false;
       }
     }
@@ -231,7 +239,7 @@ class _PageableBuilderState<PageKey, Item> extends State<PageableBuilder<PageKey
   /// Handle scroll notifications to detect when we're near the end
   bool _onScrollNotification(ScrollNotification notification) {
     if (notification is ScrollUpdateNotification) {
-      if (!hasNextPage || _hasRequestedNextPage || value.status.isLoadingMore || value.status.isCompleted) {
+      if (!hasNextPage || _hasRequestedNextPage || value.status.isLoading || value.status.isCompleted) {
         return false;
       }
 
@@ -280,11 +288,25 @@ class _PageableBuilderState<PageKey, Item> extends State<PageableBuilder<PageKey
               newPageProgressBuilder,
               (context, index) => _buildItem(context, index, list),
             );
+          } else if (status == PageableStatus.LOADING_PREVIOUS_PAGE) {
+            return widget.loadingBuilder(
+              context,
+              itemCount,
+              previousPageProgressBuilder,
+              (context, index) => _buildItem(context, index, list),
+            );
           } else if (status == PageableStatus.NEW_PAGE_ERROR) {
             return widget.errorBuilder(
               context,
               itemCount,
               newPageErrorBuilder,
+              (context, index) => _buildItem(context, index, list),
+            );
+          } else if (status == PageableStatus.PREVIOUS_PAGE_ERROR) {
+            return widget.errorBuilder(
+              context,
+              itemCount,
+              previousPageErrorBuilder,
               (context, index) => _buildItem(context, index, list),
             );
           } 

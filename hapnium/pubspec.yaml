@@ -3,6 +3,8 @@ description: A starting point for Dart libraries or applications.
 
 publish_to: none
 
+resolution: workspace
+
 version: 0.1.5
 homepage: https://github.com/Hapnium/flutter/tree/main/hapnium
 repository: https://github.com/Hapnium/flutter/tree/main/hapnium
@@ -14,5 +16,5 @@ dependencies:
   meta: ^1.17.0
 
 dev_dependencies:
-  test: ^1.31.2
+  test: ^1.31.0
   lints: ^6.1.0

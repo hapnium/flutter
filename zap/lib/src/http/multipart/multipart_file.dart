@@ -256,12 +256,12 @@ class MultipartFile {
     if (_length != null) return _length!;
 
     if (_bytes != null) {
-      _length = _bytes!.length;
+      _length = _bytes.length;
       return _length!;
     }
 
     if (_filePath != null) {
-      final file = File(_filePath!);
+      final file = File(_filePath);
       if (await file.exists()) {
         _length = await file.length();
         return _length!;
@@ -302,7 +302,7 @@ class MultipartFile {
     if (_cachedStream != null) return _cachedStream;
 
     if (_bytes != null) {
-      _cachedStream = Stream.value(_bytes!);
+      _cachedStream = Stream.value(_bytes);
       return _cachedStream;
     }
 
@@ -312,7 +312,7 @@ class MultipartFile {
     }
 
     if (_filePath != null) {
-      final file = File(_filePath!);
+      final file = File(_filePath);
       _cachedStream = file.openRead().cast<List<int>>();
       return _cachedStream;
     }
@@ -337,10 +337,10 @@ class MultipartFile {
   /// // Process bytes
   /// ```
   Future<BodyBytes> get bytes async {
-    if (_bytes != null) return _bytes!;
+    if (_bytes != null) return _bytes;
 
     if (_filePath != null) {
-      final file = File(_filePath!);
+      final file = File(_filePath);
       if (await file.exists()) {
         return await file.readAsBytes(); // Async read
       }
@@ -348,7 +348,7 @@ class MultipartFile {
 
     if (_stream != null) {
       final chunks = <int>[];
-      await for (final chunk in _stream!) {
+      await for (final chunk in _stream) {
         chunks.addAll(chunk);
       }
       return Uint8List.fromList(chunks);

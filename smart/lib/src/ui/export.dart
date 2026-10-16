@@ -119,6 +119,7 @@ export 'pageable/helpers/pageable_logger.dart' hide ConsolePageableLogger;
 
 export 'pageable/models/pageable.dart';
 export 'pageable/models/page_result.dart';
+export 'pageable/models/pageable_cache.dart' hide InMemoryPageableCache;
 export 'pageable/models/pageable_status.dart';
 export 'pageable/models/pageable_builder_delegate.dart';
 export 'pageable/models/pageable_source.dart';

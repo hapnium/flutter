@@ -1,4 +1,5 @@
-import 'package:file_picker/file_picker.dart' show FilePickerResult, FileType, FilePicker, PlatformFile;
+import 'package:file_picker/file_picker.dart' show FilePicker, FileType, PlatformFile;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:multimedia/multimedia.dart';
 import 'package:smart/smart.dart';
 
@@ -54,47 +55,55 @@ final class MultimediaUtils {
     int? minSize
   }) async {
     try {
-      FilePickerResult? result = await FilePicker.pickFiles(
-        type: onlyVideo ? FileType.video : onlyPhoto ? FileType.image : FileType.media,
-        allowMultiple: multipleAllowed,
-        dialogTitle: title,
+      final FileType type = onlyVideo ? FileType.video : onlyPhoto ? FileType.image : FileType.media;
+
+      final List<PlatformFile> files;
+      if (multipleAllowed) {
+        files = await FilePicker.pickFiles(dialogTitle: title, type: type);
+      } else {
+        final PlatformFile? single = await FilePicker.pickFile(dialogTitle: title, type: type);
+        files = single == null ? <PlatformFile>[] : <PlatformFile>[single];
+      }
+
+      if (files.isEmpty) return [];
+
+      final List<int> sizes = await Future.wait(
+        files.map((file) async => await file.length() ?? 0),
       );
 
-      List<PlatformFile> files = result?.files ?? [];
+      if (maxSize != null && sizes.any((size) => size.isGreaterThan(maxSize))) {
+        onError?.call("Some assets exceeds the maximum desired size ${maxSize.toFileSize}", false);
+        return [];
+      }
 
-      if (files.isNotEmpty) {
-        if(maxSize != null && files.any((file) => file.size.isGreaterThan(maxSize))) {
-          onError?.call("Some assets exceeds the maximum desired size ${maxSize.toFileSize}", false);
-          return [];
+      if (minSize != null && sizes.any((size) => size.isLessThan(minSize))) {
+        onError?.call("Some assets goes below the desired minimum size ${minSize.toFileSize}", false);
+        return [];
+      }
+
+      if (files.all((file) => (file.path ?? file.name).isImage || (file.path ?? file.name).isVideo)) {
+        List<SelectedMedia> response = [];
+        for (int i = 0; i < files.length; i++) {
+          final PlatformFile file = files[i];
+          String path = file.path ?? file.name;
+
+          response.add(SelectedMedia(
+            path: path,
+            data: kIsWeb ? await file.readAsBytes() : null,
+            size: sizes[i].toFileSize,
+            media: path.isVideo ? MediaType.video : MediaType.photo,
+          ));
         }
 
-        if(minSize != null && files.any((file) => file.size.isLessThan(minSize))) {
-          onError?.call("Some assets goes below the desired minimum size ${minSize.toFileSize}", false);
-          return [];
+        if (handleSelected.isNotNull) {
+          handleSelected!(response, []);
         }
 
-        if (files.all((file) => (file.path ?? file.name).isImage || (file.path ?? file.name).isVideo)) {
-          List<SelectedMedia> response = files.map((file) {
-            String path = file.path ?? file.name;
+        return response;
+      }
 
-            return SelectedMedia(
-              path: path,
-              data: file.bytes,
-              size: file.size.toFileSize,
-              media: path.isVideo ? MediaType.video : MediaType.photo,
-            );
-          }).toList();
-
-          if (handleSelected.isNotNull) {
-            handleSelected!(response, []);
-          }
-
-          return response;
-        }
-
-        if (onError.isNotNull) {
-          onError!("Unsupported file format detected. Only images or videos are allowed", true);
-        }
+      if (onError.isNotNull) {
+        onError!("Unsupported file format detected. Only images or videos are allowed", true);
       }
     } catch (e) {
       if (onError.isNotNull) {

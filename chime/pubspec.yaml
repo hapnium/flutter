@@ -3,12 +3,14 @@ description: "Notification (In-App and Device) management for Hapnium mobile pla
 
 publish_to: none
 
+resolution: workspace
+
 version: 0.1.0
 homepage: https://github.com/Hapnium/flutter/tree/main/chime
 repository: https://github.com/Hapnium/flutter/tree/main/chime
 
 environment:
-  sdk: ^3.0.0
+  sdk: ^3.6.0
   flutter: ">=1.17.0"
 
 dependencies:

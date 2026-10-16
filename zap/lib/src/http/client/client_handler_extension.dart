@@ -408,7 +408,7 @@ extension ClientHandlerExtension on ClientHandler {
       var response = await modifier.modifyResponse<T>(req, res);
 
       if (response.status.isUnauthorized && modifier.authenticator != null && requestNumber <= maxAuthRetries) {
-        return perform<T>(req, useAuth: true, requestNumber: requestNumber + 1, headers: req.headers);
+        return await perform<T>(req, useAuth: true, requestNumber: requestNumber + 1, headers: req.headers);
       } else if (response.status.isUnauthorized) {
         if (!errorSafety) {
           throw ZapException.auth('An authentication error occurred. Please try again.');

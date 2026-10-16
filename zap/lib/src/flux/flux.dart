@@ -336,7 +336,7 @@ final class Flux implements FluxInterface {
   @override
   Future<Response<ApiResponse>> delete({required String endpoint, RequestParam? query, dynamic body, bool useAuth = true, CancelToken? token}) async {
     try {
-      return config.execute((Headers? headers, CancelToken? cancelToken) => _client(useAuth).delete<ApiResponse>(
+      return await config.execute((Headers? headers, CancelToken? cancelToken) => _client(useAuth).delete<ApiResponse>(
         endpoint,
         headers: headers, 
         query: query,
@@ -354,7 +354,7 @@ final class Flux implements FluxInterface {
   @override
   Future<Response<ApiResponse>> get({required String endpoint, RequestParam? query, bool useAuth = true, CancelToken? token}) async {
     try {
-      return config.execute((Headers? headers, CancelToken? cancelToken) => _client(useAuth).get<ApiResponse>(
+      return await config.execute((Headers? headers, CancelToken? cancelToken) => _client(useAuth).get<ApiResponse>(
         endpoint,
         headers: headers, 
         query: query,
@@ -372,7 +372,7 @@ final class Flux implements FluxInterface {
   @override
   Future<Response<ApiResponse>> patch({required String endpoint, dynamic body, RequestParam? query, Progress? onProgress, bool useAuth = true, CancelToken? token}) async {
     try {
-      return config.execute((Headers? headers, CancelToken? cancelToken) => _client(useAuth).patch<ApiResponse>(
+      return await config.execute((Headers? headers, CancelToken? cancelToken) => _client(useAuth).patch<ApiResponse>(
         endpoint, 
         body, 
         headers: headers, 
@@ -392,7 +392,7 @@ final class Flux implements FluxInterface {
   @override
   Future<Response<ApiResponse>> post({required String endpoint, dynamic body, RequestParam? query, Progress? onProgress, bool useAuth = true, CancelToken? token}) async {
     try {
-      return config.execute((Headers? headers, CancelToken? cancelToken) => _client(useAuth).post<ApiResponse>(
+      return await config.execute((Headers? headers, CancelToken? cancelToken) => _client(useAuth).post<ApiResponse>(
         endpoint, 
         body, 
         headers: headers, 
@@ -412,7 +412,7 @@ final class Flux implements FluxInterface {
   @override
   Future<Response<ApiResponse>> put({required String endpoint, dynamic body, RequestParam? query, Progress? onProgress, bool useAuth = true, CancelToken? token}) async {
     try {
-      return config.execute((Headers? headers, CancelToken? cancelToken) => _client(useAuth).put<ApiResponse>(
+      return await config.execute((Headers? headers, CancelToken? cancelToken) => _client(useAuth).put<ApiResponse>(
         endpoint, 
         body, 
         headers: headers, 

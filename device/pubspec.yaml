@@ -5,12 +5,14 @@ description: >
 
 publish_to: none
 
+resolution: workspace
+
 version: 0.3.1
 homepage: https://github.com/Hapnium/flutter/tree/main/device
 repository: https://github.com/Hapnium/flutter/tree/main/device
 
 environment:
-  sdk: ^3.0.0
+  sdk: ^3.6.0
 
 dependencies:
   device_info_plus: ^13.2.0

@@ -3,12 +3,14 @@ description: "HTTP and Socket client handling requests with error and session ma
 
 publish_to: none
 
+resolution: workspace
+
 version: 0.4.2
 homepage: https://github.com/Hapnium/flutter/tree/main/zap
 repository: https://github.com/Hapnium/flutter/tree/main/zap
 
 environment:
-  sdk: ^3.0.0
+  sdk: ^3.6.0
   flutter: ">=1.17.0"
 
 dependencies:

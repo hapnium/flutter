@@ -40,6 +40,13 @@ class PageableView<PageKey, Item> with EqualsAndHashCode {
   
   /// Key for the next page to load, or `null` if no more pages or unknown.
   final PageKey? nextPageKey;
+
+  /// Key for the page before the first loaded page, or `null` if none.
+  ///
+  /// Used by [PageableController.fetchPreviousPage] to load earlier pages.
+  /// Derived from the previous-page generator after each prepend, or set
+  /// explicitly via snapshots and [PageableView.fromPages].
+  final PageKey? prevPageKey;
   
   /// Flag indicating whether to show debug logs.
   final bool showLog;
@@ -59,6 +66,7 @@ class PageableView<PageKey, Item> with EqualsAndHashCode {
     this.error,
     this.stackTrace,
     this.nextPageKey,
+    this.prevPageKey,
     this.showLog = false,
     this.pageSize,
     this.revision = 0,
@@ -92,16 +100,18 @@ class PageableView<PageKey, Item> with EqualsAndHashCode {
   factory PageableView.fromPages({
     required List<PageResult<PageKey, Item>> pages,
     PageKey? nextPageKey,
+    PageKey? prevPageKey,
     bool showLog = false,
     int? pageSize,
   }) {
     final allItems = pages.expand((result) => result.items).toList();
     final status = allItems.isEmpty ? PageableStatus.NO_ITEMS_FOUND : PageableStatus.LOADED_PAGE;
-    
+
     return PageableView<PageKey, Item>(
       pages: List.from(pages),
       status: status,
       nextPageKey: nextPageKey,
+      prevPageKey: prevPageKey,
       showLog: showLog,
       pageSize: pageSize,
       revision: 0,
@@ -147,6 +157,12 @@ class PageableView<PageKey, Item> with EqualsAndHashCode {
   
   /// Whether additional pages can be loaded.
   bool get canLoadMore => hasNextPage && status.canLoadMore;
+
+  /// Whether there are earlier pages to load.
+  bool get hasPreviousPage => prevPageKey != null;
+
+  /// Whether earlier pages can be loaded.
+  bool get canLoadPrevious => hasPreviousPage && status.canLoadPrevious;
   
   /// Returns the first loaded page, or `null` if none.
   PageResult<PageKey, Item>? get firstPage => pages.isNotEmpty ? pages.first : null;
@@ -183,18 +199,22 @@ class PageableView<PageKey, Item> with EqualsAndHashCode {
     dynamic error,
     StackTrace? stackTrace,
     PageKey? nextPageKey,
+    PageKey? prevPageKey,
     bool? showLog,
     int? pageSize,
     int? revision,
     bool bumpRevision = true,
     bool clearError = false,
+    bool clearNextPageKey = false,
+    bool clearPrevPageKey = false,
   }) {
     return PageableView<PageKey, Item>(
       pages: pages ?? List.from(this.pages),
       status: status ?? this.status,
       error: clearError ? null : (error ?? this.error),
       stackTrace: clearError ? null : (stackTrace ?? this.stackTrace),
-      nextPageKey: nextPageKey ?? this.nextPageKey,
+      nextPageKey: clearNextPageKey ? null : (nextPageKey ?? this.nextPageKey),
+      prevPageKey: clearPrevPageKey ? null : (prevPageKey ?? this.prevPageKey),
       showLog: showLog ?? this.showLog,
       pageSize: pageSize ?? this.pageSize,
       revision: revision ?? (bumpRevision ? this.revision + 1 : this.revision),
@@ -223,5 +243,5 @@ class PageableView<PageKey, Item> with EqualsAndHashCode {
   }
 
   @override
-  List<Object?> equalizedProperties() => [pages, status, nextPageKey, error, showLog, pageSize, revision];
+  List<Object?> equalizedProperties() => [pages, status, nextPageKey, prevPageKey, error, showLog, pageSize, revision];
 }

@@ -2,7 +2,19 @@
 
 Monorepo of Dart and Flutter libraries maintained by **Hapnium Inc.** for shared mobile (and partially web/desktop) functionality: core utilities, logging, networking, cryptography, device intelligence, local storage, notifications, media, and a large UI kit.
 
-This directory is **not** the Flutter SDK. It is a **collection of packages**; there is **no root `pubspec.yaml`**. Each subfolder is an independent package. All packages use `publish_to: none` and are intended to be consumed via **path** or **git** dependencies (see [Consuming packages](#consuming-packages)).
+This directory is **not** the Flutter SDK. It is a **collection of packages** managed as a **Pub workspace**: there **is** a root `pubspec.yaml` that lists every package under `workspace:` and resolves all dependencies to a single `pubspec.lock` / `.dart_tool/package_config.json` at the repo root. Each subfolder is a workspace member (`resolution: workspace` in its own `pubspec.yaml`). All packages use `publish_to: none` (except `phosphor_flutter`) and are intended to be consumed via **path** or **git** dependencies (see [Consuming packages](#consuming-packages)).
+
+### Workspace commands
+
+```bash
+flutter pub get          # resolve the whole workspace from the repo root
+dart pub workspace list  # list workspace members
+flutter pub upgrade      # upgrade shared dependencies across all packages
+```
+
+> Requires Dart `^3.6.0` or higher (workspaces need language version 3.5+).
+> `gallery/example` (and other `example/` apps) are intentionally **not**
+> workspace members and keep their own independent resolution.
 
 ---
 
@@ -274,8 +286,8 @@ If the repository is private, configure credentials (for example a **`~/.netrc`*
 
 ## Prerequisites
 
-- **Flutter** 3.x-compatible SDK (packages target Dart `^3.0.0` or higher; `hapnium` requires `^3.7.0`)
-- **Dart** included with Flutter
+- **Flutter** 3.x-compatible SDK (workspace members target Dart `^3.6.0` or higher; `hapnium` requires `^3.7.0`, `phosphor_flutter` requires `>=3.11.0`)
+- **Dart** included with Flutter (workspaces require Dart `^3.6.0`+)
 
 ---
 
