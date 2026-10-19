@@ -15,10 +15,19 @@ import 'pageable_controller.dart';
 /// [PageableSource] objects. Each source maintains its own independent
 /// pagination cursor, loading state, and error boundary.
 ///
+/// ## Type Parameters
+///
+/// - [PageKey] — the page key type shared by every [PageableSource] registered
+///   with this controller (e.g., `int`, `String`, `DateTime`). All sources
+///   must use the same [PageKey] type.
+/// - [Item] — the type of items yielded by the interleaved feed. All sources
+///   must share the same [Item] type.
+///
 /// ## How It Works
 ///
-/// 1. **Synthetic page keys**: Uses [int] as a "synthetic page key". To the
-///    parent widget (e.g., a `ListView`), a single "page" represents one
+/// 1. **Synthetic page keys**: Source-level pagination uses [PageKey], but to
+///    the parent widget (e.g., a `ListView`) the controller emits `int`
+///    "synthetic page keys". A single synthetic "page" represents one
 ///    complete batch of interleaved items — not a raw source page.
 /// 2. **Strategy-driven**: Relies on an [InterleaveStrategy] to determine both
 ///    *which* sources to fetch data from on the next pagination cycle, and
@@ -33,7 +42,7 @@ import 'pageable_controller.dart';
 /// ## Usage
 ///
 /// ```dart
-/// final controller = InterleavablePageableController<Post>(
+/// final controller = InterleavablePageableController<int, Post>(
 ///   strategy: RoundRobinInterleaveStrategy(itemsPerSource: 5),
 ///   sources: [
 ///     PageableSource<int, Post>(
@@ -63,13 +72,27 @@ import 'pageable_controller.dart';
 /// );
 ///
 /// // Dynamic source management at runtime:
-/// controller.addSource(PageableSource<String, Post>(
+/// controller.addSource(PageableSource<int, Post>(
 ///   id: 'sponsored',
-///   fetchPage: (cursor) => api.fetchSponsored(cursor),
-///   firstPageKey: 'start',
-///   getNextPageKey: (key, items, total) => items.last.cursor,
+///   fetchPage: (page) => api.fetchSponsored(page),
+///   firstPageKey: 1,
+///   getNextPageKey: (key, items, total) => items.length < 10 ? null : key + 1,
 ///   pageSize: 10,
 /// ));
+///
+/// // Cursor-based sources use the same [PageKey] type:
+/// InterleavablePageableController<String, Post>(
+///   strategy: RoundRobinInterleaveStrategy(itemsPerSource: 5),
+///   sources: [
+///     PageableSource<String, Post>(
+///       id: 'feed',
+///       fetchPage: (cursor) => api.fetchFeed(cursor),
+///       firstPageKey: 'start',
+///       getNextPageKey: (key, items, total) => items.last.cursor,
+///       pageSize: 20,
+///     ),
+///   ],
+/// );
 /// ```
 ///
 /// ## State Mapping
@@ -90,7 +113,8 @@ import 'pageable_controller.dart';
 /// [fetchFirstPage] or [fetchNextPage].
 ///
 /// {@endtemplate}
-class InterleavablePageableController<Item> extends PageableController<int, Item> {
+class InterleavablePageableController<PageKey, Item>
+    extends PageableController<int, Item> {
   /// The strategy defining fetch routing (which sources to load) and merging
   /// logic (how items are ordered in the final list).
   final InterleaveStrategy<Item> _strategy;
@@ -106,7 +130,7 @@ class InterleavablePageableController<Item> extends PageableController<int, Item
   ///
   /// Sources are stored by their [PageableSource.id]. Each entry tracks the
   /// source's fetched items, pagination cursors, and error state.
-  final Map<String, _SourceEntry<Item>> _sources = {};
+  final Map<String, _SourceEntry<PageKey, Item>> _sources = {};
 
   /// Tracks the current synthetic page batch.
   ///
@@ -147,7 +171,10 @@ class InterleavablePageableController<Item> extends PageableController<int, Item
 
     /// The initial list of data sources to interleave. Defaults to empty.
     /// Sources can be added later via [addSource].
-    List<PageableSource<dynamic, Item>> sources = const [],
+    ///
+    /// All sources must share this controller's [PageKey] and [Item] types.
+    List<PageableSource<PageKey, Item>> sources = const [],
+
     super.getPreviousPageKey,
     super.enabled,
     super.reloadKey,
@@ -188,7 +215,9 @@ class InterleavablePageableController<Item> extends PageableController<int, Item
   ///
   /// The parent widget (e.g., `PageableListView<int, Item>`) uses this type
   /// parameter. Each synthetic page key is a monotonically increasing integer
-  /// representing one batch of interleaved items.
+  /// representing one batch of interleaved items. Note this is distinct from
+  /// the source-level [PageKey] type, which each [PageableSource] uses for
+  /// its own pagination.
   @override
   Type getPageKeyType() => int;
 
@@ -436,9 +465,11 @@ class InterleavablePageableController<Item> extends PageableController<int, Item
   /// controller is currently idle, you may need to call [fetchNextPage] or
   /// [fetchFirstPage] to trigger an initial fetch for the new source.
   ///
+  /// The source must share this controller's [PageKey] and [Item] types.
+  ///
   /// Throws an [ArgumentError] if a source with the same
   /// [PageableSource.id] already exists.
-  void addSource(PageableSource<dynamic, Item> source) {
+  void addSource(PageableSource<PageKey, Item> source) {
     if (_sources.containsKey(source.id)) {
       throw ArgumentError('Source "${source.id}" already exists');
     }
@@ -466,7 +497,7 @@ class InterleavablePageableController<Item> extends PageableController<int, Item
   /// its [sourceId].
   ///
   /// Returns `null` if no source with the given ID is registered.
-  PageableSource<dynamic, Item>? getSource(String sourceId) {
+  PageableSource<PageKey, Item>? getSource(String sourceId) {
     return _sources[sourceId]?.source;
   }
 
@@ -498,7 +529,7 @@ class InterleavablePageableController<Item> extends PageableController<int, Item
   ///
   /// Errors are trapped per-source: stored in [entry].error and
   /// [_sourceErrors] so other sources are unaffected.
-  Future<void> _fetchSourceFirstPage(_SourceEntry<Item> entry) async {
+  Future<void> _fetchSourceFirstPage(_SourceEntry<PageKey, Item> entry) async {
     try {
       entry.isFetching = true;
       final items = await entry.source.fetchPage(entry.source.firstPageKey);
@@ -539,12 +570,14 @@ class InterleavablePageableController<Item> extends PageableController<int, Item
   ///
   /// This method is a no-op if the source has no `nextPageKey` or is already
   /// fetching.
-  Future<void> _fetchSourceNextPage(_SourceEntry<Item> entry) async {
-    if (entry.nextPageKey == null || entry.isFetching) return;
+  Future<void> _fetchSourceNextPage(_SourceEntry<PageKey, Item> entry) async {
+    if (entry.isFetching) return;
+
+    final pageKey = entry.nextPageKey;
+    if (pageKey == null) return;
 
     try {
       entry.isFetching = true;
-      final pageKey = entry.nextPageKey!;
       final items = await entry.source.fetchPage(pageKey);
 
       entry.items.addAll(items);
@@ -578,7 +611,7 @@ class InterleavablePageableController<Item> extends PageableController<int, Item
   ///
   /// If the source has no items, retries via [_fetchSourceFirstPage].
   /// Otherwise, retries via [_fetchSourceNextPage].
-  Future<void> _retrySource(_SourceEntry<Item> entry) async {
+  Future<void> _retrySource(_SourceEntry<PageKey, Item> entry) async {
     if (entry.items.isEmpty) {
       await _fetchSourceFirstPage(entry);
     } else {
@@ -714,9 +747,9 @@ class InterleavablePageableController<Item> extends PageableController<int, Item
 /// current and next pagination cursors, fetching flag, and per-source error.
 ///
 /// This class is private to the controller and not exposed to consumers.
-class _SourceEntry<Item> {
+class _SourceEntry<PageKey, Item> {
   /// The source configuration (fetch callbacks, page keys, priority).
-  final PageableSource<dynamic, Item> source;
+  final PageableSource<PageKey, Item> source;
 
   /// Accumulated items fetched from this source across all pages.
   ///
@@ -727,7 +760,7 @@ class _SourceEntry<Item> {
   ///
   /// Used by [_fetchSourceNextPage] to pass as `currentPageKey` to the
   /// source's `getNextPageKey` generator. Set to `null` after [reset].
-  dynamic currentPageKey;
+  PageKey? currentPageKey;
 
   /// The page key to fetch next, or `null` if the source is exhausted.
   ///
@@ -735,7 +768,7 @@ class _SourceEntry<Item> {
   /// - [PageableSource.getNextPageKey] returns `null`
   /// - [PageableSource.getNextPageKey] is not provided (single-page source)
   /// - The source is reset via [reset]
-  dynamic nextPageKey;
+  PageKey? nextPageKey;
 
   /// Whether this source is currently executing a fetch operation.
   ///
