@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 // import 'dart:convert';
 
 import '../core/zap_inst.dart';
@@ -116,9 +117,26 @@ class Zync implements ZyncInterface {
   }
 
   /// Disposes the current singleton instance, allowing a new one to be created.
+  /// Tears down the [Zync] singleton: disconnects the socket, stops all
+  /// timers, and closes the state/data/error streams. A new instance can
+  /// be created afterwards via [Zync.new].
   static void dispose() {
-    _instance?.disconnect();
+    final instance = _instance;
+    if (instance != null) {
+      instance.disconnect();
+      instance._closeControllers();
+    }
     _instance = null;
+  }
+
+  /// Closes the instance's stream controllers (idempotent).
+  void _closeControllers() {
+    _pingTimer?.cancel();
+    _heartbeatTimer?.cancel();
+    _reconnectTimer?.cancel();
+    if (!_connectionStateController.isClosed) _connectionStateController.close();
+    if (!_dataStreamController.isClosed) _dataStreamController.close();
+    if (!_errorStreamController.isClosed) _errorStreamController.close();
   }
 
   /// Underlying ZapSocket instance
@@ -135,6 +153,34 @@ class Zync implements ZyncInterface {
 
   /// Reconnection attempt counter
   int _reconnectAttempts = 0;
+
+  /// Whether the last disconnect was initiated by the caller via
+  /// [disconnect].
+  ///
+  /// When `true`, transport close/error events must not trigger an
+  /// automatic reconnect. Reset to `false` at the start of every
+  /// [connect].
+  bool _manualDisconnect = false;
+
+  /// Periodic dead-connection probe, active only when
+  /// [ZyncConfig.heartbeatTimeout] is configured.
+  Timer? _heartbeatTimer;
+
+  /// The time the last inbound frame was received; drives the heartbeat
+  /// timeout. Refreshed on [connect] and on every incoming message.
+  DateTime _lastActivityAt = DateTime.now();
+
+  /// In-flight [sendWithAck] calls keyed by the generated `messageId`.
+  ///
+  /// Completed by an `ack` frame, failed by a `nack` frame, a timeout,
+  /// or a disconnect.
+  final Map<String, Completer<SocketMessenger>> _pendingAcks = {};
+
+  /// Per-call timeout timers for [sendWithAck], keyed by `messageId`.
+  final Map<String, Timer> _ackTimers = {};
+
+  /// Counter for generating unique ack `messageId`s within a process.
+  int _ackCounter = 0;
 
   /// Timer for reconnection attempts
   Timer? _reconnectTimer;
@@ -272,6 +318,9 @@ class Zync implements ZyncInterface {
 
   /// Handles incoming WebSocket messages.
   void _handleMessage(dynamic message) {
+    // Any inbound frame proves the connection is alive.
+    _lastActivityAt = DateTime.now();
+
     try {
       ZyncResponse response;
       
@@ -279,10 +328,23 @@ class Zync implements ZyncInterface {
         // Try to parse as JSON
         try {
           final data = SocketMessenger.decode(message);
+
+          // Acknowledgement frames complete a pending [sendWithAck] call.
+          // They are transport-level plumbing and never reach app streams.
+          if ((data.type == SocketType.ack || data.type == SocketType.nack) &&
+              data.messageId != null &&
+              _pendingAcks.containsKey(data.messageId)) {
+            _completeAck(data);
+            return;
+          }
+
           response = ZyncResponse(
             type: data.type,
             body: message,
             data: data,
+            topic: data.topic,
+            event: data.event,
+            messageId: data.messageId,
             hasBody: true,
             hasData: true,
           );
@@ -311,9 +373,19 @@ class Zync implements ZyncInterface {
       // Call config callback
       config.onReceived?.call(response);
 
-      // Handle subscriptions
-      if (response.type != null && _subscriptions.containsKey(response.type!.name)) {
-        _subscriptions[response.type!.name]?.call(response);
+      // Surface topic-scoped error frames into the global error stream
+      // with topic context, so apps can handle channel failures locally
+      // (e.g. show "orders channel rejected the message" on that screen).
+      if (response.type == SocketType.error && response.topic != null) {
+        _handleError('Topic ${response.topic}', response.data, topic: response.topic);
+      }
+
+      // Handle subscriptions: route by the frame's topic first (pub/sub
+      // servers tag channels explicitly), falling back to the type name
+      // for servers that only send SocketType-tagged frames.
+      final topicKey = response.topic ?? response.type?.name;
+      if (topicKey != null && _subscriptions.containsKey(topicKey)) {
+        _subscriptions[topicKey]?.call(response);
       }
 
       // Handle event listeners
@@ -330,8 +402,8 @@ class Zync implements ZyncInterface {
   }
 
   /// Handles WebSocket errors.
-  void _handleError(String where, dynamic error) {
-    final errorResponse = ZyncErrorResponse(where: where, error: error);
+  void _handleError(String where, dynamic error, {String? topic}) {
+    final errorResponse = ZyncErrorResponse(where: where, error: error, topic: topic);
     
     if (!_errorStreamController.isClosed) {
       _errorStreamController.add(errorResponse);
@@ -366,6 +438,41 @@ class Zync implements ZyncInterface {
     _pingTimer = null;
   }
 
+  /// Starts the dead-connection probe when [ZyncConfig.heartbeatTimeout]
+  /// is configured.
+  ///
+  /// If no inbound frame arrives for the timeout window while connected,
+  /// the socket is force-closed and the normal reconnect path recovers
+  /// the session.
+  void _startHeartbeat() {
+    _heartbeatTimer?.cancel();
+    final timeout = config.heartbeatTimeout;
+    if (timeout == null || timeout <= Duration.zero) {
+      return;
+    }
+
+    _lastActivityAt = DateTime.now();
+    var period = timeout ~/ 2;
+    if (period <= Duration.zero) period = timeout;
+    _heartbeatTimer = Timer.periodic(period, (_) {
+      if (!isConnected) return;
+      if (DateTime.now().difference(_lastActivityAt) < timeout) return;
+
+      if (config.showConnectionLogs) {
+        Z.log('Zync: No inbound frames for ${timeout.inMilliseconds}ms; forcing reconnect');
+      }
+      // Force-close the presumed-dead socket; the close handler runs the
+      // normal reconnect path.
+      _socket?.close(4000, 'heartbeat timeout');
+    });
+  }
+
+  /// Stops the dead-connection probe.
+  void _stopHeartbeat() {
+    _heartbeatTimer?.cancel();
+    _heartbeatTimer = null;
+  }
+
   /// Attempts to reconnect to the WebSocket server.
   void _attemptReconnect() {
     if (_reconnectAttempts >= config.maxReconnectAttempts) {
@@ -380,7 +487,16 @@ class Zync implements ZyncInterface {
       Z.log('Zync: Attempting reconnection $_reconnectAttempts/${config.maxReconnectAttempts}');
     }
 
-    _reconnectTimer = Timer(config.reconnectDelay, () {
+    // Exponential backoff with jitter: the configured [ZyncConfig.reconnectDelay]
+    // is the base, doubling per attempt and capped at 30 seconds. Jitter
+    // (±25%) prevents a fleet of clients that lost the same server from
+    // stampeding it with synchronized reconnects.
+    _reconnectTimer?.cancel();
+    final exponent = (_reconnectAttempts - 1).clamp(0, 6).toInt();
+    var delayMs = config.reconnectDelay.inMilliseconds * (1 << exponent);
+    if (delayMs > 30000) delayMs = 30000;
+    final jitteredMs = (delayMs * (0.75 + Random().nextDouble() * 0.5)).round();
+    _reconnectTimer = Timer(Duration(milliseconds: jitteredMs), () {
       connect();
     });
   }
@@ -388,11 +504,19 @@ class Zync implements ZyncInterface {
   @override
   Future<void> connect() async {
     try {
+      _manualDisconnect = false;
+      _reconnectTimer?.cancel();
       _updateConnectionState(ZyncState.connecting);
       
       if (config.showConnectionLogs) {
         Z.log('Zync: Connecting to ${config.url}');
       }
+
+      // Tear down any previous socket so a reconnect never leaves two
+      // live sockets (and their handlers) behind.
+      final previous = _socket;
+      _socket = null;
+      previous?.dispose();
 
       // Create new socket instance
       _socket = ZapSocket(config.url, ping: config.pingInterval);
@@ -402,6 +526,7 @@ class Zync implements ZyncInterface {
         _reconnectAttempts = 0; // Reset reconnection counter
         _updateConnectionState(ZyncState.connected);
         _startPingTimer();
+        _startHeartbeat();
         
         if (config.showConnectionLogs) {
           Z.log('Zync: Connected to ${config.url}');
@@ -416,8 +541,22 @@ class Zync implements ZyncInterface {
           ).encode(),
         );
 
+        // Re-subscribe channels registered before this (re)connect:
+        // handlers survive reconnects, the server-side subscriptions do
+        // not.
+        for (final entry in _subscriptions.entries.toList()) {
+          _socket!.send(
+            SocketMessenger(
+              type: SocketType.subscribe,
+              topic: entry.key,
+              headers: _buildHeaders(),
+              timestamp: DateTime.now(),
+            ).encode(),
+          );
+        }
+
         // Auto-subscribe to configured subscription
-        if (config.subscription != null) {
+        if (config.subscription != null && !_subscriptions.containsKey(config.subscription)) {
           subscribe(
             topic: config.subscription!,
             onMessage: (response) {
@@ -430,24 +569,33 @@ class Zync implements ZyncInterface {
       _socket!.onMessage(_handleMessage);
 
       _socket!.onError((error) {
-        _handleError('WebSocket Error', error.message);
+        _handleError('WebSocket Error', '${error.message} (reason ${error.reason})');
         _updateConnectionState(ZyncState.disconnected);
         _stopPingTimer();
+        _stopHeartbeat();
         
-        // Attempt reconnection
-        _attemptReconnect();
+        // Attempt reconnection unless the caller disconnected manually
+        // or the policy rejects this close.
+        if (!_manualDisconnect && (config.shouldReconnect?.call(error) ?? true)) {
+          _attemptReconnect();
+        }
       });
 
       _socket!.onClose((close) {
-        _updateConnectionState(ZyncState.disconnected);
         _stopPingTimer();
+        _stopHeartbeat();
         
         if (config.showConnectionLogs) {
-          Z.log('Zync: Connection closed - ${close.message}');
+          Z.log('Zync: Connection closed - ${close.message} (reason ${close.reason})');
         }
 
-        // Attempt reconnection if not manually disconnected
-        if (_connectionState != ZyncState.disconnected) {
+        _updateConnectionState(ZyncState.disconnected);
+
+        // A close is the most common trigger for reconnection (server
+        // restart, load-balancer idle kill). Skip it when the caller
+        // disconnected intentionally via [disconnect], or when the
+        // configured policy rejects this close (e.g. fatal auth codes).
+        if (!_manualDisconnect && (config.shouldReconnect?.call(close) ?? true)) {
           _attemptReconnect();
         }
       });
@@ -458,28 +606,42 @@ class Zync implements ZyncInterface {
     } catch (e) {
       _handleError('Connection Error', e);
       _updateConnectionState(ZyncState.disconnected);
-      _attemptReconnect();
+      if (!_manualDisconnect) {
+        _attemptReconnect();
+      }
     }
   }
 
   @override
   void disconnect() {
+    _manualDisconnect = true;
     _reconnectTimer?.cancel();
     _stopPingTimer();
+    _stopHeartbeat();
     
     if (_socket != null) {
       _socket!.close();
+      _socket!.dispose();
       _socket = null;
     }
+
+    // Fail acknowledgement waiters: their replies cannot arrive on a
+    // closed connection.
+    for (final pending in _pendingAcks.values) {
+      pending.completeError(ZapException.connection('Zync: connection closed before acknowledgement', null));
+    }
+    _pendingAcks.clear();
+    for (final timer in _ackTimers.values) {
+      timer.cancel();
+    }
+    _ackTimers.clear();
     
-    _subscriptions.clear();
-    _eventListeners.clear();
+    // Stream controllers and registered handlers are intentionally kept
+    // alive: [disconnect] is reversible — a later [connect] (or an
+    // automatic reconnect) must keep delivering to existing listeners.
+    // Controllers are closed only when the singleton is torn down via
+    // [Zync.dispose].
     _updateConnectionState(ZyncState.disconnected);
-    
-    // Close stream controllers
-    _connectionStateController.close();
-    _dataStreamController.close();
-    _errorStreamController.close();
     
     if (config.showConnectionLogs) {
       Z.log('Zync: Disconnected');
@@ -527,6 +689,94 @@ class Zync implements ZyncInterface {
       _updateConnectionState(ZyncState.notSent);
       _handleError('Send Error', e);
       _resetSendTrial();
+    }
+  }
+
+  /// Sends a message and waits for the server to acknowledge it.
+  ///
+  /// [send] is fire-and-forget; this variant stamps the envelope with a
+  /// generated `messageId` and completes when the server replies with a
+  /// matching [SocketType.ack] (success — the ack envelope is returned)
+  /// or [SocketType.nack] (failure — a [ZapException] is thrown). If no
+  /// reply arrives within [timeout], or the connection drops first, the
+  /// returned future fails with a [ZapException].
+  ///
+  /// ### Example
+  /// ```dart
+  /// final ack = await zync.sendWithAck(endpoint: '/orders', data: {'id': 42});
+  /// print(ack.data); // server payload
+  /// ```
+  ///
+  /// ### Edge cases
+  /// - Throws immediately when the socket is not connected.
+  /// - On reconnect, waiters from the previous connection are failed —
+  ///   their replies cannot arrive.
+  Future<SocketMessenger> sendWithAck({
+    required String endpoint,
+    required dynamic data,
+    Headers? headers,
+    Duration timeout = const Duration(seconds: 10),
+  }) async {
+    if (!isConnected) {
+      throw ZapException.connection('Zync: cannot sendWithAck while disconnected', null);
+    }
+
+    final messageId = 'zap-ack-${DateTime.now().microsecondsSinceEpoch}-${++_ackCounter}';
+    final completer = Completer<SocketMessenger>();
+    _pendingAcks[messageId] = completer;
+
+    _ackTimers[messageId] = Timer(timeout, () {
+      final pending = _pendingAcks.remove(messageId);
+      _ackTimers.remove(messageId);
+      pending?.completeError(
+        ZapException.timeout(
+          'Zync: no acknowledgement for message $messageId after ${timeout.inMilliseconds}ms',
+          null,
+        ),
+      );
+    });
+
+    final envelopeHeaders = _buildHeaders();
+    if (headers != null) {
+      envelopeHeaders.addAll(headers);
+    }
+
+    _socket!.send(
+      SocketMessenger(
+        type: SocketType.send,
+        endpoint: endpoint,
+        data: data,
+        messageId: messageId,
+        headers: envelopeHeaders,
+        timestamp: DateTime.now(),
+      ).encode(),
+    );
+
+    if (config.showSendLogs) {
+      Z.info('Zync: Sent with ack ($messageId) to $endpoint');
+    }
+
+    return completer.future;
+  }
+
+  /// Completes the [sendWithAck] call registered for [envelope].
+  void _completeAck(SocketMessenger envelope) {
+    final messageId = envelope.messageId!;
+    final pending = _pendingAcks.remove(messageId);
+    _ackTimers.remove(messageId)?.cancel();
+
+    if (pending == null) return;
+
+    if (envelope.type == SocketType.ack) {
+      pending.complete(envelope);
+    } else {
+      pending.completeError(
+        ZapException.connection(
+          'Zync: server nacked message $messageId: ${envelope.data}',
+          null,
+          {'envelope': envelope.toJson()},
+        ),
+      );
     }
   }
 

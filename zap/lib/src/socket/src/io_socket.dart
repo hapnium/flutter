@@ -41,9 +41,9 @@ import '../../enums/socket_status.dart';
 ///
 /// ### Self-signed certificates
 ///
-/// When [allowSelfSigned] is `true` (the default), the client creates
-/// a custom `HttpClient` that accepts all certificates. This is useful
-/// for development but should be disabled in production.
+/// When [allowSelfSigned] is `true`, the client creates a custom
+/// `HttpClient` that accepts all certificates. This is useful for
+/// development but must stay disabled (the default) in production.
 ///
 /// ### Ping mechanism
 ///
@@ -80,6 +80,14 @@ class BaseWebSocket extends SocketInterface {
   /// {@endtemplate}
   SocketStatus? connectionStatus;
 
+  /// {@template io_socket_subscription}
+  /// Subscription to the underlying WebSocket data stream.
+  ///
+  /// Cancelled when the socket is closed, reconnected, or disposed so
+  /// no events are delivered to a torn-down [SocketNotifier].
+  /// {@endtemplate}
+  StreamSubscription<dynamic>? _subscription;
+
   /// {@template io_socket_constructor}
   /// Creates a new [BaseWebSocket] instance.
   ///
@@ -88,13 +96,14 @@ class BaseWebSocket extends SocketInterface {
   /// - [url]: The WebSocket server URL.
   /// - [ping]: Ping interval. Defaults to 5 seconds.
   /// - [allowSelfSigned]: Whether to allow self-signed certificates.
-  ///   Defaults to `true`.
+  ///   Defaults to `false`.
   /// {@endtemplate}
   /// {@macro io_socket}
   BaseWebSocket(
     super.url, {
     super.ping = const Duration(seconds: 5),
-    super.allowSelfSigned = true,
+    super.allowSelfSigned = false,
+    super.connectTimeout,
   });
 
   /// {@template io_socket_close}
@@ -102,12 +111,14 @@ class BaseWebSocket extends SocketInterface {
   ///
   /// ### Parameters
   ///
-  /// - [status]: Optional close status code.
+  /// - [status]: Optional close status code. Defaults to `1000` (normal
+  ///   closure) because dart:io sends a malformed close frame when no
+  ///   code is provided, which peers never acknowledge.
   /// - [reason]: Optional close reason string.
   /// {@endtemplate}
   @override
   void close([int? status, String? reason]) {
-    socket?.close(status, reason);
+    socket?.close(status ?? 1000, reason);
   }
 
   /// {@template io_socket_connect}
@@ -141,26 +152,41 @@ class BaseWebSocket extends SocketInterface {
 
     try {
       connectionStatus = SocketStatus.connecting;
-      socket = allowSelfSigned ? await _connectForSelfSignedCert(url) : await WebSocket.connect(url);
+
+      // Detach from any previous connection before replacing it, so
+      // reconnects never deliver events for two sockets at once.
+      await _subscription?.cancel();
+      _subscription = null;
+
+      socket = await (allowSelfSigned ? _connectForSelfSignedCert(url) : WebSocket.connect(url)).timeout(connectTimeout);
 
       socket!.pingInterval = ping;
-      socketNotifier?.open();
       connectionStatus = SocketStatus.connected;
+      socketNotifier?.open();
 
-      socket!.listen((data) {
-        socketNotifier!.notifyData(data);
+      _subscription = socket!.listen((data) {
+        socketNotifier?.notifyData(data);
       }, onError: (err) {
-        socketNotifier!.notifyError(SocketClose(err.toString(), 1005));
+        // With cancelOnError the subscription is cancelled here and onDone
+        // never fires, so close the socket and mark the status ourselves.
+        connectionStatus = SocketStatus.closed;
+        socketNotifier?.notifyError(SocketClose(err.toString(), 1005));
+        socket?.close();
       }, onDone: () {
         connectionStatus = SocketStatus.closed;
-        socketNotifier!.notifyClose(SocketClose('Connection Closed', socket!.closeCode));
+        socketNotifier?.notifyClose(SocketClose('Connection Closed', socket?.closeCode));
       }, cancelOnError: true);
+
+      return;
+    } on TimeoutException {
+      connectionStatus = SocketStatus.closed;
+      socketNotifier?.notifyError(SocketClose('Connection timed out after ${connectTimeout.inMilliseconds}ms', 0));
 
       return;
     } on SocketException catch (e) {
       connectionStatus = SocketStatus.closed;
-      socketNotifier!.notifyError(SocketClose(e.osError!.message, e.osError!.errorCode));
-      
+      socketNotifier?.notifyError(SocketClose(e.osError?.message ?? e.message, e.osError?.errorCode ?? 0));
+
       return;
     }
   }
@@ -168,10 +194,19 @@ class BaseWebSocket extends SocketInterface {
   /// {@template io_socket_dispose}
   /// Disposes of the socket, removing all listeners and closing the
   /// connection.
+  ///
+  /// The data-stream subscription is cancelled and the underlying
+  /// WebSocket is closed before the notifier is torn down, so no late
+  /// frames can reach disposed listeners.
   /// {@endtemplate}
   @override
   void dispose() {
-    socketNotifier!.dispose();
+    close();
+    _subscription?.cancel();
+    _subscription = null;
+    socket = null;
+    connectionStatus = SocketStatus.closed;
+    socketNotifier?.dispose();
     socketNotifier = null;
     isDisposed = true;
   }
@@ -199,7 +234,7 @@ class BaseWebSocket extends SocketInterface {
   /// {@endtemplate}
   @override
   void on(SocketType command, MessageSocket message) {
-    socketNotifier!.addEvents(command, message);
+    socketNotifier?.addEvents(command, message);
   }
 
   /// {@template io_socket_onClose}
@@ -211,7 +246,7 @@ class BaseWebSocket extends SocketInterface {
   /// {@endtemplate}
   @override
   void onClose(CloseSocket fn) {
-    socketNotifier!.addCloses(fn);
+    socketNotifier?.addCloses(fn);
   }
 
   /// {@template io_socket_onError}
@@ -223,7 +258,7 @@ class BaseWebSocket extends SocketInterface {
   /// {@endtemplate}
   @override
   void onError(CloseSocket fn) {
-    socketNotifier!.addErrors(fn);
+    socketNotifier?.addErrors(fn);
   }
 
   /// {@template io_socket_onMessage}
@@ -235,7 +270,7 @@ class BaseWebSocket extends SocketInterface {
   /// {@endtemplate}
   @override
   void onMessage(MessageSocket fn) {
-    socketNotifier!.addMessages(fn);
+    socketNotifier?.addMessages(fn);
   }
 
   /// {@template io_socket_onOpen}
@@ -248,7 +283,7 @@ class BaseWebSocket extends SocketInterface {
   // ignore: use_setters_to_change_properties
   @override
   void onOpen(OpenSocket fn) {
-    socketNotifier!.open = fn;
+    socketNotifier?.open = fn;
   }
 
   /// {@template io_socket_send}
@@ -268,12 +303,21 @@ class BaseWebSocket extends SocketInterface {
   /// {@endtemplate}
   @override
   void send(dynamic data) async {
-    if (connectionStatus == SocketStatus.closed) {
-      await connect();
-    }
+    try {
+      if (connectionStatus == SocketStatus.closed) {
+        await connect();
+      }
 
-    if (socket != null) {
-      socket!.add(data);
+      final current = socket;
+      if (current != null && connectionStatus == SocketStatus.connected) {
+        current.add(data);
+      } else {
+        socketNotifier?.notifyError(SocketClose('WebSocket not connected, message not sent', 0));
+      }
+    } catch (e) {
+      // Surface send failures instead of letting them escape this
+      // fire-and-forget method as unobservable async errors.
+      socketNotifier?.notifyError(SocketClose('Send failed: $e', 0));
     }
   }
 

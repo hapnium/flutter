@@ -1,6 +1,8 @@
+import '../core/zap_inst.dart';
 import '../definitions.dart';
 import '../exceptions/controller_advice.dart';
 import '../http/modifier/zap_modifier.dart';
+import 'response/session_response.dart';
 import 'zap_config.dart';
 
 /// {@template flux_config}
@@ -175,6 +177,54 @@ class FluxConfig {
     this.requestModifiers,
     this.responseModifiers,
   });
+
+  /// The in-flight refresh future, used to coalesce concurrent refresh
+  /// attempts into a single call to [onSessionRefreshed].
+  Future<SessionResponse?>? _refreshInFlight;
+
+  /// Refreshes the session via [onSessionRefreshed], coalescing concurrent
+  /// callers into a single in-flight refresh.
+  ///
+  /// **Why this exists:** without coalescing, N concurrent requests that all
+  /// receive a `401` would each invoke [onSessionRefreshed], producing N
+  /// parallel token rotations — which invalidates the refresh token on
+  /// servers that treat refresh tokens as single-use.
+  ///
+  /// **Behavior:** the first caller starts the refresh; every caller that
+  /// arrives before it completes receives the same [Future]. Once it
+  /// completes (successfully or not), the next refresh starts fresh.
+  Future<SessionResponse?> refreshSession() {
+    final inFlight = _refreshInFlight;
+    if (inFlight != null) {
+      return inFlight;
+    }
+
+    final future = _refreshSession();
+    _refreshInFlight = future;
+    return future;
+  }
+
+  Future<SessionResponse?> _refreshSession() async {
+    try {
+      final callback = onSessionRefreshed;
+      if (callback == null) {
+        return null;
+      }
+
+      final session = await callback();
+      if (session != null && showResponseLogs) {
+        Z.log('Flux: Session refreshed successfully');
+      }
+      return session;
+    } catch (e) {
+      if (showErrorLogs) {
+        Z.log('Flux: Session refresh failed: $e');
+      }
+      return null;
+    } finally {
+      _refreshInFlight = null;
+    }
+  }
 
   /// Generates a new instance of [FluxConfig] with selectively updated properties.
   /// 

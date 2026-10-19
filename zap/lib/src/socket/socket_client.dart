@@ -100,5 +100,6 @@ class SocketClient extends BaseWebSocket {
     super.url, {
     super.ping,
     super.allowSelfSigned,
+    super.connectTimeout,
   });
 }

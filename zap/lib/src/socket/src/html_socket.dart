@@ -92,6 +92,16 @@ class BaseWebSocket extends SocketInterface {
   /// connection alive. Cancelled on close, error, or disposal.
   /// {@endtemplate}
   Timer? _t;
+  Timer? _connectTimeoutTimer;
+
+  /// {@template html_socket_subscriptions}
+  /// Subscriptions to the underlying WebSocket event streams.
+  ///
+  /// All entries are cancelled on re-[connect] and [dispose] so no
+  /// events are delivered to a torn-down [SocketNotifier] and no
+  /// duplicate listeners accumulate across reconnects.
+  /// {@endtemplate}
+  final List<StreamSubscription<dynamic>> _subscriptions = [];
 
   /// {@template html_socket_constructor}
   /// Creates a new [BaseWebSocket] instance.
@@ -105,7 +115,7 @@ class BaseWebSocket extends SocketInterface {
   /// - [url]: The WebSocket server URL.
   /// - [ping]: Ping interval. Defaults to 5 seconds.
   /// - [allowSelfSigned]: Whether to allow self-signed certificates.
-  ///   Defaults to `true`.
+  ///   Defaults to `false` (unused on web; the browser handles TLS).
   ///
   /// ### Example
   ///
@@ -121,7 +131,8 @@ class BaseWebSocket extends SocketInterface {
   BaseWebSocket(
     super.url, {
     super.ping = const Duration(seconds: 5),
-    super.allowSelfSigned = true,
+    super.allowSelfSigned = false,
+    super.connectTimeout,
   }) {
     url = url.startsWith('https')
         ? url.replaceAll('https:', 'wss:')
@@ -184,33 +195,65 @@ class BaseWebSocket extends SocketInterface {
   Future<void> connect() async {
     try {
       connectionStatus = SocketStatus.connecting;
+
+      // Detach from any previous connection before replacing it, so
+      // reconnects never deliver events for two sockets at once and
+      // ping timers never accumulate.
+      _t?.cancel();
+      _t = null;
+      for (final subscription in _subscriptions) {
+        await subscription.cancel();
+      }
+      _subscriptions.clear();
+
       socket = html.WebSocket(url);
-      socket!.onOpen.listen((e) {
-        socketNotifier?.open();
-        _t = Timer?.periodic(ping, (t) {
-          socket!.send(''.toJSBox);
+
+      // Fail the handshake instead of hanging if the server never opens
+      // the connection.
+      if (connectTimeout > Duration.zero) {
+        _connectTimeoutTimer?.cancel();
+        _connectTimeoutTimer = Timer(connectTimeout, () {
+          if (connectionStatus == SocketStatus.connecting) {
+            socket?.close();
+            connectionStatus = SocketStatus.closed;
+            socketNotifier?.notifyError(SocketClose('Connection timed out after ${connectTimeout.inMilliseconds}ms', 0));
+          }
         });
+      }
+
+      _subscriptions.add(socket!.onOpen.listen((e) {
+        _connectTimeoutTimer?.cancel();
         connectionStatus = SocketStatus.connected;
-      });
+        socketNotifier?.open();
+        // A zero interval means "disable pings"; Timer.periodic(zero)
+        // would otherwise flood the server with empty frames.
+        if (ping > Duration.zero) {
+          _t = Timer.periodic(ping, (t) {
+            socket?.send(''.toJSBox);
+          });
+        }
+      }));
 
-      socket!.onMessage.listen((event) {
-        socketNotifier!.notifyData(event.data);
-      });
+      _subscriptions.add(socket!.onMessage.listen((event) {
+        socketNotifier?.notifyData(event.data);
+      }));
 
-      socket!.onClose.listen((e) {
+      _subscriptions.add(socket!.onClose.listen((e) {
         _t?.cancel();
+        _connectTimeoutTimer?.cancel();
 
         connectionStatus = SocketStatus.closed;
-        socketNotifier!.notifyClose(SocketClose(e.reason, e.code));
-      });
-      socket!.onError.listen((event) {
+        socketNotifier?.notifyClose(SocketClose(e.reason, e.code));
+      }));
+      _subscriptions.add(socket!.onError.listen((event) {
         _t?.cancel();
-        socketNotifier!.notifyError(SocketClose(event.toString(), 0));
+        _connectTimeoutTimer?.cancel();
+        socketNotifier?.notifyError(SocketClose(event.toString(), 0));
         connectionStatus = SocketStatus.closed;
-      });
+      }));
     } on Exception catch (e) {
       _t?.cancel();
-      socketNotifier!.notifyError(SocketClose(e.toString(), 500));
+      socketNotifier?.notifyError(SocketClose(e.toString(), 500));
       connectionStatus = SocketStatus.closed;
       //  close(500, e.toString());
     }
@@ -221,13 +264,25 @@ class BaseWebSocket extends SocketInterface {
   /// connection.
   ///
   /// After calling this method:
-  /// - All event listeners are cleared
+  /// - All event subscriptions are cancelled and the socket is closed
+  /// - The ping timer is cancelled
   /// - The [socketNotifier] is set to `null`
   /// - [isDisposed] is set to `true`
   /// - The socket cannot be reused
   /// {@endtemplate}
   @override
   void dispose() {
+    for (final subscription in _subscriptions) {
+      subscription.cancel();
+    }
+    _subscriptions.clear();
+    _t?.cancel();
+    _t = null;
+    _connectTimeoutTimer?.cancel();
+    _connectTimeoutTimer = null;
+    socket?.close();
+    socket = null;
+    connectionStatus = SocketStatus.closed;
     socketNotifier?.dispose();
     socketNotifier = null;
     isDisposed = true;

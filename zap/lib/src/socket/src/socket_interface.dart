@@ -69,8 +69,8 @@ abstract class SocketInterface {
   /// Whether to allow connections to servers with self-signed SSL
   /// certificates.
   ///
-  /// Defaults to `true`. Set to `false` in production to enforce
-  /// certificate validation.
+  /// Defaults to `false`. Only set to `true` in development environments;
+  /// leaving it enabled in production allows man-in-the-middle attacks.
   ///
   /// ### Security note
   ///
@@ -86,33 +86,45 @@ abstract class SocketInterface {
   /// {@endtemplate}
   bool allowSelfSigned;
 
+  /// {@template socket_interface_connectTimeout}
+  /// The maximum time allowed for the initial connection handshake.
+  ///
+  /// Defaults to 15 seconds. If the WebSocket is not open within this
+  /// window, the connection attempt fails with an error notification
+  /// instead of hanging indefinitely (dart:io in particular can stall
+  /// for minutes on some networks).
+  /// {@endtemplate}
+  Duration connectTimeout;
+
   /// {@template socket_interface_constructor}
   /// Initializes the socket connection parameters.
   ///
-  /// This constructor throws [ZapException] by default. Platform-specific
-  /// implementations must call `super()` with the appropriate parameters
-  /// and provide their own implementation.
+  /// This constructor is only intended to be called by platform-specific
+  /// subclasses (via `super`). The base implementation of [connect] and
+  /// the event-registration methods throw [ZapException] / are no-ops
+  /// until a platform subclass provides a real implementation.
   ///
   /// ### Parameters
   ///
   /// - [url]: The WebSocket server URL.
   /// - [ping]: Optional ping interval. Defaults to 5 seconds.
   /// - [allowSelfSigned]: Whether to allow insecure certificates.
-  ///   Defaults to `true`.
+  ///   Defaults to `false`.
+  /// - [connectTimeout]: Maximum handshake duration. Defaults to 15
+  ///   seconds.
   ///
   /// ### Throws
   ///
-  /// - [ZapException]: Always thrown by the base class. Use platform-
-  ///   specific implementations instead.
+  /// - [ZapException]: Thrown by the base [connect] implementation.
+  ///   Use platform-specific implementations instead.
   /// {@endtemplate}
   /// {@macro socket_interface}
   SocketInterface(
     this.url, {
     this.ping = const Duration(seconds: 5),
-    this.allowSelfSigned = true,
-  }) {
-    throw ZapException('To use sockets you need dart:io or dart:html');
-  }
+    this.allowSelfSigned = false,
+    this.connectTimeout = const Duration(seconds: 15),
+  });
 
   /// {@template socket_interface_connect}
   /// Connects to the WebSocket server.

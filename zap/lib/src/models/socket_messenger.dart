@@ -117,8 +117,11 @@ class SocketMessenger {
       messageId: json['messageId'],
       timestamp: json['timestamp'] != null ? DateTime.tryParse(json['timestamp']) : null,
       endpoint: json['endpoint'],
-      // Safely cast the dynamic map to your Headers definition
-      headers: json['headers'] as Headers?,
+      // `jsonDecode` produces `Map<String, dynamic>` values, never a
+      // `Headers` map — a direct cast always threw. Convert defensively.
+      headers: json['headers'] is Map
+          ? (json['headers'] as Map).map((key, value) => MapEntry(key.toString(), value.toString()))
+          : null,
       topic: json['topic'],
     );
   }

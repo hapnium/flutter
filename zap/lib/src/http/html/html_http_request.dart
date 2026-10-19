@@ -70,6 +70,7 @@ class HttpRequestImplementation implements HttpRequestInterface {
     List<ZapTrustedCertificate>? trustedCertificates,
     this.withCredentials = false,
     ProxyFinder? findProxy,
+    bool enableCookies = true, // Ignored: the browser manages cookies natively.
   });
 
   /// Set of active XMLHttpRequest instances for cancellation on close.

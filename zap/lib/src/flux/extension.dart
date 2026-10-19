@@ -186,7 +186,8 @@ extension FluxConfigExtension on FluxConfig {
         // Use configurable header name and token prefix
         final token = session.accessToken;
         if (token.isEmpty) {
-          headers = {};
+          // An empty token must not produce `Authorization: Bearer `.
+          return {};
         }
 
         final headerValue = tokenPrefix.isEmpty ? token : '$tokenPrefix $token';
@@ -314,27 +315,7 @@ extension FluxConfigExtension on FluxConfig {
   /// The method returns `null` in this case, allowing the caller to
   /// handle the failure gracefully.
   /// {@endtemplate}
-  Future<SessionResponse?> handleSessionRefresh() async {
-    if (onSessionRefreshed != null) {
-      try {
-        final session = await onSessionRefreshed!();
-        if(session != null) {
-          if (showResponseLogs) {
-            Z.log('Flux: Session refreshed successfully');
-          }
-
-          return session;
-        }
-      } catch (e) {
-        if (showErrorLogs) {
-          Z.log('Flux: Session refresh failed: $e');
-        }
-
-        return null;
-      }
-    }
-    return null;
-  }
+  Future<SessionResponse?> handleSessionRefresh() => refreshSession();
 
   /// Logs request information if request logging is enabled.
   ///

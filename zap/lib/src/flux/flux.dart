@@ -1,6 +1,7 @@
 import '../definitions.dart';
 import '../exceptions/zap_exception.dart';
 import '../http/modifier/zap_modifier.dart';
+import '../http/request/request.dart';
 import '../http/utils/http_method.dart';
 import '../models/response/api_response.dart';
 import '../core/zap_interface.dart';
@@ -114,6 +115,26 @@ final class Flux implements FluxInterface {
   /// ```
   /// {@endtemplate}
   final FluxConfig config;
+
+  /// The memoized underlying HTTP client, used when
+  /// [FluxConfig.useSingleInstance] is `true`.
+  ///
+  /// Created lazily on first use and reused for every subsequent request,
+  /// so connection pools (and keep-alive sockets) are shared across calls.
+  /// Disposed by [Flux.dispose].
+  ZapInterface? _singleInstanceClient;
+
+  /// Request modifiers registered at runtime via [addRequestModifier].
+  ///
+  /// Applied to the memoized client in single-instance mode, and to each
+  /// newly created client in multi-instance mode so modifiers are never
+  /// silently lost.
+  final List<RequestModifier> _runtimeRequestModifiers = [];
+
+  /// Response modifiers registered at runtime via [addResponseModifier].
+  ///
+  /// See [_runtimeRequestModifiers].
+  final List<ResponseModifier> _runtimeResponseModifiers = [];
 
   /// Private constructor to enforce singleton pattern.
   ///
@@ -235,8 +256,15 @@ final class Flux implements FluxInterface {
   /// Calling [dispose] when no instance exists is safe (no-op).
   /// {@endtemplate}
   static void dispose() {
-    _instance?._client().onDelete();
-    _instance?._client().dispose();
+    final instance = _instance;
+    if (instance != null) {
+      // Dispose the client that actually served requests (if any), instead
+      // of constructing a fresh throwaway client just to close it.
+      final client = instance._singleInstanceClient;
+      instance._singleInstanceClient = null;
+      client?.onDelete();
+      client?.dispose();
+    }
     _instance = null;
   }
 
@@ -265,7 +293,10 @@ final class Flux implements FluxInterface {
   /// ```
   /// {@endtemplate}
   static void cancelAllRequests([String reason = 'All requests cancelled']) {
-    _instance?._client().cancelAllRequests(reason);
+    // Only the memoized client holds in-flight requests. In multi-instance
+    // mode each request owns its (short-lived) client, so there is nothing
+    // shared to cancel.
+    _instance?._singleInstanceClient?.cancelAllRequests(reason);
   }
 
   /// Registers a global request modifier that applies to every request.
@@ -281,7 +312,12 @@ final class Flux implements FluxInterface {
   /// });
   /// ```
   void addRequestModifier<T>(RequestModifier<T> modifier) {
-    _client().client.addRequestModifier<T>(modifier);
+    _runtimeRequestModifiers.add(modifier as RequestModifier);
+    if (config.useSingleInstance) {
+      // Multi-instance clients receive modifiers in [_client] when each
+      // new client is created; the memoized client needs them now.
+      _client().client.addRequestModifier<T>(modifier);
+    }
   }
 
   /// Registers a global response modifier that applies to every response.
@@ -300,16 +336,22 @@ final class Flux implements FluxInterface {
   /// });
   /// ```
   void addResponseModifier<T>(ResponseModifier<T> modifier) {
-    _client().client.addResponseModifier<T>(modifier);
+    _runtimeResponseModifiers.add(modifier as ResponseModifier);
+    if (config.useSingleInstance) {
+      // See [addRequestModifier].
+      _client().client.addResponseModifier<T>(modifier);
+    }
   }
 
   /// Removes a previously registered global request modifier.
   void removeRequestModifier<T>(RequestModifier<T> modifier) {
+    _runtimeRequestModifiers.remove(modifier);
     _client().client.removeRequestModifier<T>(modifier);
   }
 
   /// Removes a previously registered global response modifier.
   void removeResponseModifier<T>(ResponseModifier<T> modifier) {
+    _runtimeResponseModifiers.remove(modifier);
     _client().client.removeResponseModifier<T>(modifier);
   }
 
@@ -326,11 +368,30 @@ final class Flux implements FluxInterface {
   ///
   /// ### Behavior
   ///
-  /// If [FluxConfig.useSingleInstance] is `true`, returns a standard
-  /// [Zap] client. If `false`, returns a [_Connect] client with
-  /// integrated header and auth management.
+  /// If [FluxConfig.useSingleInstance] is `true`, returns the memoized
+  /// [Zap] client, created on first use and reused for every subsequent
+  /// request so connection pools are shared. If `false`, returns a fresh
+  /// [_Connect] client per call with any runtime-registered modifiers
+  /// applied.
   /// {@macro zap_interface}
-  ZapInterface _client([bool useAuth = false]) => fluxClient(config, useAuth);
+  ZapInterface _client([bool useAuth = false]) {
+    if (config.useSingleInstance) {
+      return _singleInstanceClient ??= fluxClient(config, useAuth);
+    }
+
+    final client = fluxClient(config, useAuth);
+    for (final modifier in _runtimeRequestModifiers) {
+      client.client.addRequestModifier<void>((Request request) async {
+        return await modifier(request);
+      });
+    }
+    for (final modifier in _runtimeResponseModifiers) {
+      client.client.addResponseModifier<void>((request, response) async {
+        return await modifier(request, response);
+      });
+    }
+    return client;
+  }
 
   /// {@macro flux_interface_delete}
   @override
