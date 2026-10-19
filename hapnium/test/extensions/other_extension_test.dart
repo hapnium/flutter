@@ -98,7 +98,7 @@ void main() {
 
     test('getOrThrow throws when null', () {
       String? value;
-      expect(() => value.getOrThrow('missing'), throwsA(isA<Exception>()));
+      expect(() => value.getOrThrow('missing'), throwsA(isA<HapniumException>()));
     });
 
     test('getOrThrow returns value when not null', () {

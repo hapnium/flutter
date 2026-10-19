@@ -1,5 +1,7 @@
 # Hapnium Flutter packages
 
+dart run tool/strip_trailing_newlines.dart . (or --check in CI to catch regressions).
+
 Monorepo of Dart and Flutter libraries maintained by **Hapnium Inc.** for shared mobile (and partially web/desktop) functionality: core utilities, logging, networking, cryptography, device intelligence, local storage, notifications, media, and a large UI kit.
 
 This directory is **not** the Flutter SDK. It is a **collection of packages** managed as a **Pub workspace**: there **is** a root `pubspec.yaml` that lists every package under `workspace:` and resolves all dependencies to a single `pubspec.lock` / `.dart_tool/package_config.json` at the repo root. Each subfolder is a workspace member (`resolution: workspace` in its own `pubspec.yaml`). All packages use `publish_to: none` (except `phosphor_flutter`) and are intended to be consumed via **path** or **git** dependencies (see [Consuming packages](#consuming-packages)).

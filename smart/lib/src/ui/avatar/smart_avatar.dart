@@ -235,17 +235,34 @@ class SmartAvatar extends BaseAvatar {
       return Icon(defaultIcon ?? Icons.person, color: textColor ?? Colors.white54, size: textSize);
     }
 
+    final double fontSize = textSize ?? 14;
+
     Widget child = Text(
       initials,
+      textAlign: TextAlign.center,
+      // Force the text's layout box to hug the glyphs: line height equals
+      // the font size and ascent/descent are split evenly. Without this,
+      // font-metric padding shifts the initials off-center as the font
+      // size changes. The strut makes the box deterministic across fonts.
+      strutStyle: StrutStyle(
+        fontSize: fontSize,
+        height: 1,
+        forceStrutHeight: true,
+        leadingDistribution: TextLeadingDistribution.even,
+      ),
       style: TextStyle(
         color: textColor ?? Colors.white,
         fontWeight: textWeight ?? FontWeight.w600,
-        fontSize: textSize ?? 14,
+        fontSize: fontSize,
+        height: 1,
+        leadingDistribution: TextLeadingDistribution.even,
       ),
     );
 
     if(applyPadding) {
-      return Padding(padding: padding ?? EdgeInsets.only(top: 6), child: child);
+      // No default offset: any padding must be opt-in via [padding],
+      // otherwise the initials would no longer be centered.
+      return Padding(padding: padding ?? EdgeInsets.zero, child: child);
     } else {
       return child;
     }
