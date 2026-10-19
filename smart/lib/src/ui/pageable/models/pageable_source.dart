@@ -7,8 +7,8 @@ import '../controller/pageable_controller.dart';
 /// [InterleavablePageableController].
 ///
 /// Each source defines its own fetch logic and pagination independently —
-/// different sources can have different page key types, page sizes, and
-/// fetch callbacks. The interleaved controller manages all sources internally,
+/// different sources can have different page sizes, priorities, and fetch
+/// callbacks. The interleaved controller manages all sources internally,
 /// calling [fetchPage] and [getNextPageKey] as needed.
 ///
 /// Unlike wrapping a full [PageableController], a source is a lightweight
@@ -18,7 +18,8 @@ import '../controller/pageable_controller.dart';
 /// ## Type Parameters
 ///
 /// - [PageKey] — the type identifying pages (e.g., `int`, `String`, `DateTime`).
-///   Different sources can use different page key types.
+///   All sources registered with a single [InterleavablePageableController]
+///   must share the same [PageKey] type.
 /// - [Item] — the type of items returned by [fetchPage]. All sources in a
 ///   single [InterleavablePageableController] must share the same [Item] type.
 ///
@@ -42,9 +43,21 @@ import '../controller/pageable_controller.dart';
 ///   priority: 1,
 /// );
 ///
-/// final controller = InterleavablePageableController<Post>(
+/// final controller = InterleavablePageableController<int, Post>(
 ///   strategy: RoundRobinInterleaveStrategy(itemsPerSource: 5),
 ///   sources: [feedSource, adsSource],
+/// );
+/// ```
+///
+/// Cursor-based pagination works the same way with a non-int key:
+///
+/// ```dart
+/// final cursorSource = PageableSource<String, Post>(
+///   id: 'feed',
+///   fetchPage: (cursor) => api.fetchFeed(cursor),
+///   firstPageKey: 'start',
+///   getNextPageKey: (key, items, total) => items.last.cursor,
+///   pageSize: 20,
 /// );
 /// ```
 ///

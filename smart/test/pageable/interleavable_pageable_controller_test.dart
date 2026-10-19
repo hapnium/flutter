@@ -8,7 +8,7 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group('InterleavablePageableController', () {
-    late InterleavablePageableController<String> controller;
+    late InterleavablePageableController<int, String> controller;
     late List<String> feedItems;
     late List<String> adsItems;
 
@@ -16,41 +16,39 @@ void main() {
       feedItems = ['post1', 'post2', 'post3', 'post4', 'post5'];
       adsItems = ['ad1', 'ad2', 'ad3'];
 
-      controller = InterleavablePageableController<String>(
+      controller = InterleavablePageableController<int, String>(
         strategy: const RoundRobinInterleaveStrategy<String>(itemsPerSource: 2),
         sources: [
-          PageableSource<dynamic, String>(
+          PageableSource<int, String>(
             id: 'feed',
             fetchPage: (pageKey) async {
-              final page = pageKey as int;
-              if (page == 1) {
+              if (pageKey == 1) {
                 return feedItems.sublist(0, 3);
-              } else if (page == 2) {
+              } else if (pageKey == 2) {
                 return feedItems.sublist(3);
               }
               return [];
             },
             firstPageKey: 1,
             getNextPageKey: (key, items, total) {
-              if (total < feedItems.length) return (key as int) + 1;
+              if (total < feedItems.length) return key + 1;
               return null;
             },
             pageSize: 3,
           ),
-          PageableSource<dynamic, String>(
+          PageableSource<int, String>(
             id: 'ads',
             fetchPage: (pageKey) async {
-              final page = pageKey as int;
-              if (page == 1) {
+              if (pageKey == 1) {
                 return ['ad1', 'ad2'];
-              } else if (page == 2) {
+              } else if (pageKey == 2) {
                 return ['ad3'];
               }
               return [];
             },
             firstPageKey: 1,
             getNextPageKey: (key, items, total) {
-              if (total < adsItems.length) return (key as int) + 1;
+              if (total < adsItems.length) return key + 1;
               return null;
             },
             pageSize: 2,
@@ -97,10 +95,10 @@ void main() {
       });
 
       test('does nothing when no sources can load more', () async {
-        final singlePageController = InterleavablePageableController<String>(
+        final singlePageController = InterleavablePageableController<int, String>(
           strategy: const RoundRobinInterleaveStrategy<String>(),
           sources: [
-            PageableSource<dynamic, String>(
+            PageableSource<int, String>(
               id: 'single',
               fetchPage: (key) async => ['only'],
               firstPageKey: 1,
@@ -150,7 +148,7 @@ void main() {
 
     group('source management', () {
       test('addSource adds a new source', () async {
-        controller.addSource(PageableSource<dynamic, String>(
+        controller.addSource(PageableSource<int, String>(
           id: 'extra',
           fetchPage: (key) async => ['extra1'],
           firstPageKey: 1,
@@ -161,7 +159,7 @@ void main() {
 
       test('addSource throws on duplicate id', () {
         expect(
-          () => controller.addSource(PageableSource<dynamic, String>(
+          () => controller.addSource(PageableSource<int, String>(
             id: 'feed',
             fetchPage: (key) async => [],
             firstPageKey: 1,
@@ -199,15 +197,15 @@ void main() {
 
     group('error handling', () {
       test('handles source fetch errors gracefully', () async {
-        final errorController = InterleavablePageableController<String>(
+        final errorController = InterleavablePageableController<int, String>(
           strategy: const RoundRobinInterleaveStrategy<String>(),
           sources: [
-            PageableSource<dynamic, String>(
+            PageableSource<int, String>(
               id: 'failing',
               fetchPage: (key) async => throw Exception('Network error'),
               firstPageKey: 1,
             ),
-            PageableSource<dynamic, String>(
+            PageableSource<int, String>(
               id: 'working',
               fetchPage: (key) async => ['item1', 'item2'],
               firstPageKey: 1,
@@ -247,10 +245,10 @@ void main() {
       });
 
       test('returns false when no more pages available', () async {
-        final singlePageController = InterleavablePageableController<String>(
+        final singlePageController = InterleavablePageableController<int, String>(
           strategy: const RoundRobinInterleaveStrategy<String>(),
           sources: [
-            PageableSource<dynamic, String>(
+            PageableSource<int, String>(
               id: 'single',
               fetchPage: (key) async => ['only'],
               firstPageKey: 1,
