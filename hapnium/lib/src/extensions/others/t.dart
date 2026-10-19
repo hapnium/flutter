@@ -12,6 +12,8 @@
 // 
 // 🔧 Powered by Hapnium — the Dart backend engine 🍃
 
+import '../../exceptions/hapnium_exception.dart';
+
 /// Returns whether a dynamic value PROBABLY
 /// has the isEmpty getter/method by checking
 /// standard dart types that contain it.
@@ -71,10 +73,10 @@ extension TExtensions<T> on T? {
     return this;
   }
 
-  /// Returns this value if it is not null, otherwise throws a [JetException].
+  /// Returns this value if it is not null, otherwise throws a [HapniumException].
   T getOrThrow([String? message]) {
     if (isNull) {
-      throw ArgumentError(message ?? "");
+      throw HapniumException(message ?? "");
     }
     return this!;
   }

@@ -12,6 +12,7 @@
 // 
 // 🔧 Powered by Hapnium — the Dart backend engine 🍃
 
+import '../../exceptions/hapnium_exception.dart';
 import 'iterable.dart';
 
 extension NumExtensions on num {
@@ -269,7 +270,13 @@ extension NumExtensions on num {
   ///
   /// ### Notes:
   /// - If the integer already has the same or more digits, it returns the number as a string.
-  String toDigits(int digits) => toString().padLeft(digits, '0');
+  String toDigits(int digits) {
+    if (digits <= 0) {
+      throw HapniumException('digits must be greater than 0');
+    }
+
+    return toString().padLeft(digits, '0');
+  }
 
   /// Converts numbers to human-readable strings.
   ///

@@ -14,6 +14,7 @@
 
 import 'dart:math';
 
+import '../../exceptions/hapnium_exception.dart';
 import 'iterable.dart';
 
 extension IntExtensions on int {
@@ -268,7 +269,7 @@ extension IntExtensions on int {
   /// - If the integer already has the same or more digits, it returns the number as a string.
   String toDigits([int digits = 2]) {
     if(digits <= 0) {
-      throw ArgumentError('digits must be greater than 0');
+      throw HapniumException('digits must be greater than 0');
     }
 
     return toString().padLeft(digits, '0');
