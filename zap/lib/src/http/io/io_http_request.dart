@@ -12,6 +12,7 @@ import '../response/helpers.dart';
 import '../response/response.dart';
 import '../utils/body_decoder.dart';
 import '../utils/http_status.dart';
+import 'io_cookie_jar.dart';
 import 'io_http_response.dart';
 
 /// {@template io_http_request}
@@ -45,6 +46,13 @@ class HttpRequestImplementation extends HttpRequestInterface {
   /// The security context for custom certificate trust.
   io.SecurityContext? _securityContext;
 
+  /// The in-memory cookie store; `null` when cookies are disabled.
+  ///
+  /// Shared by every request sent through this client instance, so
+  /// sessions built on cookies persist across requests in single-instance
+  /// mode.
+  final IoCookieJar? _cookieJar;
+
   /// Creates an [HttpRequestImplementation] for IO platforms.
   ///
   /// ## Parameters
@@ -53,6 +61,9 @@ class HttpRequestImplementation extends HttpRequestInterface {
   /// - [trustedCertificates]: Optional list of certificates to trust explicitly.
   /// - [withCredentials]: Whether to include credentials (unused on IO).
   /// - [findProxy]: Optional function to determine the proxy server.
+  /// - [enableCookies]: Whether to persist `Set-Cookie` headers in an
+  ///   in-memory jar and attach matching cookies to subsequent requests
+  ///   (RFC 6265 domain/path/secure matching). Defaults to `true`.
   ///
   /// ## Example
   /// ```dart
@@ -72,7 +83,8 @@ class HttpRequestImplementation extends HttpRequestInterface {
     List<ZapTrustedCertificate>? trustedCertificates,
     bool withCredentials = false,
     ProxyFinder? findProxy,
-  }) {
+    bool enableCookies = true,
+  }) : _cookieJar = enableCookies ? IoCookieJar() : null {
     _httpClient = io.HttpClient();
     if (trustedCertificates != null) {
       _securityContext = io.SecurityContext();
@@ -120,9 +132,20 @@ class HttpRequestImplementation extends HttpRequestInterface {
         ..contentLength = request.contentLength ?? -1;
       request.headers.forEach(ioRequest.headers.set);
 
+      // Attach stored cookies unless the caller set an explicit Cookie
+      // header (explicit-wins, consistent with the modifier layer).
+      final jarCookies = _cookieJar?.cookiesFor(request.url) ?? const <io.Cookie>[];
+      final hasExplicitCookie = request.headers.keys.any((key) => key.toLowerCase() == 'cookie');
+      if (jarCookies.isNotEmpty && !hasExplicitCookie) {
+        ioRequest.cookies.addAll(jarCookies);
+      }
+
       var response = timeout == null
           ? await stream.pipe(ioRequest) as io.HttpClientResponse
           : await stream.pipe(ioRequest).timeout(timeout!) as io.HttpClientResponse;
+
+      // Persist whatever the server set for use by subsequent requests.
+      _cookieJar?.save(request.url, response.cookies);
 
       var headers = <String, String>{};
       response.headers.forEach((key, values) {

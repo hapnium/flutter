@@ -45,11 +45,13 @@ HttpRequestImplementation createHttp({
   List<ZapTrustedCertificate>? trustedCertificates,
   bool withCredentials = false,
   ProxyFinder? findProxy,
+  bool enableCookies = true,
 }) {
   return HttpRequestImplementation(
     allowAutoSignedCert: allowAutoSignedCert,
     trustedCertificates: trustedCertificates,
     withCredentials: withCredentials,
     findProxy: findProxy,
+    enableCookies: enableCookies,
   );
 }

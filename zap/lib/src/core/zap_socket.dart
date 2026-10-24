@@ -103,5 +103,6 @@ class ZapSocket extends SocketClient {
     super.url, {
     super.ping,
     super.allowSelfSigned,
+    super.connectTimeout,
   });
 }

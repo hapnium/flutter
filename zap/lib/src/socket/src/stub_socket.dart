@@ -49,7 +49,7 @@ class BaseWebSocket extends SocketInterface {
   /// - [allowSelfSigned]: Whether to allow self-signed certs (ignored).
   /// {@endtemplate}
   /// {@macro stub_socket}
-  BaseWebSocket(super.url, {super.ping, super.allowSelfSigned});
+  BaseWebSocket(super.url, {super.ping, super.allowSelfSigned, super.connectTimeout});
 
   /// {@template stub_socket_close}
   /// No-op implementation. Does nothing.

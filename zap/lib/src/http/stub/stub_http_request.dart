@@ -48,6 +48,7 @@ class HttpRequestImplementation extends HttpRequestInterface {
     List<ZapTrustedCertificate>? trustedCertificates,
     bool withCredentials = false,
     ProxyFinder? findProxy,
+    bool enableCookies = true, // Ignored: the stub never sends requests.
   });
 
   /// Closes the stub client. This is a no-op.

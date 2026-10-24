@@ -55,6 +55,27 @@ class ZyncResponse {
   /// specific domain models, shifting the responsibility of strong-typing to 
   /// the feature repositories.
   final dynamic data;
+
+  /// The pub/sub topic this frame was routed on, when the server provides one.
+  ///
+  /// **Use Case:**
+  /// Servers that multiplex many logical channels over one socket tag each
+  /// frame with a topic (e.g. `'orders:42'`). Handlers registered via
+  /// `Zync.subscribe(topic: ...)` are matched against this value first,
+  /// falling back to the [type] name for servers that only send types.
+  final String? topic;
+
+  /// The application-level event name attached to the frame, if any.
+  ///
+  /// Distinct from [type]: two `SocketType.message` frames may carry
+  /// different events (e.g. `'message.created'`, `'message.deleted'`).
+  final String? event;
+
+  /// A server-generated correlation ID for this frame, if any.
+  ///
+  /// Useful for request/response matching and deduplication across
+  /// reconnects.
+  final String? messageId;
   
   /// A rapid, synchronous convenience flag indicating if [body] contains raw text.
   /// 
@@ -86,6 +107,9 @@ class ZyncResponse {
     this.headers,
     this.body,
     this.data,
+    this.topic,
+    this.event,
+    this.messageId,
     this.hasBody = false,
     this.hasData = false,
   }) : timestamp = DateTime.now();
@@ -101,6 +125,9 @@ class ZyncResponse {
     'headers': headers,
     'body': body,
     'data': data,
+    'topic': topic,
+    'event': event,
+    'messageId': messageId,
     'hasBody': hasBody,
     'hasData': hasData,
     'timestamp': timestamp.toIso8601String(),
@@ -110,5 +137,5 @@ class ZyncResponse {
   /// 
   /// Ideal for terminal output. Format: `ZyncResponse[<type>]: <data>`
   @override
-  String toString() => 'ZyncResponse[${type ?? 'unknown'}]: $data';
+  String toString() => 'ZyncResponse[${type ?? 'unknown'}${topic != null ? ':$topic' : ''}]: $data';
 }

@@ -156,6 +156,19 @@ class ZapConfig {
   /// If `false`, the browser will strip cookies from the request.
   bool withCredentials;
 
+  /// Whether the dart:io engine persists `Set-Cookie` headers in an
+  /// in-memory jar and attaches matching cookies to subsequent requests.
+  ///
+  /// Matching follows RFC 6265 (domain, path, and secure rules). The jar
+  /// lives as long as the underlying client — in single-instance mode
+  /// (the default) cookies therefore persist across requests; in
+  /// multi-instance mode each request gets a fresh client and jar.
+  /// Ignored on web, where the browser manages cookies natively.
+  ///
+  /// Defaults to `true` to match browser semantics; set to `false` to
+  /// restore the previous behavior of silently dropping cookies.
+  bool enableCookies;
+
   /// Defines the client's internal error propagation philosophy.
   ///
   /// If `true` (Safe Mode), the client aggressively catches underlying `SocketException`, 
@@ -179,6 +192,7 @@ class ZapConfig {
     this.maxAuthRetries = 1,
     this.allowAutoSignedCert = false,
     this.withCredentials = false,
+    this.enableCookies = true,
     this.baseUrl,
     this.defaultContentType = '${HttpContentType.APPLICATION_JSON}; ${HttpContentType.CHARSET_UTF_8}',
     this.defaultDecoder,
@@ -215,6 +229,7 @@ class ZapConfig {
     List<ZapTrustedCertificate>? trustedCertificates,
     ProxyFinder? findProxy,
     bool? withCredentials,
+    bool? enableCookies,
     bool? errorSafety,
   }) {
     return ZapConfig(
@@ -231,6 +246,7 @@ class ZapConfig {
       trustedCertificates: trustedCertificates ?? this.trustedCertificates,
       findProxy: findProxy ?? this.findProxy,
       withCredentials: withCredentials ?? this.withCredentials,
+      enableCookies: enableCookies ?? this.enableCookies,
       errorSafety: errorSafety ?? this.errorSafety,
     );
   }

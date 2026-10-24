@@ -31,6 +31,13 @@ class ZyncErrorResponse {
   /// * Standard `String` error messages.
   /// * Parsed JSON maps representing backend validation errors.
   final dynamic error;
+
+  /// The pub/sub topic this error concerns, when it originates from a
+  /// topic-scoped frame (e.g. a server error tagged `topic: 'orders'`).
+  ///
+  /// Lets apps filter `Zync.errorStream` per channel instead of treating
+  /// every error as global. `null` for connection-level errors.
+  final String? topic;
   
   /// The exact local time when the error was caught and instantiated.
   ///
@@ -48,6 +55,7 @@ class ZyncErrorResponse {
   ZyncErrorResponse({
     required this.where,
     required this.error,
+    this.topic,
   }) : timestamp = DateTime.now();
 
   /// Serializes the error response into a JSON-compatible map.
@@ -62,6 +70,7 @@ class ZyncErrorResponse {
   Map<String, dynamic> toJson() => {
     'where': where,
     'error': error.toString(),
+    if (topic != null) 'topic': topic,
     'timestamp': timestamp.toIso8601String(),
   };
 
@@ -71,5 +80,5 @@ class ZyncErrorResponse {
   /// 
   /// Format: `ZyncError[<where>]: <error.toString()>`
   @override
-  String toString() => 'ZyncError[$where]: $error';
+  String toString() => 'ZyncError[$where${topic != null ? ':$topic' : ''}]: $error';
 }

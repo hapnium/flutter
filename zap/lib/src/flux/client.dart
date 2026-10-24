@@ -56,9 +56,36 @@ import 'extension.dart';
 /// {@endtemplate}
 ZapInterface fluxClient(FluxConfig config, [bool useAuth = false]) {
   if (config.useSingleInstance) {
-    return Zap(zapConfig: config.zapConfig);
+    final client = Zap(zapConfig: config.zapConfig);
+    registerConfigModifiers(client, config);
+    return client;
   } else {
     return _Connect(config, useAuth);
+  }
+}
+
+/// Registers [FluxConfig.requestModifiers] and [FluxConfig.responseModifiers]
+/// on [client].
+///
+/// Shared by both client modes so that config-level modifiers fire
+/// regardless of [FluxConfig.useSingleInstance].
+void registerConfigModifiers(ZapInterface client, FluxConfig fx) {
+  // Register global request modifiers from config
+  if (fx.requestModifiers case List<RequestModifier> modifiers? when modifiers.isNotEmpty) {
+    for (final modifier in modifiers) {
+      client.client.addRequestModifier<void>((Request request) async {
+        return await modifier(request);
+      });
+    }
+  }
+
+  // Register global response modifiers from config
+  if (fx.responseModifiers case List<ResponseModifier> modifiers? when modifiers.isNotEmpty) {
+    for (final modifier in modifiers) {
+      client.client.addResponseModifier<void>((request, response) async {
+        return await modifier(request, response);
+      });
+    }
   }
 }
 
@@ -151,42 +178,36 @@ class _Connect extends Zap {
   /// Later modifiers can overwrite earlier ones if keys conflict.
   @override
   void onInit() {
-    // Existing header modifier
+    // Global headers from config. Only fill in headers the request does
+    // not already carry: headers passed explicitly to `execute(...)` —
+    // e.g. the refreshed auth headers built during a 401 retry — must
+    // never be clobbered by the static config values.
     if (fx.headers != null) {
       client.addRequestModifier<void>((Request request) async {
-        request.headers.addAll(fx.buildHeaders());
+        fx.buildHeaders().forEach((key, value) {
+          request.headers.putIfAbsent(key, () => value);
+        });
         return request;
       });
     }
 
-    // Existing auth modifier
+    // Auth header injection. Same explicit-wins rule: if the request
+    // already carries an auth header (built from a freshly refreshed
+    // session during a retry), keep it untouched.
     if (useAuth) {
       fx.checkAuth(useAuth);
       client.addRequestModifier<void>((Request request) async {
         if (fx.currentSession != null) {
-          request.headers.addAll(fx.buildHeadersWithAuth());
+          fx.buildHeadersWithAuth().forEach((key, value) {
+            request.headers.putIfAbsent(key, () => value);
+          });
         }
         return request;
       });
     }
 
-    // Register global request modifiers from config
-    if (fx.requestModifiers case List<RequestModifier> modifiers? when modifiers.isNotEmpty) {
-      for (final modifier in modifiers) {
-        client.addRequestModifier<void>((Request request) async {
-          return await modifier(request);
-        });
-      }
-    }
-
-    // Register global response modifiers from config
-    if (fx.responseModifiers case List<ResponseModifier> modifiers? when modifiers.isNotEmpty) {
-      for (final modifier in modifiers) {
-        client.addResponseModifier<void>((request, response) async {
-          return await modifier(request, response);
-        });
-      }
-    }
+    // Register global request/response modifiers from config
+    registerConfigModifiers(this, fx);
 
     super.onInit();
   }

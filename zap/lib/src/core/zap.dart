@@ -149,6 +149,7 @@ class Zap extends ZapInterface {
     trustedCertificates: config.trustedCertificates,
     withCredentials: config.withCredentials,
     findProxy: config.findProxy,
+    enableCookies: config.enableCookies,
     errorSafety: config.errorSafety,
   );
 
@@ -519,7 +520,6 @@ class Zap extends ZapInterface {
     zapConfig = null;
     _isDisposed = true;
 
-    client.close();
     sockets.clear();
 
     super.onDelete();

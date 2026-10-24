@@ -1,4 +1,5 @@
 import '../../definitions.dart';
+import '../../socket/src/socket_close.dart';
 import '../response/session_response.dart';
 
 /// {@template zync_config}
@@ -176,6 +177,27 @@ class ZyncConfig {
   /// 3 seconds) to prevent the client from aggressively hammering a struggling server.
   final Duration reconnectDelay;
 
+  /// When set, enables dead-connection detection: if no inbound frame
+  /// (pong, message, anything) is received for this duration while
+  /// connected, the socket is force-closed so the normal reconnect path
+  /// recovers the session.
+  ///
+  /// **Important:** only enable this when your server responds to
+  /// application-level frames — e.g. answering `SocketType.ping` with
+  /// `SocketType.pong`. Servers that stay silent and rely solely on
+  /// transport-level keep-alive would be wrongly treated as dead.
+  /// Defaults to `null` (disabled).
+  final Duration? heartbeatTimeout;
+
+  /// Optional policy deciding whether an automatic reconnect should be
+  /// attempted after a socket close.
+  ///
+  /// Invoked with the close event; return `false` to suppress reconnects
+  /// for that close (e.g. reject close code `4003` = forbidden — retrying
+  /// would loop uselessly). Manual [Zync.disconnect] calls never consult
+  /// this policy. Defaults to `null`, meaning "always reconnect".
+  final bool Function(SocketClose close)? shouldReconnect;
+
   /// {@macro zync_config}
   /// 
   /// Initializes the WebSocket configuration with sensible defaults for resiliency 
@@ -201,6 +223,8 @@ class ZyncConfig {
     this.pingInterval = const Duration(seconds: 30),
     this.maxReconnectAttempts = 5,
     this.reconnectDelay = const Duration(seconds: 3),
+    this.heartbeatTimeout,
+    this.shouldReconnect,
   });
 
   /// Generates a new instance of [ZyncConfig] with selectively updated properties.
@@ -238,6 +262,8 @@ class ZyncConfig {
     Duration? pingInterval,
     int? maxReconnectAttempts,
     Duration? reconnectDelay,
+    Duration? heartbeatTimeout,
+    bool Function(SocketClose close)? shouldReconnect,
   }) {
     return ZyncConfig(
       url: url ?? this.url,
@@ -260,6 +286,8 @@ class ZyncConfig {
       pingInterval: pingInterval ?? this.pingInterval,
       maxReconnectAttempts: maxReconnectAttempts ?? this.maxReconnectAttempts,
       reconnectDelay: reconnectDelay ?? this.reconnectDelay,
+      heartbeatTimeout: heartbeatTimeout ?? this.heartbeatTimeout,
+      shouldReconnect: shouldReconnect ?? this.shouldReconnect,
     );
   }
 }

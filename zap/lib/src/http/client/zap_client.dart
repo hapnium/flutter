@@ -321,6 +321,7 @@ class ZapClient {
     List<ZapTrustedCertificate>? trustedCertificates,
     bool withCredentials = false,
     ProxyFinder? findProxy,
+    bool enableCookies = true,
     HttpRequestInterface? customClient,
     this.errorSafety = true,
     this.controllerAdvice,
@@ -329,6 +330,7 @@ class ZapClient {
       trustedCertificates: trustedCertificates,
       withCredentials: withCredentials,
       findProxy: findProxy,
+      enableCookies: enableCookies,
     ),
     _modifier = ZapModifier();
 
