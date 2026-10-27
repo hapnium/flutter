@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/widgets.dart';
+import 'package:hapnium/hapnium.dart' show EqualsAndHashCode;
 import 'package:smart/exceptions.dart';
 
 import '../helpers/pageable_logger.dart';
@@ -78,7 +79,7 @@ typedef PageableRetryCallback = void Function(int attempt, Object error, StackTr
 /// ```
 /// 
 /// {@endtemplate}
-class PageableController<PageKey, Item> extends ValueNotifier<PageableView<PageKey, Item>> with PageableControllerLifecycleMixin<PageKey, Item>, PageableControllerLifecycle, WidgetsBindingObserver {
+class PageableController<PageKey, Item> extends ValueNotifier<PageableView<PageKey, Item>> with EqualsAndHashCode, PageableControllerLifecycleMixin<PageKey, Item>, PageableControllerLifecycle, WidgetsBindingObserver {
   /// The callback function that fetches a page of items based on a [PageKey].
   ///
   /// Returns a [Future] or synchronous [List<Item>] for the specified page key.
@@ -1273,4 +1274,16 @@ class PageableController<PageKey, Item> extends ValueNotifier<PageableView<PageK
 
     super.dispose();
   }
+
+  @override
+  List<Object?> equalizedProperties() => [
+    cacheKey,
+    pageSize,
+    maxRetries,
+    resetOnReloadKeyChange,
+    getItemType(),
+    getPageKeyType(),
+    useSafeMode,
+    pausePollingWhenHidden
+  ];
 }
