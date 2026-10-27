@@ -6,6 +6,65 @@ import '../models/pageable_status.dart';
 import 'interleave_strategy.dart';
 import 'pageable_controller.dart';
 
+/// Internal mutable state container tracking a single [PageableSource].
+///
+/// Wraps a [PageableSource] with runtime state: the fetched item buffer,
+/// current and next pagination cursors, fetching flag, and per-source error.
+///
+/// This class is private to the controller and not exposed to consumers.
+class _SourceEntry<PageKey, Item> {
+  /// The source configuration (fetch callbacks, page keys, priority).
+  final PageableSource<PageKey, Item> source;
+
+  /// Accumulated items fetched from this source across all pages.
+  ///
+  /// Cleared on [reset] (e.g., during [InterleavablePageableController.refresh]).
+  final List<Item> items = [];
+
+  /// The page key of the most recently fetched page.
+  ///
+  /// Used by [_fetchSourceNextPage] to pass as `currentPageKey` to the
+  /// source's `getNextPageKey` generator. Set to `null` after [reset].
+  PageKey? currentPageKey;
+
+  /// The page key to fetch next, or `null` if the source is exhausted.
+  ///
+  /// Set to `null` when:
+  /// - [PageableSource.getNextPageKey] returns `null`
+  /// - [PageableSource.getNextPageKey] is not provided (single-page source)
+  /// - The source is reset via [reset]
+  PageKey? nextPageKey;
+
+  /// Whether this source is currently executing a fetch operation.
+  ///
+  /// Guards against concurrent fetches for the same source. Checked by
+  /// [InterleavablePageableController._fetchSourceNextPage] to skip sources
+  /// that are already mid-fetch.
+  bool isFetching = false;
+
+  /// The most recent error thrown by this source's fetch callback, or `null`
+  /// if the last fetch succeeded.
+  ///
+  /// Stored in [InterleavablePageableController._sourceErrors] for partial
+  /// failure tracking. Cleared on successful fetch or [reset].
+  dynamic error;
+
+  /// Creates a [_SourceEntry] wrapping the given [source].
+  _SourceEntry(this.source);
+
+  /// Clears all internal buffers and cursors to prep for a fresh fetch.
+  ///
+  /// Called during [InterleavablePageableController.refresh] and
+  /// [InterleavablePageableController.clear].
+  void reset() {
+    items.clear();
+    currentPageKey = null;
+    nextPageKey = null;
+    isFetching = false;
+    error = null;
+  }
+}
+
 /// {@template interleavable_pageable_controller}
 /// A [PageableController] that orchestrates multiple independent paginated data
 /// sources and merges them into a single, unified feed.
@@ -113,8 +172,7 @@ import 'pageable_controller.dart';
 /// [fetchFirstPage] or [fetchNextPage].
 ///
 /// {@endtemplate}
-class InterleavablePageableController<PageKey, Item>
-    extends PageableController<int, Item> {
+class InterleavablePageableController<PageKey, Item> extends PageableController<int, Item> {
   /// The strategy defining fetch routing (which sources to load) and merging
   /// logic (how items are ordered in the final list).
   final InterleaveStrategy<Item> _strategy;
@@ -739,63 +797,10 @@ class InterleavablePageableController<PageKey, Item>
 
     return map;
   }
-}
 
-/// Internal mutable state container tracking a single [PageableSource].
-///
-/// Wraps a [PageableSource] with runtime state: the fetched item buffer,
-/// current and next pagination cursors, fetching flag, and per-source error.
-///
-/// This class is private to the controller and not exposed to consumers.
-class _SourceEntry<PageKey, Item> {
-  /// The source configuration (fetch callbacks, page keys, priority).
-  final PageableSource<PageKey, Item> source;
-
-  /// Accumulated items fetched from this source across all pages.
-  ///
-  /// Cleared on [reset] (e.g., during [InterleavablePageableController.refresh]).
-  final List<Item> items = [];
-
-  /// The page key of the most recently fetched page.
-  ///
-  /// Used by [_fetchSourceNextPage] to pass as `currentPageKey` to the
-  /// source's `getNextPageKey` generator. Set to `null` after [reset].
-  PageKey? currentPageKey;
-
-  /// The page key to fetch next, or `null` if the source is exhausted.
-  ///
-  /// Set to `null` when:
-  /// - [PageableSource.getNextPageKey] returns `null`
-  /// - [PageableSource.getNextPageKey] is not provided (single-page source)
-  /// - The source is reset via [reset]
-  PageKey? nextPageKey;
-
-  /// Whether this source is currently executing a fetch operation.
-  ///
-  /// Guards against concurrent fetches for the same source. Checked by
-  /// [InterleavablePageableController._fetchSourceNextPage] to skip sources
-  /// that are already mid-fetch.
-  bool isFetching = false;
-
-  /// The most recent error thrown by this source's fetch callback, or `null`
-  /// if the last fetch succeeded.
-  ///
-  /// Stored in [InterleavablePageableController._sourceErrors] for partial
-  /// failure tracking. Cleared on successful fetch or [reset].
-  dynamic error;
-
-  /// Creates a [_SourceEntry] wrapping the given [source].
-  _SourceEntry(this.source);
-
-  /// Clears all internal buffers and cursors to prep for a fresh fetch.
-  ///
-  /// Called during [InterleavablePageableController.refresh] and
-  /// [InterleavablePageableController.clear].
-  void reset() {
-    items.clear();
-    currentPageKey = null;
-    nextPageKey = null;
-    isFetching = false;
-    error = null;
-  }
+  @override
+  List<Object?> equalizedProperties() => [
+    ...super.equalizedProperties(),
+    runtimeType
+  ];
 }
