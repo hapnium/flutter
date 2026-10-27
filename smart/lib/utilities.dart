@@ -17,3 +17,8 @@ export 'src/utilities/link/domain_app_link.dart';
 /// COUNTRY
 export 'src/utilities/country/country.dart';
 export 'src/utilities/country/country_util.dart';
+
+/// MATH
+export "src/utilities/math/big_integer.dart";
+export "src/utilities/math/uuid.dart";
+export "src/utilities/math/uuid_range_builder.dart";

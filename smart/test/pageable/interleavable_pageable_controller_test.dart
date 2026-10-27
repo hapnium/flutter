@@ -61,6 +61,34 @@ void main() {
       controller.dispose();
     });
 
+    group('equality', () {
+      test('controllers with matching configuration have distinct identities', () {
+        final other = InterleavablePageableController<int, String>(
+          strategy: const RoundRobinInterleaveStrategy<String>(itemsPerSource: 2),
+          sources: [
+            PageableSource<int, String>(
+              id: 'feed',
+              fetchPage: (_) async => [],
+              firstPageKey: 1,
+              pageSize: 3,
+            ),
+            PageableSource<int, String>(
+              id: 'ads',
+              fetchPage: (_) async => [],
+              firstPageKey: 1,
+              pageSize: 2,
+            ),
+          ],
+        );
+
+        expect(controller, same(controller));
+        expect(controller.uniqueId, isNot(other.uniqueId));
+        expect(controller, isNot(other));
+
+        other.dispose();
+      });
+    });
+
     group('fetchFirstPage', () {
       test('fetches from all sources and interleaves', () async {
         await controller.fetchFirstPage();

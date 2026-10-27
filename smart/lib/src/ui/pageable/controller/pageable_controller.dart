@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/widgets.dart';
 import 'package:hapnium/hapnium.dart' show EqualsAndHashCode;
 import 'package:smart/exceptions.dart';
+import 'package:smart/utilities.dart' show Uuid;
 
 import '../helpers/pageable_logger.dart';
 import 'pageable_controller_lifecycle.dart';
@@ -12,10 +13,25 @@ import '../models/pageable_cache.dart';
 import '../models/pageable_status.dart';
 import '../models/page_result.dart';
 
-/// Callback function to fetch a page of items asynchronously or synchronously.
+/// Fetches a page of items synchronously or asynchronously.
 ///
-/// [PageKey] is the type identifying the page to fetch.
-/// Returns a [Future] or direct [List<Item>] for the given [pageKey].
+/// The [PageKey] identifies the page to fetch, and [Item] is the type of
+/// each item returned.
+///
+/// Implementations may return a [List] immediately or a [Future] that
+/// resolves to a list.
+///
+/// The controller uses this callback to retrieve the initial page and
+/// subsequent pages as requested.
+///
+/// {@template pageable_callback_example}
+/// Example:
+/// ```dart
+/// fetchPage: (pageKey) async {
+///   return api.fetchItems(page: pageKey);
+/// }
+/// ```
+/// {@endtemplate}
 typedef PageableCallback<PageKey, Item> = FutureOr<List<Item>> Function(PageKey pageKey);
 
 /// Function that generates the next page key based on the current page info.
@@ -52,9 +68,38 @@ typedef PreviousPageKeyGenerator<PageKey, Item> = PageKey? Function(
   int totalLoadedItems,
 );
 
-typedef PageableRetryIf = bool Function(Object error, StackTrace stackTrace, int attempt);
+/// Determines whether a failed pagination request should be retried.
+///
+/// Receives the [error] thrown by the failed request, its [stackTrace],
+/// and the current [attempt] number.
+///
+/// Return `true` to allow another attempt, or `false` to stop retrying.
+typedef PageableRetryIf = bool Function(
+  Object error,
+  StackTrace stackTrace,
+  int attempt,
+);
+
+/// Calculates the delay before the next pagination retry.
+///
+/// Receives the current retry [attempt] number and returns the duration
+/// to wait before attempting the request again.
+///
+/// This callback can implement fixed, incremental, or exponential backoff.
 typedef PageableRetryDelayBuilder = Duration Function(int attempt);
-typedef PageableRetryCallback = void Function(int attempt, Object error, StackTrace stackTrace, Duration delay);
+
+/// Notifies callers when a pagination retry is scheduled.
+///
+/// Receives the retry [attempt] number, the [error] that caused the retry,
+/// its [stackTrace], and the [delay] before the next attempt.
+///
+/// Use this callback for logging, diagnostics, or retry-status updates.
+typedef PageableRetryCallback = void Function(
+  int attempt,
+  Object error,
+  StackTrace stackTrace,
+  Duration delay,
+);
 
 /// {@template pageable_controller}
 /// Controller that manages pagination state and data fetching logic.
@@ -143,6 +188,13 @@ class PageableController<PageKey, Item> extends ValueNotifier<PageableView<PageK
   /// cache is provided; pass a custom [PageableCache] for persistent
   /// storage, or leave both unset to disable caching.
   final PageableCache<PageKey, Item>? cache;
+
+  /// Unique identifier generated for this controller instance.
+  ///
+  /// Remains constant for the lifetime of the controller and is included in
+  /// its equality properties and log tag to distinguish it from other
+  /// controllers with the same runtime type and configuration.
+  final Uuid uniqueId;
   
   /// Expected number of items per page, used for automatically detecting the last page.
   final int _pageSize;
@@ -190,6 +242,10 @@ class PageableController<PageKey, Item> extends ValueNotifier<PageableView<PageK
   /// Completer that represents the ongoing fetch operation.
   Completer<void>? _currentFetchCompleter;
 
+  /// Number of active fetch operations managed by this controller.
+  ///
+  /// Incremented when a fetch begins and decremented when it completes.
+  /// [isFetching] is `true` while this count is greater than zero.
   int _activeFetches = 0;
   
   /// Timer used to debounce successive fetchNextPage calls.
@@ -268,6 +324,7 @@ class PageableController<PageKey, Item> extends ValueNotifier<PageableView<PageK
         cache = cache ?? (cacheKey != null ? InMemoryPageableCache<PageKey, Item>() : null),
         _pageSize = pageSize,
         _logger = logger ?? (showLog ? ConsolePageableLogger() : null),
+        uniqueId = Uuid.randomUuid(),
         super(PageableView.initial(showLog: showLog, pageSize: pageSize))
   {
     if (maxRetries < 0) {
@@ -352,6 +409,7 @@ class PageableController<PageKey, Item> extends ValueNotifier<PageableView<PageK
       cache = cache ?? (cacheKey != null ? InMemoryPageableCache<PageKey, Item>() : null),
       _pageSize = pageSize,
       _logger = logger ?? (showLog ? ConsolePageableLogger() : null),
+      uniqueId = Uuid.randomUuid(),
       super(PageableView.initial(showLog: showLog, pageSize: pageSize))
   {
 
@@ -1252,9 +1310,12 @@ class PageableController<PageKey, Item> extends ValueNotifier<PageableView<PageK
     }
   }
 
-  /// Logs a message if logging is enabled
+  /// Logs a message if logging is enabled.
+  ///
+  /// The tag includes [uniqueId] so messages from separate controller
+  /// instances can be distinguished.
   void _log(String message) {
-    _logger?.log(message, tag: '$runtimeType ${runtimeType.hashCode}');
+    _logger?.log(message, tag: '$runtimeType ${uniqueId.toCompactString()}');
   }
   
   @override
@@ -1262,6 +1323,7 @@ class PageableController<PageKey, Item> extends ValueNotifier<PageableView<PageK
     trackOperation('dispose');
     markDisposed();
     triggerPageableDispose();
+
     _pollTimer?.cancel();
     _pollTimer = null;
     _debounceTimer?.cancel();
@@ -1269,6 +1331,7 @@ class PageableController<PageKey, Item> extends ValueNotifier<PageableView<PageK
     _activeFetches = 0;
     _completeCurrentFetchIfPending();
     _currentFetchCompleter = null;
+
     WidgetsBinding.instance.removeObserver(this);
     _log('PageableController disposed');
 
@@ -1278,12 +1341,8 @@ class PageableController<PageKey, Item> extends ValueNotifier<PageableView<PageK
   @override
   List<Object?> equalizedProperties() => [
     cacheKey,
-    pageSize,
-    maxRetries,
-    resetOnReloadKeyChange,
     getItemType(),
     getPageKeyType(),
-    useSafeMode,
-    pausePollingWhenHidden
+    uniqueId.toCompactString()
   ];
 }
