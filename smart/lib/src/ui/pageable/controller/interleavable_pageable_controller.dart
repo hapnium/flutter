@@ -568,10 +568,13 @@ class InterleavablePageableController<PageKey, Item> extends PageableController<
 
   /// Conditionally forwards messages to the internal [PageableLogger].
   ///
-  /// Messages are logged with the tag `'InterleavedController'` for easy
-  /// filtering in debug output.
+  /// Messages are tagged with this controller's [uniqueId] so logs from
+  /// separate interleavable controllers can be distinguished.
   void _log(String message) {
-    _interleaveLogger?.log(message, tag: 'InterleavedController');
+    _interleaveLogger?.log(
+      message,
+      tag: 'InterleavedController ${uniqueId.toCompactString()}',
+    );
   }
 
   // ─── Internal Pagination ────────────────────────────────────

@@ -46,6 +46,20 @@ Future<void> waitForCondition(bool Function() condition, {String? reason}) async
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
+  group('PageableController equality', () {
+    test('controllers with matching configuration have distinct identities', () {
+      final first = makeController(fetch: (_) async => []);
+      final second = makeController(fetch: (_) async => []);
+
+      expect(first, same(first));
+      expect(first.uniqueId, isNot(second.uniqueId));
+      expect(first, isNot(second));
+
+      first.dispose();
+      second.dispose();
+    });
+  });
+
   group('fetchFirstPage', () {
     test('empty first page resolves to NO_ITEMS_FOUND', () async {
       final controller = makeController(fetch: (_) async => []);
