@@ -395,7 +395,7 @@ class PageableStaggeredView<Page, Item> extends StatelessWidget {
     final totalSeparators = hasSeparator
         ? PageableHelper.calculateTotalSeparators(strategy, separatorBuilder, context, count)
         : 0;
-    final baseItemCount = widgetBuilder != null ? count - 1 : count;
+    final baseItemCount = count;
     final totalSlotCount = baseItemCount + totalSeparators;
 
     bool canShowSeparator(int index) {

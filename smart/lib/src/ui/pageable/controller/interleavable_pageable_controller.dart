@@ -397,20 +397,39 @@ class InterleavablePageableController<PageKey, Item> extends PageableController<
   /// - Resets every source's internal buffer, cursors, and error state
   /// - Clears the synthetic page key counter
   /// - Clears all per-source errors
-  /// - Sets status to [PageableStatus.REFRESHING] before fetching
+  /// - Clears the visible pages and sets status to
+  ///   [PageableStatus.LOADING_FIRST_PAGE] before fetching, so the UI can
+  ///   show its normal first-page loading state
   ///
   /// After all sources complete their first-page fetch, the results are merged
   /// into a fresh synthetic page.
+  ///
+  /// Use [refreshSilently] to keep the current items visible during the
+  /// refresh instead.
   @override
-  Future<void> refresh() async {
+  Future<void> refresh() => _refreshAll(clearVisiblePages: true);
+
+  /// Like [refresh], but keeps the current items visible while every source
+  /// re-fetches its first page.
+  ///
+  /// The status is set to [PageableStatus.REFRESHING] instead of
+  /// [PageableStatus.LOADING_FIRST_PAGE].
+  @override
+  Future<void> refreshSilently() => _refreshAll(clearVisiblePages: false);
+
+  Future<void> _refreshAll({required bool clearVisiblePages}) async {
     if (useSafeMode && !mounted) return;
     debugAssertNotDisposed();
 
-    _log('Refreshing all sources');
+    _log(clearVisiblePages
+        ? 'Refreshing all sources'
+        : 'Refreshing all sources silently');
     _isFetching = true;
     _sourceErrors.clear();
     _syntheticPageKey = 0;
-    value = value.copyWith(status: PageableStatus.REFRESHING, clearError: true);
+    value = clearVisiblePages
+        ? value.reset()
+        : value.copyWith(status: PageableStatus.REFRESHING, clearError: true);
 
     try {
       for (final entry in _sources.values) {
